@@ -1,8 +1,29 @@
+import traceback
+import sys
+import os
+
+# Ajouter le répertoire racine au PYTHONPATH
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
+
+# Appliquer le correctif pour TypedDict
+try:
+    from patch_typing import *
+except ImportError:
+    pass
+
 from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel
-from typing import Optional, Dict, Any
-from archon.archon_graph import agentic_flow
-from langgraph.types import Command
+from pydantic import BaseModel, Field
+from typing_extensions import TypedDict
+from typing import Optional, Dict, Any, List
+from archon_graph import agentic_flow
+try:
+    from langgraph.types import Command
+except ImportError:
+    # Fallback implementation if langgraph.types.Command is not available
+    class Command:
+        """Dummy implementation of Command for compatibility"""
+        pass
+        
 from utils.utils import write_to_log
     
 app = FastAPI()
@@ -39,31 +60,137 @@ async def invoke_agent(request: InvokeRequest):
             }
         }
 
+        print(f"[DEBUG] Starting invoke_agent for thread {request.thread_id}")
+        print(f"[DEBUG] Request message: {request.message[:100]}..." if len(request.message) > 100 else f"[DEBUG] Request message: {request.message}")
+        print(f"[DEBUG] Is first message: {request.is_first_message}")
+        
         response = ""
         if request.is_first_message:
+            print("[DEBUG] Processing first message")
             write_to_log(f"Processing first message for thread {request.thread_id}")
-            async for msg in agentic_flow.astream(
-                {"latest_user_message": request.message}, 
-                config,
-                stream_mode="custom"
-            ):
-                response += str(msg)
+            
+            # Initialiser l'état avec tous les champs requis par AgentState
+            initial_state = {
+                "latest_user_message": request.message,
+                "next_user_message": "",
+                "messages": [],
+                "scope": "",
+                "advisor_output": "",
+                "file_list": [],
+                "refined_prompt": "",
+                "refined_tools": "",
+                "refined_agent": ""
+            }
+            
+            print("[DEBUG] Initial state created, starting agentic flow...")
+            print(f"[DEBUG] Initial state keys: {initial_state.keys()}")
+            
+            # Ajouter un compteur pour suivre les itérations
+            iteration = 0
+            
+            try:
+                async for msg in agentic_flow.astream(
+                    initial_state, 
+                    config,
+                    stream_mode="custom"
+                ):
+                    iteration += 1
+                    print(f"[DEBUG] Received message {iteration} from agentic flow")
+                    print(f"[DEBUG] Message type: {type(msg)}")
+                    print(f"[DEBUG] Message content: {str(msg)[:200]}..." if len(str(msg)) > 200 else f"[DEBUG] Message content: {str(msg)}")
+                    response += str(msg)
+                    
+                    # Vérifier si nous sommes bloqués dans une boucle
+                    if iteration > 10:  # Limite arbitraire pour éviter les boucles infinies
+                        print("[WARNING] Possible infinite loop detected, breaking after 10 iterations")
+                        break
+                        
+            except Exception as e:
+                print(f"[ERROR] Exception in agentic flow: {str(e)}")
+                print("[ERROR] Traceback:", traceback.format_exc())
+                raise
+                
         else:
+            print("[DEBUG] Processing continuation message")
             write_to_log(f"Processing continuation for thread {request.thread_id}")
-            async for msg in agentic_flow.astream(
-                Command(resume=request.message),
-                config,
-                stream_mode="custom"
-            ):
-                response += str(msg)
+            
+            try:
+                # Créer un état initial avec le message de continuation
+                initial_state = {
+                    "next_user_message": request.message,
+                    "latest_user_message": "",
+                    "messages": [],
+                    "scope": "",
+                    "advisor_output": "",
+                    "file_list": [],
+                    "refined_prompt": "",
+                    "refined_tools": "",
+                    "refined_agent": ""
+                }
+                
+                async for msg in agentic_flow.astream(
+                    initial_state,
+                    config,
+                    stream_mode="custom"
+                ):
+                    response += str(msg)
+            except Exception as e:
+                print(f"[ERROR] Exception in continuation flow: {str(e)}")
+                print("[ERROR] Traceback:", traceback.format_exc())
+                raise
 
-        write_to_log(f"Final response for thread {request.thread_id}: {response}")
+        print(f"[DEBUG] Final response length: {len(response)} characters")
+        write_to_log(f"Final response for thread {request.thread_id}: {response[:200]}...")
+        
+        # Vérifier que la réponse n'est pas vide
+        if not response:
+            print("[WARNING] Empty response from agentic flow")
+            response = "Désolé, je n'ai pas pu générer de réponse. Veuillez réessayer."
+            
         return {"response": response}
         
     except Exception as e:
-        print(f"Exception invoking Archon for thread {request.thread_id}: {str(e)}")
+        error_msg = f"Exception invoking Archon for thread {request.thread_id}: {str(e)}"
+        print(f"[ERROR] {error_msg}")
+        print("[ERROR] Traceback:", traceback.format_exc())
         write_to_log(f"Error processing message for thread {request.thread_id}: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
+        
+        # Ajouter plus de détails à l'erreur pour le débogage
+        error_detail = {
+            "error": str(e),
+            "type": type(e).__name__,
+            "thread_id": request.thread_id,
+            "is_first_message": request.is_first_message if hasattr(request, 'is_first_message') else None,
+            "message_length": len(request.message) if hasattr(request, 'message') else 0
+        }
+        
+        # Si c'est une erreur de validation, ajouter les détails de validation
+        if hasattr(e, 'errors') and callable(e.errors):
+            # Convertir les erreurs en un format sérialisable
+            validation_errors = []
+            for error in e.errors():
+                if isinstance(error, dict):
+                    validation_errors.append({
+                        'type': str(error.get('type', '')),
+                        'loc': [str(loc) for loc in error.get('loc', [])],
+                        'msg': str(error.get('msg', '')),
+                        'input': str(error.get('input', ''))[:100] + '...' if isinstance(error.get('input'), (bytes, bytearray)) else error.get('input')
+                    })
+                else:
+                    validation_errors.append(str(error))
+            error_detail["validation_errors"] = validation_errors
+            
+        # S'assurer que tous les champs sont sérialisables
+        for key, value in error_detail.items():
+            if isinstance(value, (bytes, bytearray)):
+                error_detail[key] = value.decode('utf-8', errors='replace')
+            elif hasattr(value, '__dict__'):
+                error_detail[key] = str(value)
+                
+        raise HTTPException(
+            status_code=500, 
+            detail=error_detail
+        )
 
 if __name__ == "__main__":
     import uvicorn

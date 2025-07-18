@@ -1,9 +1,10 @@
 # Ignore specified folders
 iterations/
-venv/
+.venv/
 .langgraph_api/
 .github/
 __pycache__/
+logs/
 .env
 
 # Git related

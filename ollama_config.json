@@ -1,0 +1,14 @@
+{
+  "OLLAMA_NO_CUDA": "1",
+  "OLLAMA_HOST": "0.0.0.0:11434",
+  "num_ctx": 2048,
+  "num_thread": 4,
+  "num_gpu_layers": 0,
+  "main_gpu": 0,
+  "embedding_only": false,
+  "f16_kv": true,
+  "use_mlock": false,
+  "use_mmap": true,
+  "low_vram": true,
+  "verbose_prompt": false
+}

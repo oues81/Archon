@@ -1,28 +1,39 @@
-FROM python:3.12-slim
+FROM python:3.10-slim
 
 WORKDIR /app
 
 # Install system dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
+    curl \
+    procps \
+    git \
+    && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy requirements first for better caching
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+# Set environment variables
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONPATH=/app \
+    PIP_NO_CACHE_DIR=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    PIP_DEFAULT_TIMEOUT=100
 
-# Copy the rest of the application
+# Copy requirements first to leverage Docker cache
+COPY requirements.txt .
+
+# Install dependencies using pip
+RUN pip install --upgrade pip && \
+    pip install --no-cache-dir -r requirements.txt && \
+    pip install --no-cache-dir uvicorn streamlit
+
+# Copy all source files
 COPY . .
 
-# Set environment variables
-ENV PYTHONUNBUFFERED=1
-ENV PYTHONPATH=/app
+# Make scripts executable
+RUN chmod +x /app/start_services.sh
 
-# Expose port for Streamlit
-EXPOSE 8501
+# Expose ports
+EXPOSE 8110 8501
 
-# Expose port for the Archon Service (started within Streamlit)
-EXPOSE 8100
-
-# Set the entrypoint to run Streamlit directly
-CMD ["streamlit", "run", "streamlit_ui.py", "--server.port=8501", "--server.address=0.0.0.0"]
+# Run the service
+CMD ["/app/start_services.sh"]

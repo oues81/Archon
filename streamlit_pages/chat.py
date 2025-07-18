@@ -1,4 +1,11 @@
-from langgraph.types import Command
+try:
+    from langgraph.types import Command
+except ImportError:
+    # Fallback implementation if langgraph.types.Command is not available
+    class Command:
+        """Dummy implementation of Command for compatibility"""
+        pass
+
 import streamlit as st
 import uuid
 import sys

@@ -383,16 +383,16 @@ def reload_archon_graph(show_reload_success=True):
 def get_clients():
     # LLM client setup
     embedding_client = None
-    base_url = get_env_var('EMBEDDING_BASE_URL') or 'https://api.openai.com/v1'
-    api_key = get_env_var('EMBEDDING_API_KEY') or 'no-api-key-provided'
     provider = get_env_var('EMBEDDING_PROVIDER') or 'OpenAI'
+    base_url = get_env_var('EMBEDDING_BASE_URL') or 'https://api.openai.com/v1'
     
-    # Setup OpenAI client for LLM
+    # For Ollama, use a dummy API key if not provided and ensure the base URL is correct
     if provider == "Ollama":
-        if api_key == "NOT_REQUIRED":
-            api_key = "ollama"  # Use a dummy key for Ollama
+        api_key = get_env_var('EMBEDDING_API_KEY') or 'ollama'
+
         embedding_client = AsyncOpenAI(base_url=base_url, api_key=api_key)
     else:
+        api_key = get_env_var('EMBEDDING_API_KEY') or 'no-api-key-provided'
         embedding_client = AsyncOpenAI(base_url=base_url, api_key=api_key)
 
     # Supabase client setup

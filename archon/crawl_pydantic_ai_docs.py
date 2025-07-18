@@ -36,12 +36,16 @@ base_url = get_env_var('BASE_URL') or 'https://api.openai.com/v1'
 api_key = get_env_var('LLM_API_KEY') or 'no-api-key-provided'
 provider = get_env_var('LLM_PROVIDER') or 'OpenAI'
 
-# Setup OpenAI client for LLM
+# Setup LLM client based on provider
 if provider == "Ollama":
-    if api_key == "NOT_REQUIRED":
-        api_key = "ollama"  # Use a dummy key for Ollama
+    # For Ollama, use the base URL directly and a dummy API key
+    if not base_url:
+                base_url = os.environ.get('EMBEDDING_BASE_URL', 'http://localhost:11434')
+    if not api_key or api_key == 'no-api-key-provided':
+        api_key = 'ollama'  # Dummy key for Ollama
     llm_client = AsyncOpenAI(base_url=base_url, api_key=api_key)
 else:
+    # For other providers (OpenAI, Anthropic, etc.)
     llm_client = AsyncOpenAI(base_url=base_url, api_key=api_key)
 
 # Initialize HTML to Markdown converter
@@ -208,7 +212,11 @@ async def get_title_and_summary(chunk: str, url: str) -> Dict[str, str]:
         return {"title": "Error processing title", "summary": "Error processing summary"}
 
 async def get_embedding(text: str) -> List[float]:
-    """Get embedding vector from OpenAI."""
+    """Get embedding vector from OpenAI.
+    
+    Returns:
+        List[float]: The embedding vector, or a zero vector of length 768 if there's an error.
+    """
     try:
         response = await embedding_client.embeddings.create(
             model=embedding_model,
@@ -217,7 +225,8 @@ async def get_embedding(text: str) -> List[float]:
         return response.data[0].embedding
     except Exception as e:
         print(f"Error getting embedding: {e}")
-        return [0] * 1536  # Return zero vector on error
+        # Return a zero vector with 768 dimensions (matching database schema)
+        return [0.0] * 768
 
 async def process_chunk(chunk: str, chunk_number: int, url: str) -> ProcessedChunk:
     """Process a single chunk of text."""

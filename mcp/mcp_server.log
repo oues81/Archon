@@ -1,0 +1,9 @@
+2025-07-11 16:18:13,899 - mcp.mcp_server - INFO - SSE connection closed by client
+2025-07-11 16:20:22,735 - mcp.mcp_server - INFO - SSE connection closed by client
+2025-07-11 16:20:36,463 - mcp.mcp_server - INFO - Received MCP request: {
+  "jsonrpc": "2.0",
+  "method": "list_resources",
+  "id": 1
+}
+2025-07-11 16:54:40,800 - mcp.mcp_server - INFO - SSE connection closed by client
+2025-07-11 16:55:29,967 - mcp.mcp_server - INFO - SSE connection closed by client

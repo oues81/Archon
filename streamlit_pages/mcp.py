@@ -40,13 +40,13 @@ def generate_mcp_config(ide_type, python_path, server_script_path):
                     "run",
                     "-i",
                     "--rm",
-                    "--add-host=host.docker.internal:host-gateway",
+                    "--add-host=localhost:host-gateway",
                     "-e", 
                     "GRAPH_SERVICE_URL",
                     "archon-mcp:latest"
                 ],
                 "env": {
-                    "GRAPH_SERVICE_URL": "http://host.docker.internal:8100"
+                    "GRAPH_SERVICE_URL": "http://localhost:8110"
                 }
             }
         }
@@ -56,7 +56,7 @@ def generate_mcp_config(ide_type, python_path, server_script_path):
     if ide_type == "Windsurf":
         return json.dumps(python_config, indent=2), json.dumps(docker_config, indent=2)
     elif ide_type == "Cursor":
-        return f"{python_path} {server_script_path}", f"docker run -i --rm --add-host=host.docker.internal:host-gateway -e GRAPH_SERVICE_URL=http://host.docker.internal:8100 archon-mcp:latest"
+        return f"{python_path} {server_script_path}", f"docker run -i --rm --add-host=localhost:host-gateway -e GRAPH_SERVICE_URL=http://localhost:8100 archon-mcp:latest"
     elif ide_type == "Cline/Roo Code":
         return json.dumps(python_config, indent=2), json.dumps(docker_config, indent=2)
     elif ide_type == "Claude Code":
@@ -162,7 +162,7 @@ def mcp_tab():
             3. Open a terminal and navigate to your work folder.
             4. Execute the command: 
             
-            \tFor Docker: `claude mcp add Archon docker run -i --rm -e GRAPH_SERVICE_URL=http://host.docker.internal:8100 archon-mcp:latest `   
+            \tFor Docker: `claude mcp add Archon docker run -i --rm -e GRAPH_SERVICE_URL=http://localhost:8100 archon-mcp:latest `   
             \tFor Python: `claude mcp add Archon {python_path} {server_script_path}`
             
             5. Start Claude Code with the command `claude`. When Claude Code starts, at the bottom of the welcome section will be a listing of connected MCP Services, Archon should be listed with a status of _connected_.

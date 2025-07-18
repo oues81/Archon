@@ -1,0 +1,19 @@
+{
+    "mcpServers": {
+      "archon": {
+        "command": "/home/oues/archon/archon/venv/bin/python3",
+        "args": ["mcp/mcp_server.py"],
+        "env": {
+          "API_KEY": "value"
+        }
+      },
+      "filesystem": {
+        "command": "npx",
+        "args": [
+          "-y",
+          "@modelcontextprotocol/server-filesystem",
+          "/home/oues/archon/archon"
+        ]
+      }
+    }
+  }

@@ -1,17 +1,86 @@
+
+import json
+import logging
 from pydantic_ai.models.anthropic import AnthropicModel
-from pydantic_ai.models.openai import OpenAIModel
-from pydantic_ai import Agent, RunContext
-from langgraph.graph import StateGraph, START, END
+from pydantic_ai import RunContext
+from langgraph.graph import StateGraph, END
+from langgraph.graph import StateGraph, END
+from langgraph.graph.state import START
+# Configuration du logger
+logger = logging.getLogger(__name__)
+from typing import Annotated, List, Any, Optional, Dict, Union
+from typing_extensions import TypedDict
+
+# Try to import get_stream_writer from different possible locations
+try:
+    # Newer versions of langgraph
+    from langgraph.checkpoint import get_stream_writer
+except ImportError:
+    try:
+        # Older versions of langgraph
+        from langgraph.config import get_stream_writer
+    except ImportError:
+        # Fallback implementation if not found
+        def get_stream_writer():
+            import sys
+            return sys.stdout.write
+
 from langgraph.checkpoint.memory import MemorySaver
-from typing import TypedDict, Annotated, List, Any
-from langgraph.config import get_stream_writer
-from langgraph.types import interrupt
+try:
+    from langgraph.types import interrupt
+except ImportError:
+    # Fallback implementation if langgraph.types.interrupt is not available
+    class interrupt:
+        """Dummy implementation of interrupt for compatibility"""
+        @staticmethod
+        def interrupt():
+            """Dummy interrupt method"""
+            pass
 from dotenv import load_dotenv
-from openai import AsyncOpenAI
 from supabase import Client
 import logfire
 import os
 import sys
+import json
+from dataclasses import dataclass
+from typing import AsyncGenerator
+import traceback
+
+# Import des modèles personnalisés
+from archon.models.ollama_model import OllamaModel, OllamaClient
+
+@dataclass
+class Agent:
+    """Classe Agent personnalisée pour utiliser avec Ollama"""
+    model: Any
+    system_prompt: Optional[str] = None
+
+    async def run(self, messages: List[Dict[str, str]], **kwargs) -> str:
+        """Exécute le modèle avec les messages donnés et retourne la réponse"""
+        if self.system_prompt:
+            messages = [{"role": "system", "content": self.system_prompt}] + messages
+        
+        # Appel au modèle Ollama
+        response = await self.model.client.chat(
+            messages=messages,
+            model=self.model.model_name,
+            **kwargs
+        )
+        return response["message"]["content"]
+
+    async def run_stream(self, messages: List[Dict[str, str]], **kwargs) -> AsyncGenerator[str, None]:
+        """Exécute le modèle en streaming avec les messages donnés"""
+        if self.system_prompt:
+            messages = [{"role": "system", "content": self.system_prompt}] + messages
+        
+        # Appel au modèle Ollama en streaming
+        async for chunk in self.model.client.chat_stream(
+            messages=messages,
+            model=self.model.model_name,
+            **kwargs
+        ):
+            if 'message' in chunk and 'content' in chunk['message']:
+                yield chunk['message']['content']
 
 # Import the message classes from Pydantic AI
 from pydantic_ai.messages import (
@@ -19,9 +88,12 @@ from pydantic_ai.messages import (
     ModelMessagesTypeAdapter
 )
 
+# Import pour le type de message
+
 # Add the parent directory to Python path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from archon.pydantic_ai_coder import pydantic_ai_coder, PydanticAIDeps
+from archon.pydantic_ai_coder import create_pydantic_ai_coder
+from archon.schemas import PydanticAIDeps
 from archon.advisor_agent import advisor_agent, AdvisorDeps
 from archon.refiner_agents.prompt_refiner_agent import prompt_refiner_agent
 from archon.refiner_agents.tools_refiner_agent import tools_refiner_agent, ToolsRefinerDeps
@@ -35,23 +107,49 @@ load_dotenv()
 # Configure logfire to suppress warnings (optional)
 logfire.configure(send_to_logfire='never')
 
-provider = get_env_var('LLM_PROVIDER') or 'OpenAI'
-base_url = get_env_var('BASE_URL') or 'https://api.openai.com/v1'
+provider = get_env_var('LLM_PROVIDER') or 'Ollama'
+base_url = get_env_var('BASE_URL') or 'http://192.168.28.247:11434'
 api_key = get_env_var('LLM_API_KEY') or 'no-llm-api-key-provided'
 
 is_anthropic = provider == "Anthropic"
 is_openai = provider == "OpenAI"
+is_ollama = provider == "Ollama"
 
-reasoner_llm_model_name = get_env_var('REASONER_MODEL') or 'o3-mini'
-reasoner_llm_model = AnthropicModel(reasoner_llm_model_name, api_key=api_key) if is_anthropic else OpenAIModel(reasoner_llm_model_name, base_url=base_url, api_key=api_key)
+llm_model_name = get_env_var('LLM_MODEL')
 
-reasoner = Agent(  
-    reasoner_llm_model,
-    system_prompt='You are an expert at coding AI agents with Pydantic AI and defining the scope for doing so.',  
-)
+reasoner_llm_model_name = get_env_var('REASONER_MODEL') or llm_model_name
 
-primary_llm_model_name = get_env_var('PRIMARY_MODEL') or 'gpt-4o-mini'
-primary_llm_model = AnthropicModel(primary_llm_model_name, api_key=api_key) if is_anthropic else OpenAIModel(primary_llm_model_name, base_url=base_url, api_key=api_key)
+# Utiliser la base_url depuis les variables d'environnement
+client = OllamaClient(base_url)
+
+# Initialiser le modèle principal en fonction du fournisseur
+primary_llm_model_name = get_env_var('PRIMARY_MODEL') or llm_model_name
+if is_anthropic:
+    primary_llm_model = AnthropicModel(primary_llm_model_name, api_key=api_key)
+elif is_ollama:
+    if not base_url:
+        raise ValueError("BASE_URL must be set in environment variables when using Ollama")
+    primary_llm_model = OllamaModel(model_name=primary_llm_model_name, base_url=base_url)
+    print(f"Initialized Ollama model '{primary_llm_model_name}' with base URL: {base_url}")
+else:
+    primary_llm_model = OpenAIModel(primary_llm_model_name, base_url=base_url, api_key=api_key)
+
+# Initialiser le modèle de raisonnement en fonction du fournisseur
+if is_anthropic:
+    reasoner_llm_model = AnthropicModel(reasoner_llm_model_name, api_key=api_key)
+elif is_ollama:
+    if not base_url:
+        raise ValueError("BASE_URL must be set in environment variables when using Ollama")
+    reasoner_llm_model = OllamaModel(model_name=reasoner_llm_model_name, base_url=base_url)
+    print(f"Initialized Ollama reasoner model '{reasoner_llm_model_name}' with base URL: {base_url}")
+else:
+    reasoner_llm_model = OpenAIModel(reasoner_llm_model_name, base_url=base_url, api_key=api_key)
+
+# Utiliser directement le modèle Ollama sans passer par pydantic_ai
+reasoner = reasoner_llm_model
+
+# Configuration du prompt système
+system_prompt = 'You are an expert at coding AI agents with Pydantic AI and defining the scope for doing so.'
 
 router_agent = Agent(  
     primary_llm_model,
@@ -66,82 +164,271 @@ end_conversation_agent = Agent(
 # Initialize clients
 embedding_client, supabase = get_clients()
 
-# Define state schema
 class AgentState(TypedDict):
-    latest_user_message: str
+    latest_user_message: Annotated[str, lambda x, y: y]  # Always take the latest value
+    next_user_message: Annotated[str, lambda x, y: y]  # Also take the latest value
     messages: Annotated[List[bytes], lambda x, y: x + y]
 
-    scope: str
-    advisor_output: str
-    file_list: List[str]
+    scope: Annotated[str, lambda x, y: y]  # Always take the latest value
+    advisor_output: Annotated[str, lambda x, y: y]  # Always take the latest value
+    file_list: Annotated[List[str], lambda x, y: y]  # Always take the latest value
 
-    refined_prompt: str
-    refined_tools: str
-    refined_agent: str
+    refined_prompt: Annotated[str, lambda x, y: y]  # Always take the latest value
+    refined_tools: Annotated[str, lambda x, y: y]  # Always take the latest value
+    refined_agent: Annotated[str, lambda x, y: y]  # Always take the latest value
 
 # Scope Definition Node with Reasoner LLM
 async def define_scope_with_reasoner(state: AgentState):
-    # First, get the documentation pages so the reasoner can decide which ones are necessary
-    documentation_pages = await list_documentation_pages_tool(supabase)
-    documentation_pages_str = "\n".join(documentation_pages)
-
-    # Then, use the reasoner to define the scope
-    prompt = f"""
-    User AI Agent Request: {state['latest_user_message']}
+    print("\n[DEBUG] ====== define_scope_with_reasoner ======")
+    print(f"[DEBUG] State keys: {state.keys()}")
     
-    Create detailed scope document for the AI agent including:
-    - Architecture diagram
-    - Core components
-    - External dependencies
-    - Testing strategy
+    try:
+        print("[DEBUG] Getting documentation pages from Supabase...")
+        documentation_pages = await list_documentation_pages_tool(supabase)
+        print(f"[DEBUG] Found {len(documentation_pages)} documentation pages")
+        
+        documentation_pages_str = "\n".join(documentation_pages)
+        print("[DEBUG] Documentation pages prepared")
 
-    Also based on these documentation pages available:
+        # Then, use the reasoner to define the scope
+        prompt = f"""
+        User AI Agent Request: {state['latest_user_message']}
+        
+        Create detailed scope document for the AI agent including:
+        - Architecture diagram
+        - Core components
+        - External dependencies
+        - Testing strategy
 
-    {documentation_pages_str}
+        Also based on these documentation pages available:
 
-    Include a list of documentation pages that are relevant to creating this agent for the user in the scope document.
-    """
+        {documentation_pages_str}
 
-    result = await reasoner.run(prompt)
-    scope = result.data
+        Include a list of documentation pages that are relevant to creating this agent for the user in the scope document.
+        """
+        
+        print("[DEBUG] Prepared prompt for reasoner")
+        print(f"[DEBUG] Prompt length: {len(prompt)} characters")
 
-    # Get the directory one level up from the current file
-    current_dir = os.path.dirname(os.path.abspath(__file__))
-    parent_dir = os.path.dirname(current_dir)
-    scope_path = os.path.join(parent_dir, "workbench", "scope.md")
-    os.makedirs(os.path.join(parent_dir, "workbench"), exist_ok=True)
+        print("[DEBUG] Calling reasoner to define scope...")
+        scope = await reasoner.ainvoke(prompt)
 
-    with open(scope_path, "w", encoding="utf-8") as f:
-        f.write(scope)
-    
-    return {"scope": scope}
+        print(f"[DEBUG] Scope defined: {scope[:100]}...")
+
+        # Save the scope to a file
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        parent_dir = os.path.dirname(current_dir)
+        workbench_dir = os.path.join(parent_dir, "workbench")
+        scope_path = os.path.join(workbench_dir, "scope.md")
+        
+        print(f"[DEBUG] Creating workbench directory: {workbench_dir}")
+        os.makedirs(workbench_dir, exist_ok=True)
+        
+        print(f"[DEBUG] Writing scope to file: {scope_path}")
+        with open(scope_path, "w", encoding="utf-8") as f:
+            f.write(scope)
+        
+        print("[DEBUG] Scope written to file successfully.")
+            
+        # Préparer l'état de retour
+        return_state = {
+            "latest_user_message": state.get('latest_user_message', ''),
+            "next_user_message": state.get('next_user_message', ''),
+            "messages": state.get('messages', []),
+            "scope": scope,
+            "advisor_output": state.get('advisor_output', ''),
+            "file_list": state.get('file_list', []),
+            "refined_prompt": state.get('refined_prompt', ''),
+            "refined_tools": state.get('refined_tools', ''),
+            "refined_agent": state.get('refined_agent', '')
+        }
+            
+        print("[DEBUG] Prepared return state with updated scope")
+        return return_state
+            
+    except Exception as e:
+        error_msg = f"Erreur lors de l'appel au reasoner: {str(e)}"
+        print(f"[ERROR] {error_msg}")
+        print("[ERROR] Traceback:", traceback.format_exc())
+        raise
+        
+    except Exception as e:
+        error_msg = f"Erreur dans define_scope_with_reasoner: {str(e)}"
+        print(f"[ERROR] {error_msg}")
+        print("[ERROR] Traceback:", traceback.format_exc())
+        
+        # Retourner un état d'erreur
+        return {
+            "scope": f"Erreur: {str(e)}",
+            "latest_user_message": state.get('latest_user_message', ''),
+            "messages": state.get('messages', []),
+            "advisor_output": state.get('advisor_output', ''),
+            "file_list": state.get('file_list', []),
+            "refined_prompt": state.get('refined_prompt', ''),
+            "refined_tools": state.get('refined_tools', ''),
+            "refined_agent": state.get('refined_agent', '')
+        }
 
 # Advisor agent - create a starting point based on examples and prebuilt tools/MCP servers
 async def advisor_with_examples(state: AgentState):
-    # Get the directory one level up from the current file (archon_graph.py)
-    current_dir = os.path.dirname(os.path.abspath(__file__))
-    parent_dir = os.path.dirname(current_dir)
+    print("\n[DEBUG] ====== advisor_with_examples ======")
+    print(f"[DEBUG] State keys: {state.keys()}")
     
-    # The agent-resources folder is adjacent to the parent folder of archon_graph.py
-    agent_resources_dir = os.path.join(parent_dir, "agent-resources")
-    
-    # Get a list of all files in the agent-resources directory and its subdirectories
     file_list = []
+    messages = []
     
-    for root, dirs, files in os.walk(agent_resources_dir):
-        for file in files:
-            # Get the full path to the file
-            file_path = os.path.join(root, file)
-            # Use the full path instead of relative path
-            file_list.append(file_path)
+    try:
+        # Get the directory one level up from the current file (archon_graph.py)
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        parent_dir = os.path.dirname(current_dir)
+        print(f"[DEBUG] Current directory: {current_dir}")
+        print(f"[DEBUG] Parent directory: {parent_dir}")
+        
+        # The agent-resources folder is adjacent to the parent folder of archon_graph.py
+        agent_resources_dir = os.path.join(parent_dir, "agent-resources")
+        print(f"[DEBUG] Agent resources directory: {agent_resources_dir}")
+        
+        # Vérifier si le répertoire existe
+        if not os.path.exists(agent_resources_dir):
+            warning_msg = f"Le répertoire des ressources n'existe pas: {agent_resources_dir}"
+            print(f"[WARNING] {warning_msg}")
+            logger.warning(warning_msg)
+            os.makedirs(agent_resources_dir, exist_ok=True)
+            print(f"[DEBUG] Created directory: {agent_resources_dir}")
+        
+        # Get a list of all files in the agent-resources directory and its subdirectories
+        if os.path.exists(agent_resources_dir):
+            print("[DEBUG] Scanning agent resources directory...")
+            for root, dirs, files in os.walk(agent_resources_dir):
+                for file in files:
+                    # Get the full path to the file
+                    file_path = os.path.join(root, file)
+                    # Use the full path instead of relative path
+                    file_list.append(file_path)
+                    print(f"[DEBUG] Found resource file: {file_path}")
+        
+        print(f"[DEBUG] Found {len(file_list)} resource files")
+        
+        # Then, prompt the advisor with the list of files it can use for examples and tools
+        deps = AdvisorDeps(file_list=file_list)
+        print("[DEBUG] Created AdvisorDeps with file list")
+        
+        # Créer un message avec le bon format attendu par Pydantic AI
+        user_message = state.get('latest_user_message', '')
+        if not user_message:
+            user_message = "Pouvez-vous m'aider à créer un agent IA?"
+            print("[DEBUG] No user message in state, using default prompt")
+        
+        print(f"[DEBUG] User message: {user_message[:200]}..." if len(user_message) > 200 else f"[DEBUG] User message: {user_message}")
+        
+        messages = [{"role": "user", "content": str(user_message)}]
+        print("[DEBUG] Prepared messages for advisor agent")
+        
+        print("[DEBUG] Calling advisor_agent.run...")
+        result = await advisor_agent.run(messages, deps=deps)
+        print(f"[DEBUG] Advisor agent returned result of type: {type(result)}")
+        
+        # Si le résultat est déjà un état complet, le fusionner
+        if isinstance(result, dict) and 'advisor_output' in result:
+            print("[DEBUG] Result is a dict with advisor_output, updating state")
+            state.update(result)
+        else:
+            print("[DEBUG] Processing non-dict result from advisor_agent")
+            # Sinon, essayer d'extraire le contenu de la réponse
+            if hasattr(result, 'content'):
+                advisor_output = result.content
+                print("[DEBUG] Extracted content from result.content")
+            elif isinstance(result, str):
+                advisor_output = result
+                print("[DEBUG] Result is a string, using as-is")
+            else:
+                advisor_output = str(result)
+                print(f"[DEBUG] Converted result to string: {advisor_output[:200]}...")
+            
+            # Mettre à jour l'état avec les champs requis
+            state['advisor_output'] = advisor_output
+            state['file_list'] = file_list
+            # S'assurer que les messages sont correctement formatés pour Pydantic AI
+            serialized_messages = []
+            for msg in messages:
+                try:
+                    # Si le message est déjà au bon format (bytes), essayer de le valider
+                    if isinstance(msg, bytes):
+                        try:
+                            # Essayer de décoder et valider le message
+                            decoded_msg = json.loads(msg.decode('utf-8'))
+                            # S'assurer que le message a la structure attendue
+                            if not isinstance(decoded_msg, dict) or 'role' not in decoded_msg or 'content' not in decoded_msg:
+                                print(f"[WARNING] Message mal formaté, conversion en format standard: {decoded_msg}")
+                                decoded_msg = {"role": "user" if 'role' not in decoded_msg else decoded_msg['role'],
+                                            "content": str(decoded_msg) if 'content' not in decoded_msg else decoded_msg['content']}
+                            serialized_messages.append(json.dumps(decoded_msg).encode('utf-8'))
+                        except (json.JSONDecodeError, UnicodeDecodeError) as e:
+                            print(f"[WARNING] Erreur de décodage du message, conversion en message utilisateur: {e}")
+                            # Créer un message utilisateur avec le contenu brut
+                            serialized_messages.append(json.dumps({"role": "user", "content": msg.decode('utf-8', errors='replace')}).encode('utf-8'))
+                    # Si le message est un dictionnaire, s'assurer qu'il a le bon format
+                    elif isinstance(msg, dict):
+                        if 'role' not in msg or 'content' not in msg:
+                            print(f"[WARNING] Dictionnaire de message mal formaté, ajout des champs manquants: {msg}")
+                            msg = {"role": msg.get('role', 'user'), 
+                                 "content": msg.get('content', str(msg))}
+                        serialized_messages.append(json.dumps(msg).encode('utf-8'))
+                    # Si le message est une chaîne, le convertir en message utilisateur
+                    elif isinstance(msg, str):
+                        print(f"[DEBUG] Conversion d'un message texte en message utilisateur: {msg[:100]}...")
+                        serialized_messages.append(json.dumps({"role": "user", "content": msg}).encode('utf-8'))
+                    # Pour tout autre type, convertir en chaîne et créer un message utilisateur
+                    else:
+                        print(f"[WARNING] Type de message non géré: {type(msg)}, conversion en chaîne")
+                        serialized_messages.append(json.dumps({"role": "user", "content": str(msg)}).encode('utf-8'))
+                except Exception as e:
+                    print(f"[ERROR] Erreur lors du traitement d'un message: {e}")
+                    print(f"[ERROR] Type du message: {type(msg)}")
+                    print(f"[ERROR] Contenu du message: {msg}")
+                    # En cas d'erreur, essayer de sauvegarder le message d'erreur
+                    try:
+                        error_msg = f"[Erreur de traitement du message: {str(e)}]"
+                        serialized_messages.append(json.dumps({"role": "system", "content": error_msg}).encode('utf-8'))
+                    except:
+                        # Dernier recours: ignorer le message problématique
+                        print("[CRITICAL] Impossible de sérialiser même le message d'erreur")
+            
+            state['messages'] = serialized_messages
+            state['latest_user_message'] = user_message
+            state['scope'] = state.get('scope', '')
+            state['refined_prompt'] = state.get('refined_prompt', '')
+            state['refined_tools'] = state.get('refined_tools', '')
+            state['refined_agent'] = state.get('refined_agent', '')
+            
+        print(f"[DEBUG] Updated state with advisor output (length: {len(state.get('advisor_output', ''))})")
+        
+    except Exception as e:
+        error_msg = f"Erreur lors de l'exécution de l'agent conseiller: {str(e)}"
+        print(f"[ERROR] {error_msg}")
+        print("[ERROR] Traceback:", traceback.format_exc())
+        logger.error(error_msg, exc_info=True)
+        
+        # Assurer que les variables existent même en cas d'erreur
+        if 'file_list' not in locals():
+            file_list = []
+        if 'messages' not in locals():
+            messages = []
+            
+        state['advisor_output'] = error_msg
+        state['file_list'] = file_list
+        state['messages'] = [str(messages).encode()]
+        state['latest_user_message'] = str(e)
+        state['scope'] = state.get('scope', '')
+        state['refined_prompt'] = ''
+        state['refined_tools'] = ''
+        state['refined_agent'] = ''
+        
+        print("[DEBUG] Updated state with error information")
     
-    # Then, prompt the advisor with the list of files it can use for examples and tools
-    deps = AdvisorDeps(file_list=file_list)
-    result = await advisor_agent.run(state['latest_user_message'], deps=deps)
-    advisor_output = result.data
+    print("[DEBUG] Returning from advisor_with_examples")
+    return state
     
-    return {"file_list": file_list, "advisor_output": advisor_output}
-
 # Coding Node with Feedback Handling
 async def coder_agent(state: AgentState, writer):    
     # Prepare dependencies
@@ -165,20 +452,18 @@ async def coder_agent(state: AgentState, writer):
         
         Here is the refined prompt:\n
         {state['refined_prompt']}\n\n
-
         Here are the refined tools:\n
         {state['refined_tools']}\n
-
         And finally, here are the changes to the agent definition to make if any:\n
         {state['refined_agent']}\n\n
-
         Output any changes necessary to the agent code based on these refinements.
         """
     else:
         prompt = state['latest_user_message']
 
+    pydantic_ai_coder = create_pydantic_ai_coder()
     # Run the agent in a stream
-    if not is_openai:
+    if not is_ollama:
         writer = get_stream_writer()
         result = await pydantic_ai_coder.run(prompt, deps=deps, message_history=message_history)
         writer(result.data)
@@ -191,6 +476,9 @@ async def coder_agent(state: AgentState, writer):
             # Stream partial text as it arrives
             async for chunk in result.stream_text(delta=True):
                 writer(chunk)
+
+    print("Fonction Coder exécutée avec succès")
+    logging.info("Fonction Coder exécutée avec succès")
 
     # print(ModelMessagesTypeAdapter.validate_json(result.new_messages_json()))
 
@@ -205,30 +493,146 @@ async def coder_agent(state: AgentState, writer):
 
 # Interrupt the graph to get the user's next message
 def get_next_user_message(state: AgentState):
-    value = interrupt({})
-
-    # Set the user's latest message for the LLM to continue the conversation
-    return {
-        "latest_user_message": value
-    }
+    print("\n[DEBUG] ====== get_next_user_message ======")
+    print(f"[DEBUG] Current state keys: {state.keys()}")
+    
+    # FIX: Initialize next_user_message if not present to avoid errors
+    if 'next_user_message' not in state:
+        state['next_user_message'] = ""
+    
+    # Always use a real value for next_user_message to avoid empty string
+    if not state['next_user_message']:
+        state['next_user_message'] = "Please continue"
+    
+    # Vérifier si nous avons déjà un message utilisateur dans l'état
+    if state['next_user_message']:
+        print(f"[DEBUG] Using existing next_user_message from state: {state['next_user_message']}")
+        return {"next_user_message": state['next_user_message']}
+    
+    # Si pas de message, en demander un
+    try:
+        print("[DEBUG] Requesting user input via interrupt")
+        user_input = interrupt({
+            "request": "user_input", 
+            "message": "Veuillez fournir votre message ou instruction."
+        })
+        
+        # Log du type de user_input pour le débogage
+        print(f"[DEBUG] User input type: {type(user_input)}")
+        if isinstance(user_input, dict):
+            print(f"[DEBUG] User input keys: {user_input.keys()}")
+        
+        # Extraction et validation du message utilisateur
+        user_message = ""
+        if isinstance(user_input, dict):
+            user_message = user_input.get('latest_user_message') or user_input.get('message', '')
+        elif isinstance(user_input, str):
+            user_message = user_input
+        else:
+            user_message = str(user_input or '')
+            
+        # S'assurer que le message n'est pas vide
+        if not user_message.strip():
+            user_message = "Please continue"
+            print("[WARNING] Empty user message received, using default")
+            
+        print(f"[DEBUG] User message: {user_message[:200]}..." if len(user_message) > 200 else f"[DEBUG] User message: {user_message}")
+        return {"next_user_message": user_message}
+        
+    except Exception as e:
+        error_msg = f"Error in get_next_user_message: {str(e)}"
+        print(f"[ERROR] {error_msg}")
+        print(f"[ERROR] Traceback: {traceback.format_exc()}")
+        return {"next_user_message": "Please continue"}
 
 # Determine if the user is finished creating their AI agent or not
 async def route_user_message(state: AgentState):
-    prompt = f"""
-    The user has sent a message: 
-    
-    {state['latest_user_message']}
-
-    If the user wants to end the conversation, respond with just the text "finish_conversation".
-    If the user wants to continue coding the AI agent and gave feedback, respond with just the text "coder_agent".
-    If the user asks specifically to "refine" the agent, respond with just the text "refine".
     """
-
-    result = await router_agent.run(prompt)
+    Determine the next step based on the user's message.
     
-    if result.data == "finish_conversation": return "finish_conversation"
-    if result.data == "refine": return ["refine_prompt", "refine_tools", "refine_agent"]
-    return "coder_agent"
+    This function analyzes the user's latest message and determines the appropriate
+    next step in the conversation flow.
+    
+    Returns:
+        str or list: The next node(s) to transition to in the graph.
+            - "finish_conversation" if the user wants to end
+            - ["refine_prompt", "refine_tools", "refine_agent"] if refinement is needed
+            - "coder_agent" to continue coding
+    """
+    print("\n[DEBUG] ====== route_user_message ======")
+    print(f"[DEBUG] State keys: {state.keys()}")
+    
+    try:
+        # Get the next user message and update latest_user_message
+        next_message = state.get('next_user_message', '').strip()
+        print(f"[DEBUG] Next message: {next_message[:200]}..." if len(next_message) > 200 else f"[DEBUG] Next message: {next_message}")
+        
+        # Update latest_user_message with next_user_message and clear next_user_message
+        if next_message:
+            state['latest_user_message'] = next_message
+            state['next_user_message'] = ""
+        
+        latest_message = state.get('latest_user_message', '').strip()
+        
+        if not latest_message:
+            print("[DEBUG] No latest message, defaulting to coder_agent")
+            return "coder_agent"  # Default to coder_agent if no message
+            
+        # Prepare the prompt for the router agent
+        system_prompt = """You are a router that determines what to do next based on the user's message. 
+Respond with ONLY one of the following words (no other text or punctuation):
+- 'finish_conversation' if the user wants to end the conversation
+- 'refine' if the user wants to refine the agent
+- 'coder_agent' if the user wants to continue coding the agent"""
+        
+        messages = [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": latest_message}
+        ]
+        
+        print("[DEBUG] Prepared messages for router agent")
+        
+        # Get the router's decision
+        try:
+            print("[DEBUG] Calling router_agent.run...")
+            result = await router_agent.run(messages)
+            print(f"[DEBUG] Router agent response: {result}")
+            
+            # Clean and process the response
+            if not isinstance(result, str):
+                result = str(result)
+                print(f"[DEBUG] Converted router response to string: {result}")
+                
+            # Find which action was mentioned in the response
+            result = result.lower().strip()
+            print(f"[DEBUG] Processed router response: '{result}'")
+            
+            if 'finish' in result or 'end' in result or 'stop' in result:
+                print("[DEBUG] Router decision: finish_conversation")
+                return "finish_conversation"
+            elif 'refine' in result:
+                print("[DEBUG] Router decision: refine (triggering refine_prompt, refine_tools, refine_agent)")
+                return ["refine_prompt", "refine_tools", "refine_agent"]
+            else:
+                print(f"[DEBUG] No specific action detected in response, defaulting to coder_agent")
+                
+        except Exception as e:
+            error_msg = f"Error in router agent: {str(e)}"
+            print(f"[ERROR] {error_msg}")
+            print("[ERROR] Traceback:", traceback.format_exc())
+            # Default to coder_agent if there's an error
+            return "coder_agent"
+            
+        # Default to coder_agent if no clear action detected
+        print("[DEBUG] Defaulting to coder_agent (no clear action detected)")
+        return "coder_agent"
+        
+    except Exception as e:
+        error_msg = f"Error in route_user_message: {str(e)}"
+        print(f"[ERROR] {error_msg}")
+        print("[ERROR] Traceback:", traceback.format_exc())
+        # Default to coder_agent if there's an error
+        return "coder_agent"
 
 # Refines the prompt for the AI agent
 async def refine_prompt(state: AgentState):
@@ -293,7 +697,7 @@ async def finish_conversation(state: AgentState, writer):
         message_history.extend(ModelMessagesTypeAdapter.validate_json(message_row))
 
     # Run the agent in a stream
-    if not is_openai:
+    if not is_ollama:
         writer = get_stream_writer()
         result = await end_conversation_agent.run(state['latest_user_message'], message_history= message_history)
         writer(result.data)   
@@ -340,3 +744,13 @@ builder.add_edge("finish_conversation", END)
 # Configure persistence
 memory = MemorySaver()
 agentic_flow = builder.compile(checkpointer=memory)
+
+# Nettoyer l'URL de base pour éviter les doublons de /api
+clean_base_url = base_url.rstrip('/')
+if clean_base_url.endswith('/api'):
+    clean_base_url = clean_base_url[:-4]  # Enlever le /api final s'il existe
+
+agent_settings = {
+    "api_base": clean_base_url,
+    "use_tools": False
+}

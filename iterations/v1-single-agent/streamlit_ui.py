@@ -99,8 +99,12 @@ async def run_agent_with_streaming(user_input: str):
         st.session_state.messages.extend(filtered_messages)
 
         # Add the final response to the messages
+        from pydantic_ai.messages import TextPart
+        from pydantic_ai.usage import Usage
         st.session_state.messages.append(
-            ModelResponse(parts=[TextPart(content=partial_text)])
+            ModelResponse(
+                parts=[TextPart(content=partial_text)]
+            )
         )
 
 

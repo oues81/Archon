@@ -120,7 +120,20 @@ async def run_agent(thread_id: str, user_input: str) -> str:
 
 if __name__ == "__main__":
     write_to_log("Starting MCP server")
+    print("Démarrage du serveur MCP...")
     
-    # Run MCP server
-    mcp.run(transport='stdio')
-
+    try:
+        # Run MCP server with more verbose logging
+        print("Configuration du serveur MCP...")
+        mcp.run(transport='stdio')
+        print("Serveur MCP démarré avec succès")
+        
+        # Keep the server alive
+        while True:
+            import time
+            time.sleep(1)
+            
+    except Exception as e:
+        print(f"Erreur lors du démarrage du serveur MCP: {str(e)}")
+        write_to_log(f"Erreur lors du démarrage du serveur MCP: {str(e)}")
+        raise

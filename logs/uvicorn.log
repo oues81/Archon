@@ -1,0 +1,280 @@
+INFO:     Will watch for changes in these directories: ['/app']
+INFO:     Uvicorn running on http://0.0.0.0:8110 (Press CTRL+C to quit)
+INFO:     Started reloader process [9] using WatchFiles
+2025-07-18 01:58:23,549 - archon.advisor_agent - INFO - Configuration du modèle Ollama - URL: http://host.docker.internal:11434, Modèle: phi3:mini
+2025-07-18 01:58:23,566 - archon.advisor_agent - INFO - Agent conseiller initialisé avec le modèle: phi3:mini
+Initialized Ollama model 'phi3:mini' with base URL: http://host.docker.internal:11434
+Initialized Ollama reasoner model 'phi3:mini' with base URL: http://host.docker.internal:11434
+INFO:     Started server process [15]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     127.0.0.1:44568 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44572 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58810 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60772 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:48264 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:37796 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34092 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45782 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39424 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39028 - "GET /health HTTP/1.1" 200 OK
+INFO:     172.19.0.1:50222 - "POST /create_thread HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:42404 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:36726 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42396 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44838 - "GET /health HTTP/1.1" 200 OK
+INFO:     172.19.0.1:40950 - "POST /create_thread HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:48238 - "GET /health HTTP/1.1" 200 OK
+INFO:     172.19.0.1:57498 - "GET /health HTTP/1.1" 200 OK
+INFO:     172.19.0.1:38964 - "POST /invoke HTTP/1.1" 422 Unprocessable Entity
+[DEBUG] Starting invoke_agent for thread test-thread-123
+[DEBUG] Request message: Create a simple hello world agent
+[DEBUG] Is first message: True
+[DEBUG] Processing first message
+[DEBUG] Initial state created, starting agentic flow...
+[DEBUG] Initial state keys: dict_keys(['latest_user_message', 'next_user_message', 'messages', 'scope', 'advisor_output', 'file_list', 'refined_prompt', 'refined_tools', 'refined_agent'])
+
+[DEBUG] ====== advisor_with_examples ======
+[DEBUG] State keys: dict_keys(['latest_user_message', 'next_user_message', 'messages', 'scope', 'advisor_output', 'file_list', 'refined_prompt', 'refined_tools', 'refined_agent'])
+[DEBUG] Current directory: /app
+[DEBUG] Parent directory: /
+[DEBUG] Agent resources directory: /agent-resources
+[WARNING] Le répertoire des ressources n'existe pas: /agent-resources
+2025-07-18 02:05:09,487 - archon_graph - WARNING - Le répertoire des ressources n'existe pas: /agent-resources
+[DEBUG] Created directory: /agent-resources
+[DEBUG] Scanning agent resources directory...
+[DEBUG] Found 0 resource files
+[DEBUG] Created AdvisorDeps with file list
+[DEBUG] User message: Create a simple hello world agent
+[DEBUG] Prepared messages for advisor agent
+[DEBUG] Calling advisor_agent.run...
+02:05:09.938 advisor_agent run prompt=[{'role': 'user', 'content': 'Create a simple hello world agent'}]
+
+[DEBUG] ====== define_scope_with_reasoner ======
+[DEBUG] State keys: dict_keys(['latest_user_message', 'next_user_message', 'messages', 'scope', 'advisor_output', 'file_list', 'refined_prompt', 'refined_tools', 'refined_agent'])
+[DEBUG] Getting documentation pages from Supabase...
+2025-07-18 02:05:10,280 - httpx - INFO - HTTP Request: GET https://kyqznnxtdjteefvdkwto.supabase.co/rest/v1/site_pages?select=url&metadata-%3E%3Esource=eq.pydantic_ai_docs "HTTP/2 200 OK"
+[DEBUG] Found 85 documentation pages
+[DEBUG] Documentation pages prepared
+[DEBUG] Prepared prompt for reasoner
+[DEBUG] Prompt length: 3939 characters
+[DEBUG] Calling reasoner to define scope...
+02:05:10.289   preparing model request params run_step=1
+02:05:10.290   model request
+INFO:     127.0.0.1:59162 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53030 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:36412 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50692 - "GET /health HTTP/1.1" 200 OK
+[DEBUG] Scope defined: Scope Document: Anthropic Agent Development Guide Using GraphQL and PyDantic Models
+
+This guide will...
+[DEBUG] Creating workbench directory: /workbench
+[DEBUG] Writing scope to file: /workbench/scope.md
+[DEBUG] Scope written to file successfully.
+[DEBUG] Prepared return state with updated scope
+[ERROR] Erreur lors de l'exécution de l'agent conseiller: 'dict' object has no attribute 'requests'
+[ERROR] Traceback: Traceback (most recent call last):
+  File "/app/archon_graph.py", line 328, in advisor_with_examples
+    result = await advisor_agent.run(messages, deps=deps)
+  File "/usr/local/lib/python3.10/site-packages/pydantic_ai/agent.py", line 340, in run
+    end_result, _ = await graph.run(
+  File "/usr/local/lib/python3.10/site-packages/pydantic_graph/graph.py", line 187, in run
+    next_node = await self.next(next_node, history, state=state, deps=deps, infer_name=False)
+  File "/usr/local/lib/python3.10/site-packages/pydantic_graph/graph.py", line 263, in next
+    next_node = await node.run(ctx)
+  File "/usr/local/lib/python3.10/site-packages/pydantic_ai/_agent_graph.py", line 261, in run
+    ctx.state.usage.incr(request_usage, requests=1)
+  File "/usr/local/lib/python3.10/site-packages/pydantic_ai/usage.py", line 41, in incr
+    other_value = getattr(incr_usage, f)
+AttributeError: 'dict' object has no attribute 'requests'
+
+2025-07-18 02:07:09,348 - archon_graph - ERROR - Erreur lors de l'exécution de l'agent conseiller: 'dict' object has no attribute 'requests'
+Traceback (most recent call last):
+  File "/app/archon_graph.py", line 328, in advisor_with_examples
+    result = await advisor_agent.run(messages, deps=deps)
+  File "/usr/local/lib/python3.10/site-packages/pydantic_ai/agent.py", line 340, in run
+    end_result, _ = await graph.run(
+  File "/usr/local/lib/python3.10/site-packages/pydantic_graph/graph.py", line 187, in run
+    next_node = await self.next(next_node, history, state=state, deps=deps, infer_name=False)
+  File "/usr/local/lib/python3.10/site-packages/pydantic_graph/graph.py", line 263, in next
+    next_node = await node.run(ctx)
+  File "/usr/local/lib/python3.10/site-packages/pydantic_ai/_agent_graph.py", line 261, in run
+    ctx.state.usage.incr(request_usage, requests=1)
+  File "/usr/local/lib/python3.10/site-packages/pydantic_ai/usage.py", line 41, in incr
+    other_value = getattr(incr_usage, f)
+AttributeError: 'dict' object has no attribute 'requests'
+[DEBUG] Updated state with error information
+[DEBUG] Returning from advisor_with_examples
+[ERROR] Exception in agentic flow: 1 validation error for list[tagged-union[ModelRequest,ModelResponse]]
+  Invalid JSON: key must be a string at line 1 column 3 [type=json_invalid, input_value=b"[{'role': 'user', 'cont...le hello world agent'}]", input_type=bytes]
+    For further information visit https://errors.pydantic.dev/2.10/v/json_invalid
+[ERROR] Traceback: Traceback (most recent call last):
+  File "/app/graph_service.py", line 92, in invoke_agent
+    async for msg in agentic_flow.astream(
+  File "/usr/local/lib/python3.10/site-packages/langgraph/pregel/__init__.py", line 2768, in astream
+    async for _ in runner.atick(
+  File "/usr/local/lib/python3.10/site-packages/langgraph/pregel/runner.py", line 401, in atick
+    _panic_or_proceed(
+  File "/usr/local/lib/python3.10/site-packages/langgraph/pregel/runner.py", line 511, in _panic_or_proceed
+    raise exc
+  File "/usr/local/lib/python3.10/site-packages/langgraph/pregel/retry.py", line 137, in arun_with_retry
+    return await task.proc.ainvoke(task.input, config)
+  File "/usr/local/lib/python3.10/site-packages/langgraph/utils/runnable.py", line 676, in ainvoke
+    input = await step.ainvoke(input, config, **kwargs)
+  File "/usr/local/lib/python3.10/site-packages/langgraph/utils/runnable.py", line 440, in ainvoke
+    ret = await self.afunc(*args, **kwargs)
+  File "/app/archon_graph.py", line 445, in coder_agent
+    message_history.extend(ModelMessagesTypeAdapter.validate_json(message_row))
+  File "/usr/local/lib/python3.10/site-packages/pydantic/type_adapter.py", line 446, in validate_json
+    return self.validator.validate_json(
+pydantic_core._pydantic_core.ValidationError: 1 validation error for list[tagged-union[ModelRequest,ModelResponse]]
+  Invalid JSON: key must be a string at line 1 column 3 [type=json_invalid, input_value=b"[{'role': 'user', 'cont...le hello world agent'}]", input_type=bytes]
+    For further information visit https://errors.pydantic.dev/2.10/v/json_invalid
+
+[ERROR] Exception invoking Archon for thread test-thread-123: 1 validation error for list[tagged-union[ModelRequest,ModelResponse]]
+  Invalid JSON: key must be a string at line 1 column 3 [type=json_invalid, input_value=b"[{'role': 'user', 'cont...le hello world agent'}]", input_type=bytes]
+    For further information visit https://errors.pydantic.dev/2.10/v/json_invalid
+[ERROR] Traceback: Traceback (most recent call last):
+  File "/app/graph_service.py", line 92, in invoke_agent
+    async for msg in agentic_flow.astream(
+  File "/usr/local/lib/python3.10/site-packages/langgraph/pregel/__init__.py", line 2768, in astream
+    async for _ in runner.atick(
+  File "/usr/local/lib/python3.10/site-packages/langgraph/pregel/runner.py", line 401, in atick
+    _panic_or_proceed(
+  File "/usr/local/lib/python3.10/site-packages/langgraph/pregel/runner.py", line 511, in _panic_or_proceed
+    raise exc
+  File "/usr/local/lib/python3.10/site-packages/langgraph/pregel/retry.py", line 137, in arun_with_retry
+    return await task.proc.ainvoke(task.input, config)
+  File "/usr/local/lib/python3.10/site-packages/langgraph/utils/runnable.py", line 676, in ainvoke
+    input = await step.ainvoke(input, config, **kwargs)
+  File "/usr/local/lib/python3.10/site-packages/langgraph/utils/runnable.py", line 440, in ainvoke
+    ret = await self.afunc(*args, **kwargs)
+  File "/app/archon_graph.py", line 445, in coder_agent
+    message_history.extend(ModelMessagesTypeAdapter.validate_json(message_row))
+  File "/usr/local/lib/python3.10/site-packages/pydantic/type_adapter.py", line 446, in validate_json
+    return self.validator.validate_json(
+pydantic_core._pydantic_core.ValidationError: 1 validation error for list[tagged-union[ModelRequest,ModelResponse]]
+  Invalid JSON: key must be a string at line 1 column 3 [type=json_invalid, input_value=b"[{'role': 'user', 'cont...le hello world agent'}]", input_type=bytes]
+    For further information visit https://errors.pydantic.dev/2.10/v/json_invalid
+
+INFO:     172.19.0.1:38966 - "POST /invoke HTTP/1.1" 500 Internal Server Error
+INFO:     127.0.0.1:44768 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58808 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46016 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51918 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45906 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59590 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:35736 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54446 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41894 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52798 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:47130 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49932 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:48246 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:37238 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58782 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:38864 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59202 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33240 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59378 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50620 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54764 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42188 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44454 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58766 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:43756 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:43990 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:47300 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49390 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46774 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:36458 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46252 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52630 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:35612 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42688 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:47520 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:36178 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44096 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:37814 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57916 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50520 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33298 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60814 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:38824 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41790 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41804 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58432 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49768 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57374 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53418 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55038 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52608 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55622 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:38044 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55794 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45288 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60950 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:47584 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34056 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54054 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45196 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44430 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44306 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:43956 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:43524 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56942 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53138 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59042 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:41576 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58230 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53332 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49602 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57524 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53728 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51784 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:35938 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56628 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46510 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:36982 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52416 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:40470 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:35464 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52620 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44110 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46150 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51522 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44552 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56076 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44178 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46798 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:48140 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49474 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42542 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:47372 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53712 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53830 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:48838 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59374 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:47386 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:47288 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53098 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59228 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:36586 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33040 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54292 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44576 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44546 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:38420 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55472 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:37234 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59896 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56644 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60174 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60732 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53950 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:32942 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60018 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39992 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53846 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53556 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56552 - "GET /health HTTP/1.1" 200 OK

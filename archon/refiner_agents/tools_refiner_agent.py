@@ -12,9 +12,7 @@ from typing import List
 from pydantic import BaseModel
 from pydantic_ai import Agent, ModelRetry, RunContext
 from pydantic_ai.models.anthropic import AnthropicModel
-from pydantic_ai.models.openai import OpenAIModel
-from openai import AsyncOpenAI
-from supabase import Client
+from archon.models.ollama_model import OllamaModel
 
 # Add the parent directory to sys.path to allow importing from the parent directory
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
@@ -29,12 +27,22 @@ from archon.agent_tools import (
 
 load_dotenv()
 
-provider = get_env_var('LLM_PROVIDER') or 'OpenAI'
-llm = get_env_var('PRIMARY_MODEL') or 'gpt-4o-mini'
-base_url = get_env_var('BASE_URL') or 'https://api.openai.com/v1'
+provider = get_env_var('LLM_PROVIDER') or 'Ollama'  # Par défaut sur Ollama
+llm = get_env_var('LLM_MODEL') or 'phi3:mini'  # Modèle par défaut mis à jour
+base_url = get_env_var('BASE_URL') or 'http://localhost:11434'  # Utilisation de localhost par défaut
 api_key = get_env_var('LLM_API_KEY') or 'no-llm-api-key-provided'
 
-model = AnthropicModel(llm, api_key=api_key) if provider == "Anthropic" else OpenAIModel(llm, base_url=base_url, api_key=api_key)
+# Configuration du modèle en fonction du fournisseur
+if provider == "Anthropic":
+    model = AnthropicModel(llm, api_key=api_key)
+elif provider == "Ollama":
+    # Pour Ollama, on utilise OllamaModel avec l'URL de base
+    model_name = llm.split(':')[0]  # Prendre juste le nom du modèle sans le tag
+    model = OllamaModel(model_name=model_name, base_url=base_url)
+else:
+    # Par défaut, on utilise OpenAI
+    model = llm
+
 embedding_model = get_env_var('EMBEDDING_MODEL') or 'text-embedding-3-small'
 
 logfire.configure(send_to_logfire='if-token-present')
