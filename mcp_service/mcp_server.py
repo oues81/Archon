@@ -12,8 +12,8 @@ import os
 # Load environment variables from .env file
 load_dotenv()
 
-# Initialize FastMCP server with ERROR logging level
-mcp = FastMCP("archon", log_level="ERROR")
+# Initialize FastMCP server with DEBUG logging level for better visibility
+mcp = FastMCP("archon", log_level="DEBUG")
 
 # Store active threads
 active_threads: Dict[str, List[str]] = {}
@@ -22,23 +22,33 @@ active_threads: Dict[str, List[str]] = {}
 GRAPH_SERVICE_URL = os.getenv("GRAPH_SERVICE_URL", "http://localhost:8100")
 
 def write_to_log(message: str):
-    """Write a message to the logs.txt file in the workbench directory.
+    """Write a message to the logs.txt file in the workbench directory and print to stderr.
     
     Args:
         message: The message to log
     """
-    # Get the directory one level up from the current file
-    current_dir = os.path.dirname(os.path.abspath(__file__))
-    parent_dir = os.path.dirname(current_dir)
-    workbench_dir = os.path.join(parent_dir, "workbench")
-    log_path = os.path.join(workbench_dir, "logs.txt")
-    os.makedirs(workbench_dir, exist_ok=True)
+    try:
+        # Get the directory one level up from the current file
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        parent_dir = os.path.dirname(current_dir)
+        workbench_dir = os.path.join(parent_dir, "workbench")
+        log_path = os.path.join(workbench_dir, "logs.txt")
+        os.makedirs(workbench_dir, exist_ok=True)
 
-    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    log_entry = f"[{timestamp}] {message}\n"
-
-    with open(log_path, "a", encoding="utf-8") as f:
-        f.write(log_entry)
+        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        log_entry = f"[{timestamp}] {message}"
+        
+        # Print to stderr (visible in Docker logs)
+        print(log_entry, file=sys.stderr)
+        
+        # Also write to log file
+        with open(log_path, "a", encoding="utf-8") as f:
+            f.write(f"{log_entry}\n")
+            
+    except Exception as e:
+        # If logging fails, at least print the error to stderr
+        print(f"[ERROR] Failed to write to log: {str(e)}", file=sys.stderr)
+        print(f"[ERROR] Original message: {message}", file=sys.stderr)
 
 @mcp.tool()
 async def create_thread() -> str:
@@ -119,21 +129,36 @@ async def run_agent(thread_id: str, user_input: str) -> str:
 
 
 if __name__ == "__main__":
-    write_to_log("Starting MCP server")
-    print("Démarrage du serveur MCP...")
-    
     try:
-        # Run MCP server with more verbose logging
-        print("Configuration du serveur MCP...")
-        mcp.run(transport='stdio')
-        print("Serveur MCP démarré avec succès")
+        write_to_log("Démarrage du serveur MCP...")
         
-        # Keep the server alive
+        # Run MCP server with stdio transport
+        write_to_log("Configuration du serveur MCP...")
+        
+        # Démarrer le serveur MCP dans un thread séparé
+        import threading
+        import time
+        
+        def run_mcp():
+            try:
+                mcp.run(transport='stdio')
+            except Exception as e:
+                write_to_log(f"Erreur dans le thread MCP: {str(e)}")
+                os._exit(1)
+        
+        # Démarrer le thread MCP
+        mcp_thread = threading.Thread(target=run_mcp, daemon=True)
+        mcp_thread.start()
+        
+        write_to_log("Serveur MCP démarré avec succès")
+        
+        # Garder le processus principal en vie
         while True:
-            import time
             time.sleep(1)
             
     except Exception as e:
-        print(f"Erreur lors du démarrage du serveur MCP: {str(e)}")
-        write_to_log(f"Erreur lors du démarrage du serveur MCP: {str(e)}")
+        error_msg = f"Erreur lors du démarrage du serveur MCP: {str(e)}"
+        write_to_log(error_msg)
+        # Écrire l'erreur dans stderr pour qu'elle soit visible dans les logs Docker
+        sys.stderr.write(f"{error_msg}\n")
         raise

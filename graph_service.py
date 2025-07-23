@@ -1,9 +1,12 @@
 import traceback
 import sys
 import os
+import json
+from datetime import datetime
 
 # Ajouter le répertoire racine au PYTHONPATH
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+sys.path.insert(0, os.path.abspath(os.path.dirname(__file__)))
 
 # Appliquer le correctif pour TypedDict
 try:
@@ -15,7 +18,20 @@ from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
 from typing_extensions import TypedDict
 from typing import Optional, Dict, Any, List
-from archon_graph import agentic_flow
+
+# Importer agentic_flow depuis le bon emplacement
+try:
+    from archon_graph import agentic_flow
+except ImportError as e:
+    # Essayer d'importer directement depuis le même répertoire
+    try:
+        from .archon.archon_graph import agentic_flow
+    except ImportError:
+        # Essayer d'importer depuis le même niveau
+        try:
+            from archon_graph import agentic_flow
+        except ImportError as e2:
+            raise ImportError(f"Impossible d'importer agentic_flow: {e}\nTentative alternative a échoué: {e2}")
 try:
     from langgraph.types import Command
 except ImportError:
@@ -70,40 +86,82 @@ async def invoke_agent(request: InvokeRequest):
             write_to_log(f"Processing first message for thread {request.thread_id}")
             
             # Initialiser l'état avec tous les champs requis par AgentState
+            # Créer un message utilisateur correctement formaté selon le schéma attendu
+            user_message = {
+                "kind": "request",  # Doit être 'request' ou 'response'
+                "parts": [{
+                    "part_kind": "user-prompt",
+                    "content": request.message,
+                    "timestamp": datetime.utcnow().isoformat()
+                }]
+            }
+            
+            # Convertir le message en bytes pour le stockage dans l'état
+            message_bytes = json.dumps([user_message]).encode('utf-8')
+            
             initial_state = {
                 "latest_user_message": request.message,
                 "next_user_message": "",
-                "messages": [],
+                "messages": [message_bytes],  # Stocker le message formaté
                 "scope": "",
                 "advisor_output": "",
                 "file_list": [],
                 "refined_prompt": "",
                 "refined_tools": "",
-                "refined_agent": ""
+                "refined_agent": "",
+                "config": config
             }
             
             print("[DEBUG] Initial state created, starting agentic flow...")
             print(f"[DEBUG] Initial state keys: {initial_state.keys()}")
+            print("[DEBUG] Message bytes content:", message_bytes.decode('utf-8'))
+            print("[DEBUG] Initial state content:", json.dumps(initial_state, default=str)[:500] + "..." if len(json.dumps(initial_state, default=str)) > 500 else json.dumps(initial_state, default=str))
             
             # Ajouter un compteur pour suivre les itérations
             iteration = 0
             
             try:
+                final_state = None
                 async for msg in agentic_flow.astream(
                     initial_state, 
                     config,
-                    stream_mode="custom"
+                    stream_mode="values"
                 ):
                     iteration += 1
-                    print(f"[DEBUG] Received message {iteration} from agentic flow")
+                    print(f"[DEBUG] Received state update {iteration} from agentic flow")
                     print(f"[DEBUG] Message type: {type(msg)}")
-                    print(f"[DEBUG] Message content: {str(msg)[:200]}..." if len(str(msg)) > 200 else f"[DEBUG] Message content: {str(msg)}")
-                    response += str(msg)
+                    
+                    # msg contient l'état complet à chaque étape
+                    if isinstance(msg, dict):
+                        final_state = msg
+                        # Extraire la réponse générée si disponible
+                        if 'generated_code' in msg and msg['generated_code']:
+                            print(f"[DEBUG] Generated code found: {msg['generated_code'][:100]}...")
+                        if 'scope' in msg and msg['scope']:
+                            print(f"[DEBUG] Scope found: {msg['scope'][:100]}...")
+                        if 'advisor_output' in msg and msg['advisor_output']:
+                            print(f"[DEBUG] Advisor output found: {msg['advisor_output'][:100]}...")
                     
                     # Vérifier si nous sommes bloqués dans une boucle
                     if iteration > 10:  # Limite arbitraire pour éviter les boucles infinies
                         print("[WARNING] Possible infinite loop detected, breaking after 10 iterations")
                         break
+                
+                # Extraire la réponse finale de l'état
+                if final_state:
+                    # Priorité à generated_code, puis advisor_output, puis scope
+                    if final_state.get('generated_code'):
+                        response = final_state['generated_code']
+                        print(f"[DEBUG] Using generated_code as response: {len(response)} characters")
+                    elif final_state.get('advisor_output'):
+                        response = final_state['advisor_output']
+                        print(f"[DEBUG] Using advisor_output as response: {len(response)} characters")
+                    elif final_state.get('scope'):
+                        response = final_state['scope']
+                        print(f"[DEBUG] Using scope as response: {len(response)} characters")
+                    else:
+                        print("[WARNING] No generated content found in final state")
+                        print(f"[DEBUG] Final state keys: {list(final_state.keys()) if final_state else 'None'}")
                         
             except Exception as e:
                 print(f"[ERROR] Exception in agentic flow: {str(e)}")
@@ -125,27 +183,63 @@ async def invoke_agent(request: InvokeRequest):
                     "file_list": [],
                     "refined_prompt": "",
                     "refined_tools": "",
-                    "refined_agent": ""
+                    "refined_agent": "",
+                    "config": config
                 }
                 
+                final_state = None
                 async for msg in agentic_flow.astream(
                     initial_state,
                     config,
-                    stream_mode="custom"
+                    stream_mode="values"
                 ):
-                    response += str(msg)
+                    print(f"[DEBUG] Continuation: Received state update from agentic flow")
+                    if isinstance(msg, dict):
+                        final_state = msg
+                
+                # Extraire la réponse finale de l'état
+                if final_state:
+                    # Priorité à generated_code, puis advisor_output, puis scope
+                    if final_state.get('generated_code'):
+                        response = final_state['generated_code']
+                    elif final_state.get('advisor_output'):
+                        response = final_state['advisor_output']
+                    elif final_state.get('scope'):
+                        response = final_state['scope']
             except Exception as e:
                 print(f"[ERROR] Exception in continuation flow: {str(e)}")
                 print("[ERROR] Traceback:", traceback.format_exc())
                 raise
 
-        print(f"[DEBUG] Final response length: {len(response)} characters")
-        write_to_log(f"Final response for thread {request.thread_id}: {response[:200]}...")
+        print(f"[DEBUG] Final response length: {len(str(response))} characters")
+        write_to_log(f"Final response for thread {request.thread_id}: {str(response)[:200]}...")
         
-        # Vérifier que la réponse n'est pas vide
+        # Vérifier que la réponse n'est pas vide et la formater correctement
         if not response:
             print("[WARNING] Empty response from agentic flow")
             response = "Désolé, je n'ai pas pu générer de réponse. Veuillez réessayer."
+        
+        # Si la réponse est un dictionnaire (comme une réponse Ollama brute), essayer d'extraire le contenu
+        if isinstance(response, dict):
+            print(f"[DEBUG] Raw response is a dictionary, extracting content. Keys: {list(response.keys())}")
+            # Essayer d'extraire le contenu de différentes manières selon le format de la réponse
+            if 'content' in response:
+                response = response['content']
+            elif 'response' in response:
+                response = response['response']
+            elif 'message' in response and isinstance(response['message'], dict) and 'content' in response['message']:
+                response = response['message']['content']
+            else:
+                # Si on ne peut pas extraire de contenu, convertir en JSON pour l'affichage
+                response = json.dumps(response, indent=2)
+        
+        # S'assurer que la réponse est une chaîne de caractères
+        if not isinstance(response, str):
+            try:
+                response = str(response)
+            except Exception as e:
+                print(f"[ERROR] Failed to convert response to string: {e}")
+                response = "Désolé, une erreur est survenue lors du formatage de la réponse."
             
         return {"response": response}
         

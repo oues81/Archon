@@ -21,7 +21,8 @@ import asyncio
 import httpx
 import json
 from pydantic import BaseModel
-from pydantic_ai import Agent as PydanticAgent, ModelRetry, RunContext
+from pydantic_ai.agent import PydanticAgent
+from pydantic_ai.settings import ModelSettings
 from pydantic_ai.models.anthropic import AnthropicModel
 from pydantic_ai.models.openai import OpenAIModel
 from pydantic_ai.models import Model as BaseModel
@@ -100,17 +101,15 @@ if provider == 'Ollama':
     
     logger.info(f"Configuration du modèle Ollama - URL: {ollama_base_url}, Modèle: {model_name}")
 else:
-    # Pour OpenAI, on utilise directement le modèle OpenAI
+    # Pour les fournisseurs compatibles OpenAI, on utilise le 'provider' qui se charge de la configuration
     from pydantic_ai.models.openai import OpenAIModel
     model_name = llm
-    model = OpenAIModel(llm, base_url=base_url, api_key=api_key)
-    model_config = {
-        'model': model_name,
-        'model_kwargs': {
-            'base_url': base_url,
-            'api_key': api_key
-        }
-    }
+    llm_provider = os.getenv("LLM_PROVIDER", "ollama")
+    # La bibliothèque pydantic-ai utilise le nom du fournisseur pour trouver les variables d'environnement
+    # (ex: OPENROUTER_API_KEY) et configurer le client automatiquement.
+    model = OpenAIModel(model_name, provider=llm_provider.lower())
+    model_settings = ModelSettings(temperature=0.0, top_p=1.0)
+
 
 logfire.configure(send_to_logfire='if-token-present')
 
@@ -154,7 +153,7 @@ if provider == 'Ollama':
             async def agent_model(self, function_tools=None, **kwargs):
                 return self
                 
-            async def request(self, messages, model_settings=None, function_tools=None, **kwargs):
+            async def request(self, messages, model_settings=None, **kwargs):
                 try:
                     # Convertir les messages si nécessaire
                     formatted_messages = []
@@ -214,11 +213,11 @@ else:
     # Pour les autres fournisseurs (OpenAI, etc.), utiliser la configuration standard
     try:
         advisor_agent = PydanticAgent(
-            model=model_name,
+            model=model,
             system_prompt=advisor_prompt,
             deps_type=AdvisorDeps,
             retries=2,
-            **model_config
+            model_settings=model_settings,
         )
         logger.info(f"Agent conseiller initialisé avec le modèle: {model_name}")
     except Exception as e:

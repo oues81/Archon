@@ -39,6 +39,11 @@ if [ ! -f "$WORKSPACE_DIR/env_vars.json" ] && [ -f "$WORKSPACE_DIR/env_vars.json
     cp "$WORKSPACE_DIR/env_vars.json.example" "$WORKSPACE_DIR/env_vars.json"
 fi
 
+# Démarrer le serveur MCP en arrière-plan
+echo "Démarrage du serveur MCP..."
+rm -f "$LOG_DIR/mcp_server.log"
+python /app/mcp_service/mcp_server.py > "$LOG_DIR/mcp_server.log" 2>&1 &
+
 # Démarrer le service principal en arrière-plan
 echo "Démarrage du service principal Archon..."
 cd /app

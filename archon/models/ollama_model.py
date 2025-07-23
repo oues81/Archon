@@ -1,13 +1,24 @@
-from typing import Any, Dict, List, Optional, AsyncIterator, Union, cast
+from typing import Any, Dict, List, Optional, AsyncIterator, Union, cast, AsyncGenerator
+from contextlib import asynccontextmanager
 import aiohttp
 import asyncio
 import json
 import os
+from datetime import datetime
+import time
+import uuid
 
-# Importations compatibles avec pydantic-ai 0.0.22
-from pydantic_ai import models
+# Importations compatibles avec pydantic-ai
 from pydantic_ai.models import Model, ModelMessage, ModelSettings, ModelResponse
-from pydantic_ai.messages import SystemPromptPart, UserPromptPart, ToolReturnPart
+from pydantic_ai.usage import Usage
+from pydantic_ai.messages import TextPart
+
+# Ajout pour éviter les problèmes d'importation circulaire
+import sys
+from pathlib import Path
+
+# Ajout du répertoire parent au path pour permettre les imports
+sys.path.append(str(Path(__file__).parent.parent))
 
 
 class OllamaModel(Model):
@@ -63,6 +74,7 @@ class OllamaModel(Model):
         self,
         messages: List[Union[ModelMessage, Dict[str, Any]]],
         model_settings: Optional[ModelSettings] = None,
+        model_request_parameters = None,
         **kwargs
     ) -> Dict[str, Any]:
         """
@@ -71,6 +83,7 @@ class OllamaModel(Model):
         Args:
             messages: Liste des messages de la conversation
             model_settings: Paramètres du modèle
+            model_request_parameters: Paramètres spécifiques à la requête
             **kwargs: Arguments supplémentaires pour la requête
             
         Returns:
@@ -79,10 +92,19 @@ class OllamaModel(Model):
         # Convertir les messages au format attendu par Ollama
         ollama_messages = []
         for msg in messages:
-            if isinstance(msg, SystemPromptPart):
-                ollama_messages.append({"role": "system", "content": msg.text})
-            elif isinstance(msg, UserPromptPart):
-                ollama_messages.append({"role": "user", "content": msg.text})
+            if hasattr(msg, 'parts'):
+                # Handle ModelMessage with parts
+                for part in msg.parts:
+                    if hasattr(part, 'content'):
+                        role = "user"
+                        if hasattr(part, 'part_kind'):
+                            if 'system' in part.part_kind:
+                                role = "system"
+                            elif 'assistant' in part.part_kind or 'text' in part.part_kind:
+                                role = "assistant"
+                        ollama_messages.append({"role": role, "content": part.content})
+            elif hasattr(msg, 'content'):
+                ollama_messages.append({"role": "user", "content": msg.content})
             elif isinstance(msg, dict) and 'role' in msg and 'content' in msg:
                 # Gestion des messages déjà au bon format
                 ollama_messages.append({"role": msg['role'], "content": msg['content']})
@@ -97,65 +119,142 @@ class OllamaModel(Model):
             **params
         )
         
-        # Créer un objet de réponse standardisé
-        return {
-            "content": response.get("message", {}).get("content", ""),
-            "model": self._model_name,
-            "usage": {
-                "requests": 1,
-                "tokens": {
-                    "prompt": 0,
-                    "completion": 0,
-                    "total": 0
-                }
-            }
-        }
+        # Extraire le contenu de la réponse
+        content = response.get("message", {}).get("content", "")
+        
+        # Créer un objet Usage approprié
+        prompt_tokens = len(str(messages))  # Estimation grossière
+        completion_tokens = len(content.split()) if content else 0
+        usage = Usage(
+            requests=1,
+            request_tokens=prompt_tokens,
+            response_tokens=completion_tokens,
+            total_tokens=prompt_tokens + completion_tokens
+        )
+        
+        # Créer une réponse ModelResponse avec les champs requis par Pydantic AI
+        model_response = ModelResponse(
+            parts=[TextPart(content)],
+            model_name=self._model_name,
+            usage=usage
+        )
+        
+        return model_response
     
+    @asynccontextmanager
     async def request_stream(
         self,
         messages: List[Union[ModelMessage, Dict[str, Any]]],
-        model_settings: Optional[ModelSettings] = None,
+        model_settings: Optional[Union[ModelSettings, Dict[str, Any]]] = None,
+        model_request_parameters: Optional[Any] = None,
         **kwargs
-    ) -> AsyncIterator[Dict[str, Any]]:
+    ) -> AsyncIterator[AsyncIterator[Dict[str, Any]]]:
         """
         Envoie une requête en streaming au modèle Ollama.
         
         Args:
             messages: Liste des messages de la conversation
-            model_settings: Paramètres du modèle
-            **kwargs: Arguments supplémentaires pour la requête
+            model_settings: Paramètres du modèle (temperature, max_tokens, etc.)
+            model_request_parameters: Paramètres spécifiques à la requête (peut être un objet ou un dict)
+            **kwargs: Arguments supplémentaires passés à l'API Ollama
             
         Yields:
-            Des morceaux de la réponse du modèle au fur et à mesure qu'ils sont reçus
+            Un itérateur asynchrone de chunks de réponse formatés
         """
         # Convertir les messages au format attendu par Ollama
         ollama_messages = []
         for msg in messages:
-            if isinstance(msg, SystemPromptPart):
-                ollama_messages.append({"role": "system", "content": msg.text})
-            elif isinstance(msg, UserPromptPart):
-                ollama_messages.append({"role": "user", "content": msg.text})
-            elif isinstance(msg, dict) and 'role' in msg and 'content' in msg:
-                # Gestion des messages déjà au bon format
-                ollama_messages.append({"role": msg['role'], "content": msg['content']})
+            if isinstance(msg, dict):
+                ollama_messages.append({
+                    'role': msg.get('role', 'user'),
+                    'content': msg.get('content', '')
+                })
+            elif hasattr(msg, 'role') and hasattr(msg, 'content'):
+                ollama_messages.append({
+                    'role': msg.role,
+                    'content': msg.content
+                })
         
         # Préparer les paramètres de la requête
-        params = self._prepare_generation_parameters(model_settings, **kwargs)
+        params = {}
         
-        # Effectuer la requête en streaming
-        async for chunk in self._client.chat_stream(
-            messages=ollama_messages,
-            model=self._model_name,
-            **params
-        ):
-            # Renvoyer chaque morceau de réponse
-            content = chunk.get("message", {}).get("content", "")
-            if content:
-                yield {
-                    "content": content,
-                    "model": self._model_name,
-                    "done": chunk.get("done", False)
-                }
+        # Ajouter les paramètres du modèle s'ils sont fournis
+        if model_settings is not None:
+            if isinstance(model_settings, dict):
+                params.update(model_settings)
+            else:
+                # Convertir l'objet ModelSettings en dict
+                model_settings_dict = {}
+                for field in model_settings.__fields__:
+                    value = getattr(model_settings, field, None)
+                    if value is not None:
+                        model_settings_dict[field] = value
+                params.update(model_settings_dict)
+        
+        # Ajouter les paramètres de requête spécifiques s'ils sont fournis
+        if model_request_parameters is not None:
+            if hasattr(model_request_parameters, 'dict'):
+                # Si c'est un objet Pydantic avec une méthode dict()
+                params.update(model_request_parameters.dict())
+            elif hasattr(model_request_parameters, '__dict__'):
+                # Si c'est un objet avec __dict__
+                params.update(vars(model_request_parameters))
+            elif isinstance(model_request_parameters, dict):
+                # Si c'est déjà un dictionnaire
+                params.update(model_request_parameters)
+            
+        # Ajouter les autres paramètres
+        params.update(kwargs)
+        
+        # Créer un générateur asynchrone pour le streaming
+        async def stream_generator():
+            full_content = ""
+            try:
+                async for chunk in self._client.chat_stream(
+                    messages=ollama_messages,
+                    model=self._model_name,
+                    **{k: v for k, v in params.items() if v is not None}
+                ):
+                    content = chunk.get("message", {}).get("content", "")
+                    if content:
+                        full_content += content
+                        # Créer un objet Usage approprié
+                        prompt_tokens = len(str(messages))
+                        completion_tokens = len(full_content.split())
+                        usage = Usage(
+                            requests=1,
+                            request_tokens=prompt_tokens,
+                            response_tokens=completion_tokens,
+                            total_tokens=prompt_tokens + completion_tokens
+                        )
+                        
+                        # Créer un objet de réponse avec l'attribut usage
+                        response = {
+                            "id": f"chatcmpl-{str(uuid.uuid4())}",
+                            "object": "chat.completion.chunk",
+                            "created": int(time.time()),
+                            "model": self._model_name,
+                            "choices": [{
+                                "index": 0,
+                                "delta": {
+                                    "content": content,
+                                    "role": "assistant"
+                                },
+                                "finish_reason": None if not chunk.get("done") else "stop"
+                            }],
+                            "usage": usage
+                        }
+                        yield response
+            except Exception as e:
+                print(f"Error in stream: {str(e)}")
+                raise
+        
+        # Retourner le générateur dans un gestionnaire de contexte
+        try:
+            yield stream_generator()
+        except Exception as e:
+            print(f"Error in request_stream: {str(e)}")
+            raise
     
     def _prepare_generation_parameters(
         self,
@@ -309,7 +408,21 @@ class OllamaClient:
         model: str,
         **kwargs
     ) -> AsyncIterator[Dict[str, Any]]:
-        """Effectue une conversation en streaming avec un modèle Ollama."""
+        """
+        Effectue une conversation en streaming avec un modèle Ollama.
+        
+        Args:
+            messages: Liste des messages de la conversation
+            model: Nom du modèle Ollama à utiliser
+            **kwargs: Arguments supplémentaires pour la requête
+            
+        Yields:
+            Des morceaux de la réponse du modèle au fur et à mesure qu'ils sont reçus
+            
+        Raises:
+            TimeoutError: Si la requête dépasse le délai imparti
+            aiohttp.ClientError: En cas d'erreur de requête HTTP
+        """
         url = f"{self.base_url}/api/chat"
         payload = {
             "model": model,
@@ -325,59 +438,87 @@ class OllamaClient:
             try:
                 async with session.post(url, json=payload) as response:
                     response.raise_for_status()
+                    
+                    # Lire les données en streaming avec un timeout
+                    start_time = asyncio.get_event_loop().time()
+                    timeout = 300  # 5 minutes en secondes
+                    full_content = ""
+                    
                     async for line in response.content:
+                        # Vérifier le temps écoulé
+                        elapsed = asyncio.get_event_loop().time() - start_time
+                        if elapsed > timeout:
+                            raise asyncio.TimeoutError("La requête en streaming a expiré après 5 minutes")
+                            
                         if line:
                             line = line.decode('utf-8').strip()
                             if line.startswith('data: '):
                                 try:
                                     data = json.loads(line[6:])  # Enlève 'data: ' du début
+                                    # Mettre à jour le contenu complet
+                                    if 'message' in data and 'content' in data['message']:
+                                        full_content += data['message']['content']
+                                    
+                                    # Ajouter les informations d'utilisation à chaque chunk
+                                    token_count = len(full_content.split()) if full_content else 0
+                                    data['usage'] = Usage(
+                                        requests=1,
+                                        request_tokens=0,  # Pas d'information sur les tokens du prompt dans le streaming
+                                        response_tokens=token_count,
+                                        total_tokens=token_count
+                                    )
+                                    
                                     yield data
                                 except json.JSONDecodeError:
                                     continue
+            except asyncio.CancelledError:
+                raise
             except Exception as e:
                 print(f"Erreur lors du streaming: {str(e)}")
                 raise
         
-        # Créer un générateur asynchrone pour le streaming
-        stream_gen = stream_response()
+        # Créer une tâche pour le streaming
+        stream_task = asyncio.create_task(stream_response().__anext__())
         
         try:
-            # Itérer sur le générateur avec un timeout global
-            start_time = asyncio.get_event_loop().time()
-            timeout = 300  # 5 minutes en secondes
-            
+            # Attendre les résultats avec un timeout global
             while True:
                 try:
-                    # Vérifier le temps écoulé
-                    elapsed = asyncio.get_event_loop().time() - start_time
-                    if elapsed > timeout:
-                        raise TimeoutError("La requête en streaming a expiré après 5 minutes")
-                    
-                    # Obtenir le prochain élément avec un timeout court
-                    try:
-                        item = await asyncio.wait_for(stream_gen.__anext__(), timeout=5)
-                        yield item
-                    except asyncio.TimeoutError:
-                        # Vérifier si nous avons dépassé le temps total
-                        elapsed = asyncio.get_event_loop().time() - start_time
-                        if elapsed > timeout:
-                            raise TimeoutError("La requête en streaming a expiré après 5 minutes")
-                        # Sinon, continuer à attendre
-                        continue
-                        
+                    # Utiliser un timeout court pour permettre la vérification périodique
+                    item = await asyncio.wait_for(stream_task, timeout=5)
+                    yield item
+                    # Préparer la prochaine itération
+                    stream_task = asyncio.create_task(stream_response().__anext__())
                 except StopAsyncIteration:
                     break
-                    
+                except asyncio.TimeoutError as e:
+                    # Vérifier si la tâche est terminée avec une erreur
+                    if stream_task.done():
+                        try:
+                            await stream_task  # Pour lever l'erreur si elle existe
+                        except StopAsyncIteration:
+                            break
+                        except Exception as e:
+                            raise
+                    # Sinon, continuer à attendre
+                    continue
         except asyncio.CancelledError:
-            raise
-        except Exception as e:
-            print(f"Erreur lors du traitement du streaming: {str(e)}")
-            raise
-                    
-        except asyncio.CancelledError:
-            if 'stream_task' in locals():
+            # Annuler la tâche en cours si elle existe
+            if not stream_task.done():
                 stream_task.cancel()
+                try:
+                    await stream_task
+                except (asyncio.CancelledError, StopAsyncIteration):
+                    pass
             raise
+        finally:
+            # Nettoyer la tâche si elle existe toujours
+            if not stream_task.done():
+                stream_task.cancel()
+                try:
+                    await stream_task
+                except (asyncio.CancelledError, StopAsyncIteration):
+                    pass
     
     async def _handle_streaming_response(self, response) -> Dict[str, Any]:
         """Traite une réponse en streaming et renvoie un objet de réponse unifié."""
@@ -393,11 +534,20 @@ class OllamaClient:
                     except json.JSONDecodeError:
                         continue
         
+        # Calculer le nombre de tokens (estimation approximative)
+        token_count = len(full_content.split()) if full_content else 0
+        
         return {
             "model": self.model_name if hasattr(self, 'model_name') else "",
             "message": {
                 "role": "assistant",
                 "content": full_content
             },
+            "usage": Usage(
+                requests=1,
+                request_tokens=token_count,  # Estimation
+                response_tokens=token_count,
+                total_tokens=token_count * 2
+            ),
             "done": True
         }

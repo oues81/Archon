@@ -12,6 +12,7 @@ import shutil
 import subprocess
 import sys
 import time
+from dotenv import load_dotenv
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple, Union
 
@@ -219,8 +220,12 @@ def main() -> int:
     # Analyse des arguments
     args = parse_arguments()
     
-    # Chemins importants
-    script_dir = Path(__file__).parent.absolute()
+    # Charger les variables d'environnement à partir du fichier .env
+    # Cela garantit que docker-compose peut voir les variables comme LLM
+    load_dotenv(dotenv_path=Path(__file__).parent.parent / '.env')
+
+    # Obtenir le chemin du répertoire du script
+    script_dir = Path(__file__).parent.resolve()
     compose_dir = script_dir.parent
     compose_file = args.compose_file
     

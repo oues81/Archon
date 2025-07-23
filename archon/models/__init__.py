@@ -1,1 +1,8 @@
-# This file makes Python treat the directory as a package.
+"""
+Package pour les modèles de données d'Archon.
+Contient les définitions des modèles utilisés dans l'application.
+"""
+
+from .ollama_model import OllamaModel, OllamaClient
+
+__all__ = ['OllamaModel', 'OllamaClient']

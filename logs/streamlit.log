@@ -6,94 +6,7 @@ Collecting usage statistics. To deactivate, set browser.gatherUsageStats to fals
 
   URL: http://0.0.0.0:8501
 
-2025-07-18 03:03:31,420 - archon.advisor_agent - INFO - Configuration du modèle Ollama - URL: http://host.docker.internal:11434, Modèle: phi3:mini
-2025-07-18 03:03:31,437 - archon.advisor_agent - INFO - Agent conseiller initialisé avec le modèle: phi3:mini
-Initialized Ollama model 'phi3:mini' with base URL: http://host.docker.internal:11434
-Initialized Ollama reasoner model 'phi3:mini' with base URL: http://host.docker.internal:11434
-
-[DEBUG] ====== advisor_with_examples ======
-[DEBUG] State keys: dict_keys(['latest_user_message', 'next_user_message', 'messages', 'scope', 'advisor_output', 'file_list', 'refined_prompt', 'refined_tools', 'refined_agent'])
-[DEBUG] Current directory: /app/archon
-[DEBUG] Parent directory: /app
-[DEBUG] Agent resources directory: /app/agent-resources
-[DEBUG] Scanning agent resources directory...
-[DEBUG] Found resource file: /app/agent-resources/mcps/git.json
-[DEBUG] Found resource file: /app/agent-resources/mcps/github.json
-[DEBUG] Found resource file: /app/agent-resources/mcps/qdrant.json
-[DEBUG] Found resource file: /app/agent-resources/mcps/slack.json
-[DEBUG] Found resource file: /app/agent-resources/mcps/chroma.json
-[DEBUG] Found resource file: /app/agent-resources/mcps/google_drive.json
-[DEBUG] Found resource file: /app/agent-resources/mcps/brave_search.json
-[DEBUG] Found resource file: /app/agent-resources/mcps/file_system.json
-[DEBUG] Found resource file: /app/agent-resources/mcps/sqlite.json
-[DEBUG] Found resource file: /app/agent-resources/mcps/airtable.json
-[DEBUG] Found resource file: /app/agent-resources/mcps/redis.json
-[DEBUG] Found resource file: /app/agent-resources/mcps/firecrawl.json
-[DEBUG] Found resource file: /app/agent-resources/tools/web_search.py
-[DEBUG] Found resource file: /app/agent-resources/tools/get_github_file_structure.py
-[DEBUG] Found resource file: /app/agent-resources/tools/get_github_file.py
-[DEBUG] Found resource file: /app/agent-resources/tools/get_github_repo_info.py
-[DEBUG] Found resource file: /app/agent-resources/examples/pydantic_github_agent.py
-[DEBUG] Found resource file: /app/agent-resources/examples/pydantic_mcp_agent.py
-[DEBUG] Found resource file: /app/agent-resources/examples/pydantic_web_search_agent.py
-[DEBUG] Found 19 resource files
-[DEBUG] Created AdvisorDeps with file list
-[DEBUG] User message: test
-[DEBUG] Prepared messages for advisor agent
-[DEBUG] Calling advisor_agent.run...
-03:03:36.162 advisor_agent run prompt=[{'role': 'user', 'content': 'test'}]
-
-[DEBUG] ====== define_scope_with_reasoner ======
-[DEBUG] State keys: dict_keys(['latest_user_message', 'next_user_message', 'messages', 'scope', 'advisor_output', 'file_list', 'refined_prompt', 'refined_tools', 'refined_agent'])
-[DEBUG] Getting documentation pages from Supabase...
-2025-07-18 03:03:36,516 - httpx - INFO - HTTP Request: GET https://kyqznnxtdjteefvdkwto.supabase.co/rest/v1/site_pages?select=url&metadata-%3E%3Esource=eq.pydantic_ai_docs "HTTP/2 200 OK"
-[DEBUG] Found 85 documentation pages
-[DEBUG] Documentation pages prepared
-[DEBUG] Prepared prompt for reasoner
-[DEBUG] Prompt length: 3910 characters
-[DEBUG] Calling reasoner to define scope...
-03:03:36.523   preparing model request params run_step=1
-03:03:36.524   model request
-[DEBUG] Scope defined: Scope Document: Anthropic AnthroGraphie Agent Overview and Development Pages
-
-To assist users intere...
-[DEBUG] Creating workbench directory: /app/workbench
-[DEBUG] Writing scope to file: /app/workbench/scope.md
-[DEBUG] Scope written to file successfully.
-[DEBUG] Prepared return state with updated scope
-[ERROR] Erreur lors de l'exécution de l'agent conseiller: 'dict' object has no attribute 'requests'
-[ERROR] Traceback: Traceback (most recent call last):
-  File "/app/archon/archon_graph.py", line 328, in advisor_with_examples
-    result = await advisor_agent.run(messages, deps=deps)
-  File "/usr/local/lib/python3.10/site-packages/pydantic_ai/agent.py", line 340, in run
-    end_result, _ = await graph.run(
-  File "/usr/local/lib/python3.10/site-packages/pydantic_graph/graph.py", line 187, in run
-    next_node = await self.next(next_node, history, state=state, deps=deps, infer_name=False)
-  File "/usr/local/lib/python3.10/site-packages/pydantic_graph/graph.py", line 263, in next
-    next_node = await node.run(ctx)
-  File "/usr/local/lib/python3.10/site-packages/pydantic_ai/_agent_graph.py", line 261, in run
-    ctx.state.usage.incr(request_usage, requests=1)
-  File "/usr/local/lib/python3.10/site-packages/pydantic_ai/usage.py", line 41, in incr
-    other_value = getattr(incr_usage, f)
-AttributeError: 'dict' object has no attribute 'requests'
-
-2025-07-18 03:05:47,084 - archon.archon_graph - ERROR - Erreur lors de l'exécution de l'agent conseiller: 'dict' object has no attribute 'requests'
-Traceback (most recent call last):
-  File "/app/archon/archon_graph.py", line 328, in advisor_with_examples
-    result = await advisor_agent.run(messages, deps=deps)
-  File "/usr/local/lib/python3.10/site-packages/pydantic_ai/agent.py", line 340, in run
-    end_result, _ = await graph.run(
-  File "/usr/local/lib/python3.10/site-packages/pydantic_graph/graph.py", line 187, in run
-    next_node = await self.next(next_node, history, state=state, deps=deps, infer_name=False)
-  File "/usr/local/lib/python3.10/site-packages/pydantic_graph/graph.py", line 263, in next
-    next_node = await node.run(ctx)
-  File "/usr/local/lib/python3.10/site-packages/pydantic_ai/_agent_graph.py", line 261, in run
-    ctx.state.usage.incr(request_usage, requests=1)
-  File "/usr/local/lib/python3.10/site-packages/pydantic_ai/usage.py", line 41, in incr
-    other_value = getattr(incr_usage, f)
-AttributeError: 'dict' object has no attribute 'requests'
-[DEBUG] Updated state with error information
-[DEBUG] Returning from advisor_with_examples
+[WARNING] Unable to import advisor_agent, creating stub
 [31m──[0m[31m────────────────────────[0m[31m [0m[1;31mTraceback [0m[1;2;31m(most recent call last)[0m[31m [0m[31m─────────────────────────[0m[31m──[0m
 [31m [0m [2m/usr/local/lib/python3.10/site-packages/streamlit/runtime/scriptrunner/[0m[1mexec_code.py[0m: [31m [0m
 [31m [0m 128 in exec_func_with_error_handling                                                 [31m [0m
@@ -101,138 +14,137 @@ AttributeError: 'dict' object has no attribute 'requests'
 [31m [0m [2m/usr/local/lib/python3.10/site-packages/streamlit/runtime/scriptrunner/[0m[1mscript_runner[0m [31m [0m
 [31m [0m [1m.py[0m:669 in code_to_exec                                                              [31m [0m
 [31m [0m                                                                                      [31m [0m
-[31m [0m [2m/app/[0m[1mstreamlit_ui.py[0m:120 in <module>                                                 [31m [0m
+[31m [0m [2m/app/[0m[1mstreamlit_ui.py[0m:20 in <module>                                                  [31m [0m
 [31m [0m                                                                                      [31m [0m
-[31m [0m   [2m117 [0m[2m│   │   [0mloop = asyncio.new_event_loop()                                        [31m [0m
-[31m [0m   [2m118 [0m[2m│   │   [0masyncio.set_event_loop(loop)                                           [31m [0m
-[31m [0m   [2m119 [0m[2m│   [0m                                                                           [31m [0m
-[31m [0m [31m❱ [0m120 [2m│   [0mloop.run_until_complete(main())                                            [31m [0m
-[31m [0m   [2m121 [0m                                                                               [31m [0m
+[31m [0m   [2m 17 [0m                                                                               [31m [0m
+[31m [0m   [2m 18 [0m[2m# Streamlit pages[0m                                                              [31m [0m
+[31m [0m   [2m 19 [0m[94mfrom[0m[90m [0m[4;96mstreamlit_pages[0m[4;96m.[0m[4;96mintro[0m[90m [0m[94mimport[0m intro_tab                                    [31m [0m
+[31m [0m [31m❱ [0m 20 [94mfrom[0m[90m [0m[4;96mstreamlit_pages[0m[4;96m.[0m[4;96mchat[0m[90m [0m[94mimport[0m chat_tab                                      [31m [0m
+[31m [0m   [2m 21 [0m[94mfrom[0m[90m [0m[4;96mstreamlit_pages[0m[4;96m.[0m[4;96menvironment[0m[90m [0m[94mimport[0m environment_tab                        [31m [0m
+[31m [0m   [2m 22 [0m[94mfrom[0m[90m [0m[4;96mstreamlit_pages[0m[4;96m.[0m[4;96mdatabase[0m[90m [0m[94mimport[0m database_tab                              [31m [0m
+[31m [0m   [2m 23 [0m[94mfrom[0m[90m [0m[4;96mstreamlit_pages[0m[4;96m.[0m[4;96mdocumentation[0m[90m [0m[94mimport[0m documentation_tab                    [31m [0m
 [31m [0m                                                                                      [31m [0m
-[31m [0m [2m/usr/local/lib/python3.10/asyncio/[0m[1mbase_events.py[0m:649 in run_until_complete           [31m [0m
+[31m [0m [2m/app/streamlit_pages/[0m[1mchat.py[0m:16 in <module>                                          [31m [0m
 [31m [0m                                                                                      [31m [0m
-[31m [0m   [2m 646 [0m[2m│   │   [0m[94mif[0m [95mnot[0m future.done():                                                 [31m [0m
-[31m [0m   [2m 647 [0m[2m│   │   │   [0m[94mraise[0m [96mRuntimeError[0m([33m'[0m[33mEvent loop stopped before Future completed.[0m[33m'[0m) [31m [0m
-[31m [0m   [2m 648 [0m[2m│   │   [0m                                                                      [31m [0m
-[31m [0m [31m❱ [0m 649 [2m│   │   [0m[94mreturn[0m future.result()                                                [31m [0m
-[31m [0m   [2m 650 [0m[2m│   [0m                                                                          [31m [0m
-[31m [0m   [2m 651 [0m[2m│   [0m[94mdef[0m[90m [0m[92mstop[0m([96mself[0m):                                                           [31m [0m
-[31m [0m   [2m 652 [0m[2;90m│   │   [0m[33m"""Stop running the event loop.[0m                                       [31m [0m
+[31m [0m   [2m13 [0m                                                                                [31m [0m
+[31m [0m   [2m14 [0m[2m# Add the current directory to Python path[0m                                      [31m [0m
+[31m [0m   [2m15 [0msys.path.append(os.path.dirname(os.path.dirname(os.path.abspath([91m__file__[0m))))    [31m [0m
+[31m [0m [31m❱ [0m16 [94mfrom[0m[90m [0m[4;96marchon[0m[4;96m.[0m[4;96marchon_graph[0m[90m [0m[94mimport[0m agentic_flow                                    [31m [0m
+[31m [0m   [2m17 [0m                                                                                [31m [0m
+[31m [0m   [2m18 [0m[1;95m@st[0m.cache_resource                                                              [31m [0m
+[31m [0m   [2m19 [0m[94mdef[0m[90m [0m[92mget_thread_id[0m():                                                            [31m [0m
 [31m [0m                                                                                      [31m [0m
-[31m [0m [2m/app/[0m[1mstreamlit_ui.py[0m:93 in main                                                      [31m [0m
+[31m [0m [2m/app/archon/[0m[1marchon_graph.py[0m:127 in <module>                                          [31m [0m
 [31m [0m                                                                                      [31m [0m
-[31m [0m   [2m 90 [0m[2m│   │   [0mintro_tab()                                                            [31m [0m
-[31m [0m   [2m 91 [0m[2m│   [0m[94melif[0m st.session_state.selected_tab == [33m"[0m[33mChat[0m[33m"[0m:                              [31m [0m
-[31m [0m   [2m 92 [0m[2m│   │   [0mst.title([33m"[0m[33mArchon - Agent Builder[0m[33m"[0m)                                     [31m [0m
-[31m [0m [31m❱ [0m 93 [2m│   │   [0m[94mawait[0m chat_tab()                                                       [31m [0m
-[31m [0m   [2m 94 [0m[2m│   [0m[94melif[0m st.session_state.selected_tab == [33m"[0m[33mMCP[0m[33m"[0m:                               [31m [0m
-[31m [0m   [2m 95 [0m[2m│   │   [0mst.title([33m"[0m[33mArchon - MCP Configuration[0m[33m"[0m)                                 [31m [0m
-[31m [0m   [2m 96 [0m[2m│   │   [0mmcp_tab()                                                              [31m [0m
+[31m [0m   [2m124 [0m[2m│   │   [0m[94mclass[0m[90m [0m[4;92mAdvisorDeps[0m:                                                     [31m [0m
+[31m [0m   [2m125 [0m[2m│   │   │   [0mfile_list: [96mlist[0m = [94mNone[0m                                             [31m [0m
+[31m [0m   [2m126 [0m[94mfrom[0m[90m [0m[4;96marchon[0m[4;96m.[0m[4;96mrefiner_agents[0m[4;96m.[0m[4;96mprompt_refiner_agent[0m[90m [0m[94mimport[0m prompt_refiner_agent    [31m [0m
+[31m [0m [31m❱ [0m127 [94mfrom[0m[90m [0m[4;96marchon[0m[4;96m.[0m[4;96mrefiner_agents[0m[4;96m.[0m[4;96mtools_refiner_agent[0m[90m [0m[94mimport[0m tools_refiner_agent, Too [31m [0m
+[31m [0m   [2m128 [0m[94mfrom[0m[90m [0m[4;96marchon[0m[4;96m.[0m[4;96mrefiner_agents[0m[4;96m.[0m[4;96magent_refiner_agent[0m[90m [0m[94mimport[0m agent_refiner_agent, Age [31m [0m
+[31m [0m   [2m129 [0m[94mfrom[0m[90m [0m[4;96marchon[0m[4;96m.[0m[4;96magent_tools[0m[90m [0m[94mimport[0m list_documentation_pages_tool                   [31m [0m
+[31m [0m   [2m130 [0m[94mfrom[0m[90m [0m[4;96mutils[0m[4;96m.[0m[4;96mutils[0m[90m [0m[94mimport[0m get_env_var, get_clients                               [31m [0m
 [31m [0m                                                                                      [31m [0m
-[31m [0m [2m/app/streamlit_pages/[0m[1mchat.py[0m:88 in chat_tab                                          [31m [0m
+[31m [0m [2m/app/archon/refiner_agents/[0m[1mtools_refiner_agent.py[0m:56 in <module>                     [31m [0m
 [31m [0m                                                                                      [31m [0m
-[31m [0m   [2m85 [0m[2m│   │   │   [0m[2m# Add a spinner while loading[0m                                       [31m [0m
-[31m [0m   [2m86 [0m[2m│   │   │   [0m[94mwith[0m st.spinner([33m"[0m[33mArchon is thinking...[0m[33m"[0m):                           [31m [0m
-[31m [0m   [2m87 [0m[2m│   │   │   │   [0m[2m# Run the async generator to fetch responses[0m                    [31m [0m
-[31m [0m [31m❱ [0m88 [2m│   │   │   │   [0m[94masync[0m [94mfor[0m chunk [95min[0m run_agent_with_streaming(user_input):        [31m [0m
-[31m [0m   [2m89 [0m[2m│   │   │   │   │   [0mresponse_content += chunk                                   [31m [0m
-[31m [0m   [2m90 [0m[2m│   │   │   │   │   [0m[2m# Update the placeholder with the current response content[0m  [31m [0m
-[31m [0m   [2m91 [0m[2m│   │   │   │   │   [0mmessage_placeholder.markdown(response_content)              [31m [0m
+[31m [0m   [2m 53 [0m[2m│   [0membedding_client: AsyncOpenAI                                              [31m [0m
+[31m [0m   [2m 54 [0m[2m│   [0mfile_list: List[[96mstr[0m]                                                       [31m [0m
+[31m [0m   [2m 55 [0m                                                                               [31m [0m
+[31m [0m [31m❱ [0m 56 tools_refiner_agent = Agent(                                                   [31m [0m
+[31m [0m   [2m 57 [0m[2m│   [0mmodel,                                                                     [31m [0m
+[31m [0m   [2m 58 [0m[2m│   [0msystem_prompt=tools_refiner_prompt,                                        [31m [0m
+[31m [0m   [2m 59 [0m[2m│   [0mdeps_type=ToolsRefinerDeps,                                                [31m [0m
 [31m [0m                                                                                      [31m [0m
-[31m [0m [2m/app/streamlit_pages/[0m[1mchat.py[0m:37 in run_agent_with_streaming                          [31m [0m
+[31m [0m [2m/usr/local/lib/python3.10/site-packages/pydantic_ai/[0m[1magent.py[0m:290 in __init__         [31m [0m
 [31m [0m                                                                                      [31m [0m
-[31m [0m   [2m34 [0m[2m│   [0m                                                                            [31m [0m
-[31m [0m   [2m35 [0m[2m│   [0m[2m# First message from user[0m                                                   [31m [0m
-[31m [0m   [2m36 [0m[2m│   [0m[94mif[0m [96mlen[0m(st.session_state.messages) == [94m1[0m:                                     [31m [0m
-[31m [0m [31m❱ [0m37 [2m│   │   [0m[94masync[0m [94mfor[0m msg [95min[0m agentic_flow.astream(                                  [31m [0m
-[31m [0m   [2m38 [0m[2m│   │   │   │   [0m{[33m"[0m[33mlatest_user_message[0m[33m"[0m: user_input}, config, stream_mode=[33m"[0m[33mcusto[0m [31m [0m
-[31m [0m   [2m39 [0m[2m│   │   │   [0m):                                                                  [31m [0m
-[31m [0m   [2m40 [0m[2m│   │   │   │   [0m[94myield[0m msg                                                       [31m [0m
+[31m [0m   [2m 287 [0m[2m│   │   [0m[94mif[0m model [95mis[0m [94mNone[0m [95mor[0m defer_model_check:                                [31m [0m
+[31m [0m   [2m 288 [0m[2m│   │   │   [0m[96mself[0m.model = model                                                [31m [0m
+[31m [0m   [2m 289 [0m[2m│   │   [0m[94melse[0m:                                                                 [31m [0m
+[31m [0m [31m❱ [0m 290 [2m│   │   │   [0m[96mself[0m.model = models.infer_model(model)                            [31m [0m
+[31m [0m   [2m 291 [0m[2m│   │   [0m                                                                      [31m [0m
+[31m [0m   [2m 292 [0m[2m│   │   [0m[96mself[0m.end_strategy = end_strategy                                      [31m [0m
+[31m [0m   [2m 293 [0m[2m│   │   [0m[96mself[0m.name = name                                                      [31m [0m
 [31m [0m                                                                                      [31m [0m
-[31m [0m [2m/usr/local/lib/python3.10/site-packages/langgraph/pregel/[0m[1m__init__.py[0m:2768 in astream [31m [0m
+[31m [0m [2m/usr/local/lib/python3.10/site-packages/pydantic_ai/models/[0m[1m__init__.py[0m:607 in        [31m [0m
+[31m [0m infer_model                                                                          [31m [0m
 [31m [0m                                                                                      [31m [0m
-[31m [0m   [2m2765 [0m[2m│   │   │   │   [0m[94mwhile[0m loop.tick():                                            [31m [0m
-[31m [0m   [2m2766 [0m[2m│   │   │   │   │   [0m[94mfor[0m task [95min[0m [94mawait[0m loop.amatch_cached_writes():            [31m [0m
-[31m [0m   [2m2767 [0m[2m│   │   │   │   │   │   [0mloop.output_writes(task.id, task.writes, cached=[94mTrue[0m) [31m [0m
-[31m [0m [31m❱ [0m2768 [2m│   │   │   │   │   [0m[94masync[0m [94mfor[0m _ [95min[0m runner.atick(                              [31m [0m
-[31m [0m   [2m2769 [0m[2m│   │   │   │   │   │   [0m[t [94mfor[0m t [95min[0m loop.tasks.values() [94mif[0m [95mnot[0m t.writes],     [31m [0m
-[31m [0m   [2m2770 [0m[2m│   │   │   │   │   │   [0mtimeout=[96mself[0m.step_timeout,                            [31m [0m
-[31m [0m   [2m2771 [0m[2m│   │   │   │   │   │   [0mget_waiter=get_waiter,                                [31m [0m
-[31m [0m                                                                                      [31m [0m
-[31m [0m [2m/usr/local/lib/python3.10/site-packages/langgraph/pregel/[0m[1mrunner.py[0m:401 in atick      [31m [0m
-[31m [0m                                                                                      [31m [0m
-[31m [0m   [2m398 [0m[2m│   │   │   [0mfut.cancel()                                                       [31m [0m
-[31m [0m   [2m399 [0m[2m│   │   [0m[2m# panic on failure or timeout[0m                                          [31m [0m
-[31m [0m   [2m400 [0m[2m│   │   [0m[94mtry[0m:                                                                   [31m [0m
-[31m [0m [31m❱ [0m401 [2m│   │   │   [0m_panic_or_proceed(                                                 [31m [0m
-[31m [0m   [2m402 [0m[2m│   │   │   │   [0mfutures.done.union(f [94mfor[0m f, t [95min[0m futures.items() [94mif[0m t [95mis[0m [95mnot[0m [94mN[0m [31m [0m
-[31m [0m   [2m403 [0m[2m│   │   │   │   [0mtimeout_exc_cls=asyncio.TimeoutError,                          [31m [0m
-[31m [0m   [2m404 [0m[2m│   │   │   │   [0mpanic=reraise,                                                 [31m [0m
-[31m [0m                                                                                      [31m [0m
-[31m [0m [2m/usr/local/lib/python3.10/site-packages/langgraph/pregel/[0m[1mrunner.py[0m:511 in            [31m [0m
-[31m [0m _panic_or_proceed                                                                    [31m [0m
-[31m [0m                                                                                      [31m [0m
-[31m [0m   [2m508 [0m[2m│   │   │   │   │   [0m[2m# collect interrupts[0m                                       [31m [0m
-[31m [0m   [2m509 [0m[2m│   │   │   │   │   [0minterrupts.append(exc)                                     [31m [0m
-[31m [0m   [2m510 [0m[2m│   │   │   │   [0m[94melif[0m fut [95mnot[0m [95min[0m SKIP_RERAISE_SET:                              [31m [0m
-[31m [0m [31m❱ [0m511 [2m│   │   │   │   │   [0m[94mraise[0m exc                                                  [31m [0m
-[31m [0m   [2m512 [0m[2m│   [0m[2m# raise combined interrupts[0m                                                [31m [0m
-[31m [0m   [2m513 [0m[2m│   [0m[94mif[0m interrupts:                                                             [31m [0m
-[31m [0m   [2m514 [0m[2m│   │   [0m[94mraise[0m GraphInterrupt([96mtuple[0m(i [94mfor[0m exc [95min[0m interrupts [94mfor[0m i [95min[0m exc.args[[94m0[0m [31m [0m
-[31m [0m                                                                                      [31m [0m
-[31m [0m [2m/usr/local/lib/python3.10/site-packages/langgraph/pregel/[0m[1mretry.py[0m:137 in             [31m [0m
-[31m [0m arun_with_retry                                                                      [31m [0m
-[31m [0m                                                                                      [31m [0m
-[31m [0m   [2m134 [0m[2m│   │   │   │   [0m[2m# if successful, end[0m                                           [31m [0m
-[31m [0m   [2m135 [0m[2m│   │   │   │   [0m[94mbreak[0m                                                          [31m [0m
-[31m [0m   [2m136 [0m[2m│   │   │   [0m[94melse[0m:                                                              [31m [0m
-[31m [0m [31m❱ [0m137 [2m│   │   │   │   [0m[94mreturn[0m [94mawait[0m task.proc.ainvoke(task.input, config)             [31m [0m
-[31m [0m   [2m138 [0m[2m│   │   [0m[94mexcept[0m ParentCommand [94mas[0m exc:                                           [31m [0m
-[31m [0m   [2m139 [0m[2m│   │   │   [0mns: [96mstr[0m = config[CONF][CONFIG_KEY_CHECKPOINT_NS]                   [31m [0m
-[31m [0m   [2m140 [0m[2m│   │   │   [0mcmd = exc.args[[94m0[0m]                                                  [31m [0m
-[31m [0m                                                                                      [31m [0m
-[31m [0m [2m/usr/local/lib/python3.10/site-packages/langgraph/utils/[0m[1mrunnable.py[0m:676 in ainvoke   [31m [0m
-[31m [0m                                                                                      [31m [0m
-[31m [0m   [2m673 [0m[2m│   │   │   │   │   │   │   │   [0mstep.ainvoke([96minput[0m, config, **kwargs), context [31m [0m
-[31m [0m   [2m674 [0m[2m│   │   │   │   │   │   │   [0m)                                                  [31m [0m
-[31m [0m   [2m675 [0m[2m│   │   │   │   │   [0m[94melse[0m:                                                      [31m [0m
-[31m [0m [31m❱ [0m676 [2m│   │   │   │   │   │   [0m[96minput[0m = [94mawait[0m step.ainvoke([96minput[0m, config, **kwargs)    [31m [0m
-[31m [0m   [2m677 [0m[2m│   │   │   │   [0m[94melse[0m:                                                          [31m [0m
-[31m [0m   [2m678 [0m[2m│   │   │   │   │   [0m[96minput[0m = [94mawait[0m step.ainvoke([96minput[0m, config)                  [31m [0m
-[31m [0m   [2m679 [0m[2m│   │   [0m[2m# finish the root run[0m                                                  [31m [0m
-[31m [0m                                                                                      [31m [0m
-[31m [0m [2m/usr/local/lib/python3.10/site-packages/langgraph/utils/[0m[1mrunnable.py[0m:440 in ainvoke   [31m [0m
-[31m [0m                                                                                      [31m [0m
-[31m [0m   [2m437 [0m[2m│   │   │   [0m[94melse[0m:                                                              [31m [0m
-[31m [0m   [2m438 [0m[2m│   │   │   │   [0m[94mawait[0m run_manager.on_chain_end(ret)                            [31m [0m
-[31m [0m   [2m439 [0m[2m│   │   [0m[94melse[0m:                                                                  [31m [0m
-[31m [0m [31m❱ [0m440 [2m│   │   │   [0mret = [94mawait[0m [96mself[0m.afunc(*args, **kwargs)                            [31m [0m
-[31m [0m   [2m441 [0m[2m│   │   [0m[94mif[0m [96mself[0m.recurse [95mand[0m [96misinstance[0m(ret, Runnable):                         [31m [0m
-[31m [0m   [2m442 [0m[2m│   │   │   [0m[94mreturn[0m [94mawait[0m ret.ainvoke([96minput[0m, config)                            [31m [0m
-[31m [0m   [2m443 [0m[2m│   │   [0m[94mreturn[0m ret                                                             [31m [0m
-[31m [0m                                                                                      [31m [0m
-[31m [0m [2m/app/archon/[0m[1marchon_graph.py[0m:445 in coder_agent                                       [31m [0m
-[31m [0m                                                                                      [31m [0m
-[31m [0m   [2m442 [0m[2m│   [0m[2m# Get the message history into the format for Pydantic AI[0m                  [31m [0m
-[31m [0m   [2m443 [0m[2m│   [0mmessage_history: [96mlist[0m[ModelMessage] = []                                   [31m [0m
-[31m [0m   [2m444 [0m[2m│   [0m[94mfor[0m message_row [95min[0m state[[33m'[0m[33mmessages[0m[33m'[0m]:                                      [31m [0m
-[31m [0m [31m❱ [0m445 [2m│   │   [0mmessage_history.extend(ModelMessagesTypeAdapter.validate_json(message_ [31m [0m
-[31m [0m   [2m446 [0m[2m│   [0m                                                                           [31m [0m
-[31m [0m   [2m447 [0m[2m│   [0m[2m# The prompt either needs to be the user message (initial agent request or[0m [31m [0m
-[31m [0m   [2m448 [0m[2m│   [0m[2m# or the refined prompt/tools/agent if we are in that stage of the agent c[0m [31m [0m
-[31m [0m                                                                                      [31m [0m
-[31m [0m [2m/usr/local/lib/python3.10/site-packages/pydantic/[0m[1mtype_adapter.py[0m:446 in              [31m [0m
-[31m [0m validate_json                                                                        [31m [0m
-[31m [0m                                                                                      [31m [0m
-[31m [0m   [2m443 [0m[2;33m│   │   [0m[33mReturns:[0m                                                               [31m [0m
-[31m [0m   [2m444 [0m[2;33m│   │   │   [0m[33mThe validated object.[0m                                              [31m [0m
-[31m [0m   [2m445 [0m[2;33m│   │   [0m[33m"""[0m                                                                    [31m [0m
-[31m [0m [31m❱ [0m446 [2m│   │   [0m[94mreturn[0m [96mself[0m.validator.validate_json(                                   [31m [0m
-[31m [0m   [2m447 [0m[2m│   │   │   [0mdata, strict=strict, context=context, allow_partial=experimental_a [31m [0m
-[31m [0m   [2m448 [0m[2m│   │   [0m)                                                                      [31m [0m
-[31m [0m   [2m449 [0m                                                                               [31m [0m
+[31m [0m   [2m604 [0m[2m│   │   [0m                                                                       [31m [0m
+[31m [0m   [2m605 [0m[2m│   │   [0m[94mreturn[0m BedrockConverseModel(model_name, provider=provider)             [31m [0m
+[31m [0m   [2m606 [0m[2m│   [0m[94melse[0m:                                                                      [31m [0m
+[31m [0m [31m❱ [0m607 [2m│   │   [0m[94mraise[0m UserError([33mf[0m[33m'[0m[33mUnknown model: [0m[33m{[0mmodel[33m}[0m[33m'[0m)  [2m# pragma: no cover[0m         [31m [0m
+[31m [0m   [2m608 [0m                                                                               [31m [0m
+[31m [0m   [2m609 [0m                                                                               [31m [0m
+[31m [0m   [2m610 [0m[94mdef[0m[90m [0m[92mcached_async_http_client[0m(*, provider: [96mstr[0m | [94mNone[0m = [94mNone[0m, timeout: [96mint[0m = [94m60[0m [31m [0m
 [31m────────────────────────────────────────────────────────────────────────────────────────[0m
-[1;91mValidationError: [0m[1;36m1[0m validation error for list[1m[[0mtagged-union[1m[[0mModelRequest,ModelResponse[1m][0m[1m][0m
-  Invalid JSON: key must be a string at line [1;36m1[0m column [1;36m3[0m [1m[[0m[33mtype[0m=[35mjson_invalid[0m, 
-[33minput_value[0m=[32mb"[0m[32m[[0m[32m{[0m[32m'role': 'user', 'content': 'test'[0m[32m}[0m[32m][0m[32m"[0m, [33minput_type[0m=[35mbytes[0m[1m][0m
-    For further information visit [4;94mhttps://errors.pydantic.dev/2.10/v/json_invalid[0m
+[1;91mUserError: [0mUnknown model: moonshotai/kimi-k[1;92m2:f[0mree
+2025-07-23 20:08:16,125 - archon.archon_graph - INFO - Configuration du fournisseur LLM: ollama
+2025-07-23 20:08:16,125 - archon.archon_graph - INFO - Modèle de raisonnement: qwen2.5:latest
+[WARNING] Unable to import advisor_agent, creating stub
+[31m──[0m[31m────────────────────────[0m[31m [0m[1;31mTraceback [0m[1;2;31m(most recent call last)[0m[31m [0m[31m─────────────────────────[0m[31m──[0m
+[31m [0m [2m/usr/local/lib/python3.10/site-packages/streamlit/runtime/scriptrunner/[0m[1mexec_code.py[0m: [31m [0m
+[31m [0m 128 in exec_func_with_error_handling                                                 [31m [0m
+[31m [0m                                                                                      [31m [0m
+[31m [0m [2m/usr/local/lib/python3.10/site-packages/streamlit/runtime/scriptrunner/[0m[1mscript_runner[0m [31m [0m
+[31m [0m [1m.py[0m:669 in code_to_exec                                                              [31m [0m
+[31m [0m                                                                                      [31m [0m
+[31m [0m [2m/app/[0m[1mstreamlit_ui.py[0m:20 in <module>                                                  [31m [0m
+[31m [0m                                                                                      [31m [0m
+[31m [0m   [2m 17 [0m                                                                               [31m [0m
+[31m [0m   [2m 18 [0m[2m# Streamlit pages[0m                                                              [31m [0m
+[31m [0m   [2m 19 [0m[94mfrom[0m[90m [0m[4;96mstreamlit_pages[0m[4;96m.[0m[4;96mintro[0m[90m [0m[94mimport[0m intro_tab                                    [31m [0m
+[31m [0m [31m❱ [0m 20 [94mfrom[0m[90m [0m[4;96mstreamlit_pages[0m[4;96m.[0m[4;96mchat[0m[90m [0m[94mimport[0m chat_tab                                      [31m [0m
+[31m [0m   [2m 21 [0m[94mfrom[0m[90m [0m[4;96mstreamlit_pages[0m[4;96m.[0m[4;96menvironment[0m[90m [0m[94mimport[0m environment_tab                        [31m [0m
+[31m [0m   [2m 22 [0m[94mfrom[0m[90m [0m[4;96mstreamlit_pages[0m[4;96m.[0m[4;96mdatabase[0m[90m [0m[94mimport[0m database_tab                              [31m [0m
+[31m [0m   [2m 23 [0m[94mfrom[0m[90m [0m[4;96mstreamlit_pages[0m[4;96m.[0m[4;96mdocumentation[0m[90m [0m[94mimport[0m documentation_tab                    [31m [0m
+[31m [0m                                                                                      [31m [0m
+[31m [0m [2m/app/streamlit_pages/[0m[1mchat.py[0m:16 in <module>                                          [31m [0m
+[31m [0m                                                                                      [31m [0m
+[31m [0m   [2m13 [0m                                                                                [31m [0m
+[31m [0m   [2m14 [0m[2m# Add the current directory to Python path[0m                                      [31m [0m
+[31m [0m   [2m15 [0msys.path.append(os.path.dirname(os.path.dirname(os.path.abspath([91m__file__[0m))))    [31m [0m
+[31m [0m [31m❱ [0m16 [94mfrom[0m[90m [0m[4;96marchon[0m[4;96m.[0m[4;96marchon_graph[0m[90m [0m[94mimport[0m agentic_flow                                    [31m [0m
+[31m [0m   [2m17 [0m                                                                                [31m [0m
+[31m [0m   [2m18 [0m[1;95m@st[0m.cache_resource                                                              [31m [0m
+[31m [0m   [2m19 [0m[94mdef[0m[90m [0m[92mget_thread_id[0m():                                                            [31m [0m
+[31m [0m                                                                                      [31m [0m
+[31m [0m [2m/app/archon/[0m[1marchon_graph.py[0m:127 in <module>                                          [31m [0m
+[31m [0m                                                                                      [31m [0m
+[31m [0m   [2m124 [0m[2m│   │   [0m[94mclass[0m[90m [0m[4;92mAdvisorDeps[0m:                                                     [31m [0m
+[31m [0m   [2m125 [0m[2m│   │   │   [0mfile_list: [96mlist[0m = [94mNone[0m                                             [31m [0m
+[31m [0m   [2m126 [0m[94mfrom[0m[90m [0m[4;96marchon[0m[4;96m.[0m[4;96mrefiner_agents[0m[4;96m.[0m[4;96mprompt_refiner_agent[0m[90m [0m[94mimport[0m prompt_refiner_agent    [31m [0m
+[31m [0m [31m❱ [0m127 [94mfrom[0m[90m [0m[4;96marchon[0m[4;96m.[0m[4;96mrefiner_agents[0m[4;96m.[0m[4;96mtools_refiner_agent[0m[90m [0m[94mimport[0m tools_refiner_agent, Too [31m [0m
+[31m [0m   [2m128 [0m[94mfrom[0m[90m [0m[4;96marchon[0m[4;96m.[0m[4;96mrefiner_agents[0m[4;96m.[0m[4;96magent_refiner_agent[0m[90m [0m[94mimport[0m agent_refiner_agent, Age [31m [0m
+[31m [0m   [2m129 [0m[94mfrom[0m[90m [0m[4;96marchon[0m[4;96m.[0m[4;96magent_tools[0m[90m [0m[94mimport[0m list_documentation_pages_tool                   [31m [0m
+[31m [0m   [2m130 [0m[94mfrom[0m[90m [0m[4;96mutils[0m[4;96m.[0m[4;96mutils[0m[90m [0m[94mimport[0m get_env_var, get_clients                               [31m [0m
+[31m [0m                                                                                      [31m [0m
+[31m [0m [2m/app/archon/refiner_agents/[0m[1mtools_refiner_agent.py[0m:56 in <module>                     [31m [0m
+[31m [0m                                                                                      [31m [0m
+[31m [0m   [2m 53 [0m[2m│   [0membedding_client: AsyncOpenAI                                              [31m [0m
+[31m [0m   [2m 54 [0m[2m│   [0mfile_list: List[[96mstr[0m]                                                       [31m [0m
+[31m [0m   [2m 55 [0m                                                                               [31m [0m
+[31m [0m [31m❱ [0m 56 tools_refiner_agent = Agent(                                                   [31m [0m
+[31m [0m   [2m 57 [0m[2m│   [0mmodel,                                                                     [31m [0m
+[31m [0m   [2m 58 [0m[2m│   [0msystem_prompt=tools_refiner_prompt,                                        [31m [0m
+[31m [0m   [2m 59 [0m[2m│   [0mdeps_type=ToolsRefinerDeps,                                                [31m [0m
+[31m [0m                                                                                      [31m [0m
+[31m [0m [2m/usr/local/lib/python3.10/site-packages/pydantic_ai/[0m[1magent.py[0m:290 in __init__         [31m [0m
+[31m [0m                                                                                      [31m [0m
+[31m [0m   [2m 287 [0m[2m│   │   [0m[94mif[0m model [95mis[0m [94mNone[0m [95mor[0m defer_model_check:                                [31m [0m
+[31m [0m   [2m 288 [0m[2m│   │   │   [0m[96mself[0m.model = model                                                [31m [0m
+[31m [0m   [2m 289 [0m[2m│   │   [0m[94melse[0m:                                                                 [31m [0m
+[31m [0m [31m❱ [0m 290 [2m│   │   │   [0m[96mself[0m.model = models.infer_model(model)                            [31m [0m
+[31m [0m   [2m 291 [0m[2m│   │   [0m                                                                      [31m [0m
+[31m [0m   [2m 292 [0m[2m│   │   [0m[96mself[0m.end_strategy = end_strategy                                      [31m [0m
+[31m [0m   [2m 293 [0m[2m│   │   [0m[96mself[0m.name = name                                                      [31m [0m
+[31m [0m                                                                                      [31m [0m
+[31m [0m [2m/usr/local/lib/python3.10/site-packages/pydantic_ai/models/[0m[1m__init__.py[0m:607 in        [31m [0m
+[31m [0m infer_model                                                                          [31m [0m
+[31m [0m                                                                                      [31m [0m
+[31m [0m   [2m604 [0m[2m│   │   [0m                                                                       [31m [0m
+[31m [0m   [2m605 [0m[2m│   │   [0m[94mreturn[0m BedrockConverseModel(model_name, provider=provider)             [31m [0m
+[31m [0m   [2m606 [0m[2m│   [0m[94melse[0m:                                                                      [31m [0m
+[31m [0m [31m❱ [0m607 [2m│   │   [0m[94mraise[0m UserError([33mf[0m[33m'[0m[33mUnknown model: [0m[33m{[0mmodel[33m}[0m[33m'[0m)  [2m# pragma: no cover[0m         [31m [0m
+[31m [0m   [2m608 [0m                                                                               [31m [0m
+[31m [0m   [2m609 [0m                                                                               [31m [0m
+[31m [0m   [2m610 [0m[94mdef[0m[90m [0m[92mcached_async_http_client[0m(*, provider: [96mstr[0m | [94mNone[0m = [94mNone[0m, timeout: [96mint[0m = [94m60[0m [31m [0m
+[31m────────────────────────────────────────────────────────────────────────────────────────[0m
+[1;91mUserError: [0mUnknown model: moonshotai/kimi-k[1;92m2:f[0mree

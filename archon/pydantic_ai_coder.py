@@ -77,7 +77,7 @@ coder_model = model
 # Export the tools for reuse
 pydantic_coder_tools = coder_tools
 
-# Export the dynamic prompt function for reuse
+# Export the dynamic prompt function for reuse (but we won't use it directly in the agent constructor)
 def dynamic_coder_prompt(ctx: RunContext[Dict[str, Any]]) -> str:
     """Appends reasoner and advisor outputs to the base prompt."""
     reasoner_output = ctx.deps.get("reasoner_output", "No reasoner output provided.")
@@ -86,9 +86,29 @@ def dynamic_coder_prompt(ctx: RunContext[Dict[str, Any]]) -> str:
 
 def create_pydantic_ai_coder():
     """Creates and returns a new instance of the pydantic_ai_coder Agent."""
-    return Agent(
+    # Use a string for the base system prompt instead of a function
+    base_system_prompt = "You are an expert AI agent engineer specializing in building Pydantic AI agents. Help the user create and refine their agent."
+    
+    # Create agent with string system prompt
+    agent = Agent(
         model=model,
-        system_prompt=dynamic_coder_prompt,
+        system_prompt=base_system_prompt,  # Use a string here instead of dynamic_coder_prompt
         tools=coder_tools,
         retries=2
     )
+    
+    # Optionally, you can still add dynamic content by using the decorator
+    @agent.system_prompt
+    def append_dynamic_content(ctx: RunContext[Dict[str, Any]]) -> str:
+        reasoner_output = ctx.deps.get("reasoner_output", "No reasoner output provided.")
+        advisor_output = ctx.deps.get("advisor_output", "No advisor output provided.")
+        return f"""
+        Additional thoughts/instructions from the reasoner LLM:
+        This scope includes documentation pages for you to search as well:
+        {reasoner_output}
+
+        Recommended starting point from the advisor agent:
+        {advisor_output}
+        """
+    
+    return agent
