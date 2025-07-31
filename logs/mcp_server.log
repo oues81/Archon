@@ -1,4 +1,6 @@
-[2025-07-23 18:58:47] Démarrage du serveur MCP...
-[2025-07-23 18:58:47] Configuration du serveur MCP...
-[2025-07-23 18:58:47] Serveur MCP démarré avec succès
-[07/23/25 18:58:47] DEBUG    Using selector: EpollSelector selector_events.py:54
+INFO:     Will watch for changes in these directories: ['/app/mcp_service']
+INFO:     Uvicorn running on http://0.0.0.0:8100 (Press CTRL+C to quit)
+INFO:     Started reloader process [11] using WatchFiles
+INFO:     Started server process [15]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.

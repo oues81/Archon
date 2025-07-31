@@ -231,6 +231,39 @@ The flow works like this:
 7. The process goes back to step 4 until you say the agent is complete
 8. Once the agent is complete, Archon spits out the full code again with instructions for running it
 
+## API Reference
+
+### GET /health
+Vérifie que le service est opérationnel.
+
+**Réponse :**
+```json
+{
+  "status": "ok"
+}
+```
+
+### POST /invoke
+Traite un message via le flux agentique.
+
+**Requête :**
+```json
+{
+  "message": "string",
+  "thread_id": "string",
+  "is_first_message": false
+}
+```
+
+**Réponse :**
+```json
+{
+  "response": "string",
+  "thread_id": "string",
+  "status": "success"
+}
+```
+
 ## File Architecture
 
 ### Core Files

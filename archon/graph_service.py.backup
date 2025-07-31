@@ -135,12 +135,12 @@ async def invoke_agent(request: InvokeRequest):
                     if isinstance(msg, dict):
                         final_state = msg
                         # Extraire la réponse générée si disponible
-                        if 'generated_code' in msg and msg['generated_code']:
-                            print(f"[DEBUG] Generated code found: {msg['generated_code'][:100]}...")
-                        if 'scope' in msg and msg['scope']:
-                            print(f"[DEBUG] Scope found: {msg['scope'][:100]}...")
-                        if 'advisor_output' in msg and msg['advisor_output']:
-                            print(f"[DEBUG] Advisor output found: {msg['advisor_output'][:100]}...")
+                        # if 'generated_code' in msg and msg.generated_code:
+                        #     print(f"[DEBUG] Generated code found: {msg.generated_code[:100]}...")
+                        # if 'scope' in msg and msg.scope:
+                        #     print(f"[DEBUG] Scope found: {msg.scope[:100]}...")
+                        # if 'advisor_output' in msg and msg.advisor_output:
+                        #     print(f"[DEBUG] Advisor output found: {msg.advisor_output[:100]}...")
                     
                     # Vérifier si nous sommes bloqués dans une boucle
                     if iteration > 10:  # Limite arbitraire pour éviter les boucles infinies
@@ -151,8 +151,14 @@ async def invoke_agent(request: InvokeRequest):
                 if final_state:
                     # Priorité à generated_code, puis advisor_output, puis scope
                     if final_state.get('generated_code'):
-                        response = final_state['generated_code']
-                        print(f"[DEBUG] Using generated_code as response: {len(response)} characters")
+                        result_obj = final_state['generated_code']
+                        # Check if the result object has a 'content' attribute
+                        if hasattr(result_obj, 'content') and result_obj.content:
+                            response = result_obj.content
+                            print(f"[DEBUG] Using generated_code as response: {len(response)} characters")
+                        else:
+                            # Fallback if the object structure is different
+                            response = str(result_obj)
                     elif final_state.get('advisor_output'):
                         response = final_state['advisor_output']
                         print(f"[DEBUG] Using advisor_output as response: {len(response)} characters")
@@ -285,6 +291,36 @@ async def invoke_agent(request: InvokeRequest):
             status_code=500, 
             detail=error_detail
         )
+
+@app.post('/test')
+async def test_provider(request: InvokeRequest):
+    """Endpoint dédié aux tests de fournisseurs"""
+    try:
+        # Logique de test simplifiée
+        test_prompt = f"Test de connexion avec le fournisseur: {request.message}"
+        
+        # Configuration complète pour le graphe
+        inputs = {
+            "messages": [{"content": test_prompt, "type": "human"}],
+            "thread_id": request.thread_id,
+            "configurable": {
+                "thread_id": request.thread_id,
+                "checkpoint_ns": "test",
+                "checkpoint_id": f"test-{datetime.now().isoformat()}"
+            }
+        }
+        
+        # Exécution du test
+        result = await agentic_flow.ainvoke(inputs)
+        
+        # Sérialisation correcte
+        return {
+            "status": "success",
+            "provider": "openrouter" if "openrouter" in os.environ.get("LLM_PROVIDER", "").lower() else "ollama",
+            "response": str(result)
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 if __name__ == "__main__":
     import uvicorn

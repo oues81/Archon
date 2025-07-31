@@ -6,145 +6,29 @@ Collecting usage statistics. To deactivate, set browser.gatherUsageStats to fals
 
   URL: http://0.0.0.0:8501
 
-[WARNING] Unable to import advisor_agent, creating stub
-[31m──[0m[31m────────────────────────[0m[31m [0m[1;31mTraceback [0m[1;2;31m(most recent call last)[0m[31m [0m[31m─────────────────────────[0m[31m──[0m
-[31m [0m [2m/usr/local/lib/python3.10/site-packages/streamlit/runtime/scriptrunner/[0m[1mexec_code.py[0m: [31m [0m
-[31m [0m 128 in exec_func_with_error_handling                                                 [31m [0m
-[31m [0m                                                                                      [31m [0m
-[31m [0m [2m/usr/local/lib/python3.10/site-packages/streamlit/runtime/scriptrunner/[0m[1mscript_runner[0m [31m [0m
-[31m [0m [1m.py[0m:669 in code_to_exec                                                              [31m [0m
-[31m [0m                                                                                      [31m [0m
-[31m [0m [2m/app/[0m[1mstreamlit_ui.py[0m:20 in <module>                                                  [31m [0m
-[31m [0m                                                                                      [31m [0m
-[31m [0m   [2m 17 [0m                                                                               [31m [0m
-[31m [0m   [2m 18 [0m[2m# Streamlit pages[0m                                                              [31m [0m
-[31m [0m   [2m 19 [0m[94mfrom[0m[90m [0m[4;96mstreamlit_pages[0m[4;96m.[0m[4;96mintro[0m[90m [0m[94mimport[0m intro_tab                                    [31m [0m
-[31m [0m [31m❱ [0m 20 [94mfrom[0m[90m [0m[4;96mstreamlit_pages[0m[4;96m.[0m[4;96mchat[0m[90m [0m[94mimport[0m chat_tab                                      [31m [0m
-[31m [0m   [2m 21 [0m[94mfrom[0m[90m [0m[4;96mstreamlit_pages[0m[4;96m.[0m[4;96menvironment[0m[90m [0m[94mimport[0m environment_tab                        [31m [0m
-[31m [0m   [2m 22 [0m[94mfrom[0m[90m [0m[4;96mstreamlit_pages[0m[4;96m.[0m[4;96mdatabase[0m[90m [0m[94mimport[0m database_tab                              [31m [0m
-[31m [0m   [2m 23 [0m[94mfrom[0m[90m [0m[4;96mstreamlit_pages[0m[4;96m.[0m[4;96mdocumentation[0m[90m [0m[94mimport[0m documentation_tab                    [31m [0m
-[31m [0m                                                                                      [31m [0m
-[31m [0m [2m/app/streamlit_pages/[0m[1mchat.py[0m:16 in <module>                                          [31m [0m
-[31m [0m                                                                                      [31m [0m
-[31m [0m   [2m13 [0m                                                                                [31m [0m
-[31m [0m   [2m14 [0m[2m# Add the current directory to Python path[0m                                      [31m [0m
-[31m [0m   [2m15 [0msys.path.append(os.path.dirname(os.path.dirname(os.path.abspath([91m__file__[0m))))    [31m [0m
-[31m [0m [31m❱ [0m16 [94mfrom[0m[90m [0m[4;96marchon[0m[4;96m.[0m[4;96marchon_graph[0m[90m [0m[94mimport[0m agentic_flow                                    [31m [0m
-[31m [0m   [2m17 [0m                                                                                [31m [0m
-[31m [0m   [2m18 [0m[1;95m@st[0m.cache_resource                                                              [31m [0m
-[31m [0m   [2m19 [0m[94mdef[0m[90m [0m[92mget_thread_id[0m():                                                            [31m [0m
-[31m [0m                                                                                      [31m [0m
-[31m [0m [2m/app/archon/[0m[1marchon_graph.py[0m:127 in <module>                                          [31m [0m
-[31m [0m                                                                                      [31m [0m
-[31m [0m   [2m124 [0m[2m│   │   [0m[94mclass[0m[90m [0m[4;92mAdvisorDeps[0m:                                                     [31m [0m
-[31m [0m   [2m125 [0m[2m│   │   │   [0mfile_list: [96mlist[0m = [94mNone[0m                                             [31m [0m
-[31m [0m   [2m126 [0m[94mfrom[0m[90m [0m[4;96marchon[0m[4;96m.[0m[4;96mrefiner_agents[0m[4;96m.[0m[4;96mprompt_refiner_agent[0m[90m [0m[94mimport[0m prompt_refiner_agent    [31m [0m
-[31m [0m [31m❱ [0m127 [94mfrom[0m[90m [0m[4;96marchon[0m[4;96m.[0m[4;96mrefiner_agents[0m[4;96m.[0m[4;96mtools_refiner_agent[0m[90m [0m[94mimport[0m tools_refiner_agent, Too [31m [0m
-[31m [0m   [2m128 [0m[94mfrom[0m[90m [0m[4;96marchon[0m[4;96m.[0m[4;96mrefiner_agents[0m[4;96m.[0m[4;96magent_refiner_agent[0m[90m [0m[94mimport[0m agent_refiner_agent, Age [31m [0m
-[31m [0m   [2m129 [0m[94mfrom[0m[90m [0m[4;96marchon[0m[4;96m.[0m[4;96magent_tools[0m[90m [0m[94mimport[0m list_documentation_pages_tool                   [31m [0m
-[31m [0m   [2m130 [0m[94mfrom[0m[90m [0m[4;96mutils[0m[4;96m.[0m[4;96mutils[0m[90m [0m[94mimport[0m get_env_var, get_clients                               [31m [0m
-[31m [0m                                                                                      [31m [0m
-[31m [0m [2m/app/archon/refiner_agents/[0m[1mtools_refiner_agent.py[0m:56 in <module>                     [31m [0m
-[31m [0m                                                                                      [31m [0m
-[31m [0m   [2m 53 [0m[2m│   [0membedding_client: AsyncOpenAI                                              [31m [0m
-[31m [0m   [2m 54 [0m[2m│   [0mfile_list: List[[96mstr[0m]                                                       [31m [0m
-[31m [0m   [2m 55 [0m                                                                               [31m [0m
-[31m [0m [31m❱ [0m 56 tools_refiner_agent = Agent(                                                   [31m [0m
-[31m [0m   [2m 57 [0m[2m│   [0mmodel,                                                                     [31m [0m
-[31m [0m   [2m 58 [0m[2m│   [0msystem_prompt=tools_refiner_prompt,                                        [31m [0m
-[31m [0m   [2m 59 [0m[2m│   [0mdeps_type=ToolsRefinerDeps,                                                [31m [0m
-[31m [0m                                                                                      [31m [0m
-[31m [0m [2m/usr/local/lib/python3.10/site-packages/pydantic_ai/[0m[1magent.py[0m:290 in __init__         [31m [0m
-[31m [0m                                                                                      [31m [0m
-[31m [0m   [2m 287 [0m[2m│   │   [0m[94mif[0m model [95mis[0m [94mNone[0m [95mor[0m defer_model_check:                                [31m [0m
-[31m [0m   [2m 288 [0m[2m│   │   │   [0m[96mself[0m.model = model                                                [31m [0m
-[31m [0m   [2m 289 [0m[2m│   │   [0m[94melse[0m:                                                                 [31m [0m
-[31m [0m [31m❱ [0m 290 [2m│   │   │   [0m[96mself[0m.model = models.infer_model(model)                            [31m [0m
-[31m [0m   [2m 291 [0m[2m│   │   [0m                                                                      [31m [0m
-[31m [0m   [2m 292 [0m[2m│   │   [0m[96mself[0m.end_strategy = end_strategy                                      [31m [0m
-[31m [0m   [2m 293 [0m[2m│   │   [0m[96mself[0m.name = name                                                      [31m [0m
-[31m [0m                                                                                      [31m [0m
-[31m [0m [2m/usr/local/lib/python3.10/site-packages/pydantic_ai/models/[0m[1m__init__.py[0m:607 in        [31m [0m
-[31m [0m infer_model                                                                          [31m [0m
-[31m [0m                                                                                      [31m [0m
-[31m [0m   [2m604 [0m[2m│   │   [0m                                                                       [31m [0m
-[31m [0m   [2m605 [0m[2m│   │   [0m[94mreturn[0m BedrockConverseModel(model_name, provider=provider)             [31m [0m
-[31m [0m   [2m606 [0m[2m│   [0m[94melse[0m:                                                                      [31m [0m
-[31m [0m [31m❱ [0m607 [2m│   │   [0m[94mraise[0m UserError([33mf[0m[33m'[0m[33mUnknown model: [0m[33m{[0mmodel[33m}[0m[33m'[0m)  [2m# pragma: no cover[0m         [31m [0m
-[31m [0m   [2m608 [0m                                                                               [31m [0m
-[31m [0m   [2m609 [0m                                                                               [31m [0m
-[31m [0m   [2m610 [0m[94mdef[0m[90m [0m[92mcached_async_http_client[0m(*, provider: [96mstr[0m | [94mNone[0m = [94mNone[0m, timeout: [96mint[0m = [94m60[0m [31m [0m
-[31m────────────────────────────────────────────────────────────────────────────────────────[0m
-[1;91mUserError: [0mUnknown model: moonshotai/kimi-k[1;92m2:f[0mree
-2025-07-23 20:08:16,125 - archon.archon_graph - INFO - Configuration du fournisseur LLM: ollama
-2025-07-23 20:08:16,125 - archon.archon_graph - INFO - Modèle de raisonnement: qwen2.5:latest
-[WARNING] Unable to import advisor_agent, creating stub
-[31m──[0m[31m────────────────────────[0m[31m [0m[1;31mTraceback [0m[1;2;31m(most recent call last)[0m[31m [0m[31m─────────────────────────[0m[31m──[0m
-[31m [0m [2m/usr/local/lib/python3.10/site-packages/streamlit/runtime/scriptrunner/[0m[1mexec_code.py[0m: [31m [0m
-[31m [0m 128 in exec_func_with_error_handling                                                 [31m [0m
-[31m [0m                                                                                      [31m [0m
-[31m [0m [2m/usr/local/lib/python3.10/site-packages/streamlit/runtime/scriptrunner/[0m[1mscript_runner[0m [31m [0m
-[31m [0m [1m.py[0m:669 in code_to_exec                                                              [31m [0m
-[31m [0m                                                                                      [31m [0m
-[31m [0m [2m/app/[0m[1mstreamlit_ui.py[0m:20 in <module>                                                  [31m [0m
-[31m [0m                                                                                      [31m [0m
-[31m [0m   [2m 17 [0m                                                                               [31m [0m
-[31m [0m   [2m 18 [0m[2m# Streamlit pages[0m                                                              [31m [0m
-[31m [0m   [2m 19 [0m[94mfrom[0m[90m [0m[4;96mstreamlit_pages[0m[4;96m.[0m[4;96mintro[0m[90m [0m[94mimport[0m intro_tab                                    [31m [0m
-[31m [0m [31m❱ [0m 20 [94mfrom[0m[90m [0m[4;96mstreamlit_pages[0m[4;96m.[0m[4;96mchat[0m[90m [0m[94mimport[0m chat_tab                                      [31m [0m
-[31m [0m   [2m 21 [0m[94mfrom[0m[90m [0m[4;96mstreamlit_pages[0m[4;96m.[0m[4;96menvironment[0m[90m [0m[94mimport[0m environment_tab                        [31m [0m
-[31m [0m   [2m 22 [0m[94mfrom[0m[90m [0m[4;96mstreamlit_pages[0m[4;96m.[0m[4;96mdatabase[0m[90m [0m[94mimport[0m database_tab                              [31m [0m
-[31m [0m   [2m 23 [0m[94mfrom[0m[90m [0m[4;96mstreamlit_pages[0m[4;96m.[0m[4;96mdocumentation[0m[90m [0m[94mimport[0m documentation_tab                    [31m [0m
-[31m [0m                                                                                      [31m [0m
-[31m [0m [2m/app/streamlit_pages/[0m[1mchat.py[0m:16 in <module>                                          [31m [0m
-[31m [0m                                                                                      [31m [0m
-[31m [0m   [2m13 [0m                                                                                [31m [0m
-[31m [0m   [2m14 [0m[2m# Add the current directory to Python path[0m                                      [31m [0m
-[31m [0m   [2m15 [0msys.path.append(os.path.dirname(os.path.dirname(os.path.abspath([91m__file__[0m))))    [31m [0m
-[31m [0m [31m❱ [0m16 [94mfrom[0m[90m [0m[4;96marchon[0m[4;96m.[0m[4;96marchon_graph[0m[90m [0m[94mimport[0m agentic_flow                                    [31m [0m
-[31m [0m   [2m17 [0m                                                                                [31m [0m
-[31m [0m   [2m18 [0m[1;95m@st[0m.cache_resource                                                              [31m [0m
-[31m [0m   [2m19 [0m[94mdef[0m[90m [0m[92mget_thread_id[0m():                                                            [31m [0m
-[31m [0m                                                                                      [31m [0m
-[31m [0m [2m/app/archon/[0m[1marchon_graph.py[0m:127 in <module>                                          [31m [0m
-[31m [0m                                                                                      [31m [0m
-[31m [0m   [2m124 [0m[2m│   │   [0m[94mclass[0m[90m [0m[4;92mAdvisorDeps[0m:                                                     [31m [0m
-[31m [0m   [2m125 [0m[2m│   │   │   [0mfile_list: [96mlist[0m = [94mNone[0m                                             [31m [0m
-[31m [0m   [2m126 [0m[94mfrom[0m[90m [0m[4;96marchon[0m[4;96m.[0m[4;96mrefiner_agents[0m[4;96m.[0m[4;96mprompt_refiner_agent[0m[90m [0m[94mimport[0m prompt_refiner_agent    [31m [0m
-[31m [0m [31m❱ [0m127 [94mfrom[0m[90m [0m[4;96marchon[0m[4;96m.[0m[4;96mrefiner_agents[0m[4;96m.[0m[4;96mtools_refiner_agent[0m[90m [0m[94mimport[0m tools_refiner_agent, Too [31m [0m
-[31m [0m   [2m128 [0m[94mfrom[0m[90m [0m[4;96marchon[0m[4;96m.[0m[4;96mrefiner_agents[0m[4;96m.[0m[4;96magent_refiner_agent[0m[90m [0m[94mimport[0m agent_refiner_agent, Age [31m [0m
-[31m [0m   [2m129 [0m[94mfrom[0m[90m [0m[4;96marchon[0m[4;96m.[0m[4;96magent_tools[0m[90m [0m[94mimport[0m list_documentation_pages_tool                   [31m [0m
-[31m [0m   [2m130 [0m[94mfrom[0m[90m [0m[4;96mutils[0m[4;96m.[0m[4;96mutils[0m[90m [0m[94mimport[0m get_env_var, get_clients                               [31m [0m
-[31m [0m                                                                                      [31m [0m
-[31m [0m [2m/app/archon/refiner_agents/[0m[1mtools_refiner_agent.py[0m:56 in <module>                     [31m [0m
-[31m [0m                                                                                      [31m [0m
-[31m [0m   [2m 53 [0m[2m│   [0membedding_client: AsyncOpenAI                                              [31m [0m
-[31m [0m   [2m 54 [0m[2m│   [0mfile_list: List[[96mstr[0m]                                                       [31m [0m
-[31m [0m   [2m 55 [0m                                                                               [31m [0m
-[31m [0m [31m❱ [0m 56 tools_refiner_agent = Agent(                                                   [31m [0m
-[31m [0m   [2m 57 [0m[2m│   [0mmodel,                                                                     [31m [0m
-[31m [0m   [2m 58 [0m[2m│   [0msystem_prompt=tools_refiner_prompt,                                        [31m [0m
-[31m [0m   [2m 59 [0m[2m│   [0mdeps_type=ToolsRefinerDeps,                                                [31m [0m
-[31m [0m                                                                                      [31m [0m
-[31m [0m [2m/usr/local/lib/python3.10/site-packages/pydantic_ai/[0m[1magent.py[0m:290 in __init__         [31m [0m
-[31m [0m                                                                                      [31m [0m
-[31m [0m   [2m 287 [0m[2m│   │   [0m[94mif[0m model [95mis[0m [94mNone[0m [95mor[0m defer_model_check:                                [31m [0m
-[31m [0m   [2m 288 [0m[2m│   │   │   [0m[96mself[0m.model = model                                                [31m [0m
-[31m [0m   [2m 289 [0m[2m│   │   [0m[94melse[0m:                                                                 [31m [0m
-[31m [0m [31m❱ [0m 290 [2m│   │   │   [0m[96mself[0m.model = models.infer_model(model)                            [31m [0m
-[31m [0m   [2m 291 [0m[2m│   │   [0m                                                                      [31m [0m
-[31m [0m   [2m 292 [0m[2m│   │   [0m[96mself[0m.end_strategy = end_strategy                                      [31m [0m
-[31m [0m   [2m 293 [0m[2m│   │   [0m[96mself[0m.name = name                                                      [31m [0m
-[31m [0m                                                                                      [31m [0m
-[31m [0m [2m/usr/local/lib/python3.10/site-packages/pydantic_ai/models/[0m[1m__init__.py[0m:607 in        [31m [0m
-[31m [0m infer_model                                                                          [31m [0m
-[31m [0m                                                                                      [31m [0m
-[31m [0m   [2m604 [0m[2m│   │   [0m                                                                       [31m [0m
-[31m [0m   [2m605 [0m[2m│   │   [0m[94mreturn[0m BedrockConverseModel(model_name, provider=provider)             [31m [0m
-[31m [0m   [2m606 [0m[2m│   [0m[94melse[0m:                                                                      [31m [0m
-[31m [0m [31m❱ [0m607 [2m│   │   [0m[94mraise[0m UserError([33mf[0m[33m'[0m[33mUnknown model: [0m[33m{[0mmodel[33m}[0m[33m'[0m)  [2m# pragma: no cover[0m         [31m [0m
-[31m [0m   [2m608 [0m                                                                               [31m [0m
-[31m [0m   [2m609 [0m                                                                               [31m [0m
-[31m [0m   [2m610 [0m[94mdef[0m[90m [0m[92mcached_async_http_client[0m(*, provider: [96mstr[0m | [94mNone[0m = [94mNone[0m, timeout: [96mint[0m = [94m60[0m [31m [0m
-[31m────────────────────────────────────────────────────────────────────────────────────────[0m
-[1;91mUserError: [0mUnknown model: moonshotai/kimi-k[1;92m2:f[0mree
+🔍 REASONER - Starting with model: phi3:mini
+Error in define_scope: Unknown model: phi3:mini
+Traceback (most recent call last):
+  File "/app/archon/archon_graph.py", line 95, in define_scope_with_reasoner
+    reasoner = PydanticAgent(
+  File "/usr/local/lib/python3.10/site-packages/pydantic_ai/agent.py", line 290, in __init__
+    self.model = models.infer_model(model)
+  File "/usr/local/lib/python3.10/site-packages/pydantic_ai/models/__init__.py", line 607, in infer_model
+    raise UserError(f'Unknown model: {model}')  # pragma: no cover
+pydantic_ai.exceptions.UserError: Unknown model: phi3:mini
+💡 ADVISOR - Starting with model: phi3:mini
+Error in advisor: Unknown model: phi3:mini
+Traceback (most recent call last):
+  File "/app/archon/archon_graph.py", line 134, in advisor_with_examples
+    advisor = PydanticAgent(
+  File "/usr/local/lib/python3.10/site-packages/pydantic_ai/agent.py", line 290, in __init__
+    self.model = models.infer_model(model)
+  File "/usr/local/lib/python3.10/site-packages/pydantic_ai/models/__init__.py", line 607, in infer_model
+    raise UserError(f'Unknown model: {model}')  # pragma: no cover
+pydantic_ai.exceptions.UserError: Unknown model: phi3:mini
+⚡ CODER - Starting with model: phi3:mini
+Error in coder: 'advisor_output'
+Traceback (most recent call last):
+  File "/app/archon/archon_graph.py", line 172, in coder_agent
+    logger.info(f"⚡ CODER - Advisor output: {str(state['advisor_output'])[:200]}...")
+KeyError: 'advisor_output'

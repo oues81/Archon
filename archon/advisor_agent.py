@@ -21,7 +21,7 @@ import asyncio
 import httpx
 import json
 from pydantic import BaseModel
-from pydantic_ai.agent import PydanticAgent
+from pydantic_ai import Agent
 from pydantic_ai.settings import ModelSettings
 from pydantic_ai.models.anthropic import AnthropicModel
 from pydantic_ai.models.openai import OpenAIModel
@@ -197,7 +197,7 @@ if provider == 'Ollama':
                     raise
         
         # Créer l'agent avec le modèle configuré
-        advisor_agent = PydanticAgent(
+        advisor_agent = Agent(
             model=CustomModelWrapper(model),
             system_prompt=advisor_prompt,
             deps_type=AdvisorDeps,
@@ -212,7 +212,7 @@ if provider == 'Ollama':
 else:
     # Pour les autres fournisseurs (OpenAI, etc.), utiliser la configuration standard
     try:
-        advisor_agent = PydanticAgent(
+        advisor_agent = Agent(
             model=model,
             system_prompt=advisor_prompt,
             deps_type=AdvisorDeps,

@@ -1,39 +1,31 @@
 """
-Archon Graph - Gestion du flux de travail de l'agent IA
-Utilise un fournisseur LLM unifié pour supporter plusieurs backends (Ollama, OpenAI, OpenRouter)
+Archon Graph - Agent Workflow Management
+Utilizes a unified LLM provider to support multiple backends (Ollama, OpenAI, OpenRouter)
 """
 import json
 import logging
 import os
 import sys
 import traceback
+from api.profiles import router as profiles_router
 from datetime import datetime
 from typing import Annotated, List, Any, Optional, Dict, Union
 from typing_extensions import TypedDict
 
-# Configuration du logger
+# Logger Configuration
 logger = logging.getLogger(__name__)
 
-# Configuration des chemins
+# Path Configuration
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-# Import du fournisseur LLM unifié
+# Unified LLM Provider Import
 from archon.llm_provider import llm_provider
 
-# Imports pour la compatibilité avec Pydantic AI
-try:
-    from pydantic_ai.models.anthropic import AnthropicModel
-except ImportError:
-    AnthropicModel = None
+# Pydantic AI Compatibility Imports
+from pydantic_ai import RunContext, Agent as PydanticAgent, ModelRetry
+from pydantic_ai.models.openai import OpenAIModel
+from pydantic_ai.providers.openai import OpenAIProvider
 
-try:
-    from pydantic_ai.models.openai import OpenAIModel
-    from pydantic_ai.providers.openai import OpenAIProvider
-except ImportError:
-    OpenAIModel = None
-    OpenAIProvider = None
-
-from pydantic_ai import RunContext, Agent as PydanticAgent
 from pydantic_ai.messages import (
     ModelMessage,
     ModelMessagesTypeAdapter,
@@ -44,700 +36,198 @@ from pydantic_ai.messages import (
     UserPromptPart
 )
 
-# Imports pour LangGraph
+
+def get_llm_instance(model_name: str):
+    """Crée et retourne une instance LLM configurée pour pydantic-ai."""
+    provider_name = llm_provider.config.provider.lower()
+
+    if provider_name == "ollama":
+        logger.info(f"Configuration d'Ollama via l'API compatible OpenAI: {llm_provider.config.base_url}")
+        ollama_provider = OpenAIProvider(base_url=f"{llm_provider.config.base_url}/v1")
+        return OpenAIModel(model_name=model_name, provider=ollama_provider)
+    elif provider_name == "openrouter":
+        logger.info(f"Configuration d'OpenRouter avec la chaîne: openrouter:{model_name}")
+        return f"openrouter:{model_name}"
+    else:
+        raise ValueError(f"Fournisseur LLM non supporté pour pydantic-ai: {provider_name}")
+
+
+# LangGraph Imports
 try:
     from langgraph.graph import StateGraph, END
     from langgraph.graph.state import START
     from langgraph.checkpoint.memory import MemorySaver
-    
-    # Gestion des différentes versions de langgraph
-    try:
-        from langgraph.checkpoint import get_stream_writer
-    except ImportError:
-        try:
-            from langgraph.config import get_stream_writer
-        except ImportError:
-            # Fallback si non trouvé
-            def get_stream_writer():
-                import sys
-                return sys.stdout.write
-                
 except ImportError as e:
-    logger.warning(f"Impossible d'importer LangGraph: {e}")
-    # Définir des classes factices pour permettre l'exécution
+    logger.warning(f"Could not import LangGraph: {e}")
     class StateGraph:
-        def __init__(self, *args, **kwargs):
-            pass
+        def __init__(self, *args, **kwargs): pass
     END = None
     START = None
-    MemorySaver = None
-    def get_stream_writer():
-        import sys
-        return sys.stdout.write
+    MemorySaver = object
 
-# Configuration des fournisseurs LLM
-LLM_PROVIDER = os.getenv("LLM_PROVIDER", "Ollama").lower()
-REASONER_MODEL = os.getenv("REASONER_MODEL", "phi3:latest" if LLM_PROVIDER == "ollama" else "deepseek/deepseek-chat-v3-0324:free")
-BASE_URL = os.getenv("BASE_URL", "http://host.docker.internal:11434")
-
-logger.info(f"Configuration du fournisseur LLM: {LLM_PROVIDER}")
-logger.info(f"Modèle de raisonnement: {REASONER_MODEL}")
-
-try:
-    from langgraph.types import interrupt
-except ImportError:
-    # Fallback implementation if langgraph.types.interrupt is not available
-    class interrupt:
-        """Dummy implementation of interrupt for compatibility"""
-        @staticmethod
-        def interrupt():
-            """Dummy interrupt method"""
-            pass
-from dotenv import load_dotenv
-from supabase import Client
-import logfire
-import os
-import sys
-import json
-from dataclasses import dataclass
-from typing import AsyncGenerator
-
-# Add the parent directory to Python path
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
-# Import necessary modules
-from archon.pydantic_ai_coder import create_pydantic_ai_coder
-from archon.schemas import PydanticAIDeps
-# Import corrigé pour le contexte Docker
-try:
-    from archon.advisor_agent import advisor_agent, AdvisorDeps
-except ImportError:
-    try:
-        from advisor_agent import advisor_agent, AdvisorDeps
-    except ImportError:
-        print('[WARNING] Unable to import advisor_agent, creating stub')
-        # Créer des stubs pour éviter les erreurs d import
-        advisor_agent = None
-        from dataclasses import dataclass
-        
-        @dataclass
-        class AdvisorDeps:
-            file_list: list = None
-from archon.refiner_agents.prompt_refiner_agent import prompt_refiner_agent
-from archon.refiner_agents.tools_refiner_agent import tools_refiner_agent, ToolsRefinerDeps
-from archon.refiner_agents.agent_refiner_agent import agent_refiner_agent, AgentRefinerDeps
-from archon.agent_tools import list_documentation_pages_tool
-from utils.utils import get_env_var, get_clients
-
-# Agent standard Pydantic AI - pas besoin de classe personnalisée
-def create_agent(model: Any, system_prompt: Optional[str] = None) -> PydanticAgent:
-    """Crée un agent Pydantic AI standard"""
-    return PydanticAgent(model, system_prompt=system_prompt)
-
-def normalize_messages(messages: Union[bytes, str, List[Dict], List[ModelMessage]]) -> List[ModelMessage]:
-    """
-    Normalize messages to a list of ModelMessage objects.
-    Handles various input formats including bytes, JSON strings, dictionaries, and lists.
-    """
-    from pydantic_ai.messages import ModelRequest, ModelResponse, TextPart, SystemPromptPart, UserPromptPart
-    
-    normalized = []
-    
-    # If input is bytes, decode to string first
-    if isinstance(messages, bytes):
-        try:
-            messages = messages.decode('utf-8')
-        except UnicodeDecodeError:
-            # Fallback to string representation if decoding fails
-            messages = str(messages)
-    
-    # If input is a string, try to parse as JSON
-    if isinstance(messages, str):
-        try:
-            messages = json.loads(messages)
-        except json.JSONDecodeError:
-            # If not valid JSON, treat as a single user message
-            messages = [{'role': 'user', 'content': messages}]
-    
-    # Ensure messages is a list
-    if not isinstance(messages, list):
-        messages = [messages]
-    
-    for msg in messages:
-        try:
-            # Handle already normalized ModelMessage objects
-            if isinstance(msg, (ModelRequest, ModelResponse)):
-                normalized.append(msg)
-                continue
-                
-            # Handle dictionary inputs
-            if isinstance(msg, dict):
-                role = msg.get('role', 'user')
-                content = msg.get('content', '')
-                
-                if role in ['user', 'system']:
-                    # Create appropriate part based on role
-                    if role == 'user':
-                        part = UserPromptPart(content=content)
-                        model_msg = ModelRequest(parts=[part])
-                    else:  # system
-                        part = SystemPromptPart(content=content)
-                        model_msg = ModelRequest(parts=[part])
-                    
-                    normalized.append(model_msg)
-                elif role == 'assistant':
-                    part = TextPart(content=content)
-                    model_msg = ModelResponse(parts=[part])
-                    normalized.append(model_msg)
-                continue
-                
-            # Handle string inputs
-            if isinstance(msg, str):
-                part = UserPromptPart(content=msg)
-                model_msg = ModelRequest(parts=[part])
-                normalized.append(model_msg)
-                continue
-                
-        except Exception as e:
-            print(f"[WARNING] Error normalizing message: {e}")
-            print(f"[WARNING] Message content: {str(msg)[:200]}...")
-            # Create a fallback error message
-            try:
-                part = SystemPromptPart(content=f"Error processing message: {str(e)}")
-                model_msg = ModelRequest(parts=[part])
-                normalized.append(model_msg)
-            except Exception as inner_e:
-                print(f"[CRITICAL] Failed to create error message: {inner_e}")
-    
-    return normalized
-
-# Load environment variables
-load_dotenv()
-
-# Configure logfire to suppress warnings (optional)
-logfire.configure(send_to_logfire='never')
-
-provider = get_env_var('LLM_PROVIDER') or 'Ollama'
-base_url = get_env_var('BASE_URL') or 'http://host.docker.internal:11434'
-api_key = get_env_var('LLM_API_KEY') or 'no-llm-api-key-provided'
-
-is_anthropic = provider == "Anthropic"
-is_openai = provider == "OpenAI"
-is_ollama = provider == "Ollama"
-
-llm_model_name = get_env_var('MODEL') or 'qwen2.5:latest'
-reasoner_llm_model_name = get_env_var('REASONER_MODEL') or 'phi3:latest'
-
-# Initialiser le modèle principal en fonction du fournisseur
-primary_llm_model_name = get_env_var('PRIMARY_MODEL') or llm_model_name
-if is_anthropic:
-    primary_llm_model = AnthropicModel(primary_llm_model_name, api_key=api_key)
-elif is_ollama:
-    if not base_url:
-        raise ValueError("BASE_URL must be set in environment variables when using Ollama")
-    # Utiliser la bonne méthode Pydantic AI pour Ollama avec endpoint /v1
-    ollama_provider = OpenAIProvider(base_url=f"{base_url.rstrip('/')}/v1")
-    primary_llm_model = OpenAIModel(model_name=primary_llm_model_name, provider=ollama_provider)
-    print(f"Initialized Ollama model '{primary_llm_model_name}' with base URL: {base_url}/v1")
-else:
-    primary_llm_model = OpenAIModel(primary_llm_model_name, base_url=base_url, api_key=api_key)
-
-# Initialiser le modèle de raisonnement en fonction du fournisseur  
-if is_anthropic:
-    reasoner_llm_model = AnthropicModel(reasoner_llm_model_name, api_key=api_key)
-elif is_ollama:
-    if not base_url:
-        raise ValueError("BASE_URL must be set in environment variables when using Ollama")
-    # Utiliser la bonne méthode Pydantic AI pour Ollama avec endpoint /v1
-    ollama_provider = OpenAIProvider(base_url=f"{base_url.rstrip('/')}/v1")
-    reasoner_llm_model = OpenAIModel(model_name=reasoner_llm_model_name, provider=ollama_provider)
-    print(f"Initialized Ollama reasoner model '{reasoner_llm_model_name}' with base URL: {base_url}/v1")
-else:
-    reasoner_llm_model = OpenAIModel(reasoner_llm_model_name, base_url=base_url, api_key=api_key)
-
-# Créer un agent reasoner avec Pydantic AI
-reasoner = create_agent(
-    reasoner_llm_model,
-    system_prompt='You are an expert at coding AI agents with Pydantic AI and defining the scope for doing so.'
+# Prompt Imports
+from archon.agent_prompts import (
+    prompt_refiner_agent_prompt, advisor_prompt, coder_prompt_with_examples
 )
 
-router_agent = create_agent(  
-    primary_llm_model,
-    system_prompt='''You are a router that determines the next step in an AI agent creation workflow. 
-You must respond with EXACTLY ONE of these words only (no other text):
-- "finish_conversation" if the user wants to end or is satisfied  
-- "coder_agent" if the user wants to continue building or modifying the agent
-- "refine" if the user specifically mentions wanting to refine or improve the agent
+# Log models on startup
+logger.info(f"LLM Provider: {llm_provider.config.provider}")
+logger.info(f"Reasoner Model: {llm_provider.config.reasoner_model}")
+logger.info(f"Primary Model: {llm_provider.config.primary_model}")
 
-Respond with ONLY the single word, nothing else.''',  
-)
-
-end_conversation_agent = create_agent(  
-    primary_llm_model,
-    system_prompt='Your job is to end a conversation for creating an AI agent by giving instructions for how to execute the agent and they saying a nice goodbye to the user.',  
-)
-
-# Initialize clients
-embedding_client, supabase = get_clients()
-
+# Agent State Definition
 class AgentState(TypedDict):
-    latest_user_message: Annotated[str, lambda x, y: y]  # Always take the latest value
-    next_user_message: Annotated[str, lambda x, y: y]  # Also take the latest value
-    messages: Annotated[List[bytes], lambda x, y: x + y]
+    latest_user_message: str
+    next_user_message: str
+    messages: List[Any]
+    scope: str
+    advisor_output: str
+    file_list: List[str]
+    refined_prompt: str
+    refined_tools: str
+    refined_agent: str
+    generated_code: Optional[str] = None
+    error: Optional[str] = None
 
-    scope: Annotated[str, lambda x, y: y]  # Always take the latest value
-    advisor_output: Annotated[str, lambda x, y: y]  # Always take the latest value
-    file_list: Annotated[List[str], lambda x, y: y]  # Always take the latest value
-
-    refined_prompt: Annotated[str, lambda x, y: y]  # Always take the latest value
-    refined_tools: Annotated[str, lambda x, y: y]  # Always take the latest value
-    refined_agent: Annotated[str, lambda x, y: y]  # Always take the latest value
-
-# Scope Definition Node with Reasoner LLM
-async def define_scope_with_reasoner(state: AgentState):
-    """
-    Définit la portée du projet en utilisant un modèle de raisonnement.
-    Utilise le fournisseur LLM unifié pour générer une analyse détaillée de la portée.
-    """
-    logger.info("Démarrage de la définition de la portée avec le raisonneur...")
-    
+def define_scope_with_reasoner(state: AgentState) -> AgentState:
+    """Définit la portée avec l'agent reasoner"""
+    print("🔍 REASONER - Starting with model:", llm_provider.config.reasoner_model)
+    logger.info("="*50)
+    logger.info("🔍 REASONER STARTING")
+    logger.info(f"🔍 Modèle: {llm_provider.config.reasoner_model}")
+    logger.info("="*50)
+    """Définit la portée avec l'agent reasoner"""
+    logger.info("="*50)
+    logger.info("🔍 REASONER STARTING")
+    logger.info(f"🔍 Modèle: {llm_provider.config.reasoner_model}")
+    logger.info("="*50)
+    """Defines the project scope using a reasoner agent"""
     try:
-        # Récupérer les pages de documentation depuis Supabase si disponible
-        documentation_pages = []
-        try:
-            if 'supabase' in globals() and callable(list_documentation_pages_tool):
-                logger.info("Récupération des pages de documentation depuis Supabase...")
-                documentation_pages = await list_documentation_pages_tool(supabase)
-        except Exception as e:
-            logger.warning(f"Impossible de récupérer les pages de documentation: {e}")
+        logger.info("---STEP: Defining scope with reasoner agent---")
         
-        # Préparer le contexte pour le LLM
-        context = {
-            "user_request": state.get('latest_user_message', ''),
-            "documentation_pages": documentation_pages,
-            "existing_scope": state.get('scope', '')
-        }
+        # Log du modèle utilisé pour le reasoner
+        llm_model = llm_provider.config.reasoner_model
+        llm_provider_name = llm_provider.config.provider.lower()
+        logger.info(f"🧠 REASONER - Modèle: {llm_provider_name}:{llm_model}")
+        logger.info(f"🧠 REASONER - Message utilisateur: {state['latest_user_message']}")
         
-        # Préparer le prompt pour le LLM
-        system_prompt = """
-        Tu es un expert en architecture logicielle et en développement d'agents IA. Ton rôle est de définir la portée 
-        d'un projet d'agent IA basé sur la demande de l'utilisateur. Fournis une analyse détaillée qui inclut :
+        if 'scope' not in state:
+            state['scope'] = ""
         
-        1. **Architecture** : Schéma d'architecture global
-        2. **Composants principaux** : Liste des composants clés
-        3. **Dépendances** : Bibliothèques et services externes nécessaires
-        4. **Stratégie de test** : Approche recommandée pour les tests
-        
-        Si des pages de documentation sont fournies, utilise-les comme référence pour enrichir ta réponse.
-        """
-        
-        # Préparer le message utilisateur
-        pages_list = "\n".join([f"- {page}" for page in context['documentation_pages']]) if context['documentation_pages'] else "Aucune page de documentation disponible"
-        
-        user_message = f"""
-        **Demande de l'utilisateur :**
-        {context['user_request']}
-        
-        **Portée existante (le cas échéant) :**
-        {context['existing_scope'] or 'Aucune portée existante'}
-        
-        **Pages de documentation disponibles :**
-        {pages_list}
-        """
-        
-        # Préparer les messages pour le LLM
-        messages = [
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": user_message}
-        ]
-        
-        logger.info(f"Appel du fournisseur LLM avec le modèle {REASONER_MODEL} pour définir la portée...")
-        
-        # Appeler le fournisseur LLM unifié avec le modèle de raisonnement
-        response = await llm_provider.generate(
-            messages=messages,
-            model=REASONER_MODEL,  # Utiliser le modèle de raisonnement spécifié
-            temperature=0.5,  # Température plus basse pour des réponses plus précises
-            max_tokens=3000
+        reasoner_agent = PydanticAgent(
+            get_llm_instance(llm_model),
+            system_prompt=prompt_refiner_agent_prompt
         )
         
-        # Extraire la réponse
-        scope = response.get('content', '')
+        logger.info("🔍 REASONER - Envoi de la requête...")
+        result = reasoner_agent.run_sync(state['latest_user_message'])
         
-        # Sauvegarder la portée dans un fichier
-        current_dir = os.path.dirname(os.path.abspath(__file__))
-        parent_dir = os.path.dirname(current_dir)
-        workbench_dir = os.path.join(parent_dir, "workbench")
-        scope_path = os.path.join(workbench_dir, "scope.md")
-        
-        # Créer le répertoire s'il n'existe pas
-        os.makedirs(workbench_dir, exist_ok=True)
-        
-        # Écrire la portée dans le fichier
-        with open(scope_path, "w", encoding="utf-8") as f:
-            f.write(scope)
-        
-        logger.info(f"Portée définie et enregistrée dans {scope_path}")
-        
-        # Mettre à jour l'état avec la nouvelle portée
-        state['scope'] = scope
-        
-        # Préparer les messages pour le prochain agent
-        serialized_messages = []
-        for msg in messages + [{"role": "assistant", "content": scope}]:
-            try:
-                serialized = json.dumps({"role": msg["role"], "content": msg["content"]})
-                serialized_messages.append(serialized.encode('utf-8'))
-            except Exception as e:
-                logger.warning(f"Erreur lors de la sérialisation d'un message: {e}")
-        
-        state['messages'] = serialized_messages
-        
-        return state
-            
-    except Exception as e:
-        error_msg = f"Erreur lors de l'appel au reasoner: {str(e)}"
-        print(f"[ERROR] {error_msg}")
-        print("[ERROR] Traceback:", traceback.format_exc())
-        
-        # Retourner un état d'erreur
-        return {
-            "scope": f"Erreur: {str(e)}",
-            "latest_user_message": state.get('latest_user_message', ''),
-            "messages": state.get('messages', []),
-            "advisor_output": state.get('advisor_output', ''),
-            "file_list": state.get('file_list', []),
-            "refined_prompt": state.get('refined_prompt', ''),
-            "refined_tools": state.get('refined_tools', ''),
-            "refined_agent": state.get('refined_agent', '')
-        }
+        # Extraire le contenu du résultat
+        full_response = result.content if hasattr(result, 'content') else str(result)
 
-# Advisor agent - create a starting point based on examples and prebuilt tools/MCP servers
-async def advisor_with_examples(state: AgentState):
-    """
-    Agent conseiller qui fournit des recommandations basées sur des exemples et des outils prédéfinis.
-    Utilise le fournisseur LLM unifié pour générer des conseils pertinents.
-    """
-    logger.info("Démarrage de l'agent conseiller...")
-    
-    try:
-        # Initialiser la liste des fichiers de ressources
-        file_list = []
-        
-        # Obtenir le répertoire des ressources
-        current_dir = os.path.dirname(os.path.abspath(__file__))
-        parent_dir = os.path.dirname(current_dir)
-        agent_resources_dir = os.path.join(parent_dir, "agent-resources")
-        
-        logger.info(f"Répertoire des ressources: {agent_resources_dir}")
-        
-        # Créer le répertoire s'il n'existe pas
-        if not os.path.exists(agent_resources_dir):
-            logger.info(f"Création du répertoire des ressources: {agent_resources_dir}")
-            os.makedirs(agent_resources_dir, exist_ok=True)
-        
-        # Récupérer la liste des fichiers de ressources
-        if os.path.exists(agent_resources_dir):
-            for root, _, files in os.walk(agent_resources_dir):
-                for file in files:
-                    file_path = os.path.join(root, file)
-                    file_list.append(file_path)
-                    logger.debug(f"Fichier ressource trouvé: {file_path}")
-        
-        logger.info(f"{len(file_list)} fichiers ressources trouvés")
-        
-        # Préparer le message utilisateur
-        user_message = state.get('latest_user_message', 'Pouvez-vous m\'aider à créer un agent IA?')
-        
-        # Préparer le contexte pour le LLM
-        context = {
-            "user_request": user_message,
-            "available_resources": [os.path.basename(f) for f in file_list],
-            "scope": state.get('scope', 'Aucune portée spécifiée'),
-            "previous_messages": []
-        }
-        
-        # Ajouter l'historique des messages précédents s'il y en a
-        if state.get('messages'):
-            for msg in state['messages']:
-                try:
-                    if isinstance(msg, bytes):
-                        msg = msg.decode('utf-8')
-                    try:
-                        msg_data = json.loads(msg) if isinstance(msg, str) else msg
-                        role = msg_data.get('role', 'user')
-                        content = msg_data.get('content', str(msg_data))
-                        context["previous_messages"].append({"role": role, "content": content})
-                    except (json.JSONDecodeError, AttributeError):
-                        context["previous_messages"].append({"role": "user", "content": str(msg)})
-                except Exception as e:
-                    logger.warning(f"Erreur lors du traitement d'un message: {e}")
-        
-        # Préparer le prompt pour le LLM
-        system_prompt = """
-        Tu es un expert en développement d'agents IA. Ton rôle est de fournir des conseils et des recommandations
-        pour la création d'un agent IA basé sur la demande de l'utilisateur. Utilise les ressources disponibles
-        pour fournir des exemples concrets et des conseils pratiques.
-        
-        **Ressources disponibles:**
-        {resources}
-        
-        **Portée du projet:**
-        {scope}
-        
-        Fournis des conseils clairs, des exemples de code pertinents et des recommandations d'outils ou de bibliothèques.
-        """.format(
-            resources="\n".join([f"- {f}" for f in context["available_resources"]]),
-            scope=context["scope"]
-        )
-        
-        # Préparer les messages pour le LLM
-        messages = [
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": context["user_request"]}
-        ]
-        
-        # Ajouter l'historique des messages
-        for msg in context["previous_messages"][-5:]:  # Limiter à 5 derniers messages
-            messages.append({"role": msg["role"], "content": msg["content"]})
-        
-        logger.info(f"Appel du fournisseur LLM avec le modèle {llm_provider.config.model}...")
-        
-        # Appeler le fournisseur LLM unifié
-        response = await llm_provider.generate(
-            messages=messages,
-            temperature=0.7,
-            max_tokens=2000
-        )
-        
-        # Extraire la réponse
-        advisor_output = response.get('content', '')
-        
-        # Mettre à jour l'état avec la sortie du conseiller
-        state['advisor_output'] = advisor_output
-        state['file_list'] = file_list
-        
-        # Préparer les messages pour le prochain agent
-        serialized_messages = []
-        for msg in messages + [{"role": "assistant", "content": advisor_output}]:
-            try:
-                serialized = json.dumps({"role": msg["role"], "content": msg["content"]})
-                serialized_messages.append(serialized.encode('utf-8'))
-            except Exception as e:
-                logger.warning(f"Erreur lors de la sérialisation d'un message: {e}")
-        
-        state['messages'] = serialized_messages
-        state['latest_user_message'] = user_message
-        state['scope'] = state.get('scope', '')
-        
-        # Traitement des résultats de l'agent conseiller
-        result = state.get('advisor_output', '')
-        
-        # Si le résultat est un dictionnaire, extraire le contenu
-        if isinstance(result, dict):
-            advisor_output = result.get('content', str(result))
-            print("[DEBUG] Extracted content from result dictionary")
-        # Si le résultat a un attribut content
-        elif hasattr(result, 'content'):
-            advisor_output = result.content
-            print("[DEBUG] Extracted content from result.content")
-        # Si c'est une chaîne, l'utiliser telle quelle
-        elif isinstance(result, str):
-            advisor_output = result
-            print("[DEBUG] Result is a string, using as-is")
-        # Sinon, convertir en chaîne
-        else:
-            advisor_output = str(result)
-            print(f"[DEBUG] Converted result to string: {advisor_output[:200]}...")
-        
-        # Mettre à jour l'état avec les champs requis
-        state['advisor_output'] = advisor_output
-        state['file_list'] = file_list
-        
-        # S'assurer que les messages sont correctement formatés pour Pydantic AI
-        serialized_messages = []
-        messages = state.get('messages', [])
-        
-        for msg in messages:
-            try:
-                # Si le message est déjà au bon format (bytes), essayer de le valider
-                if isinstance(msg, bytes):
-                    try:
-                        # Essayer de décoder et valider le message
-                        decoded_msg = json.loads(msg.decode('utf-8'))
-                        # S'assurer que le message a la structure attendue
-                        if not isinstance(decoded_msg, dict) or 'role' not in decoded_msg or 'content' not in decoded_msg:
-                            print(f"[WARNING] Message mal formaté, conversion en format standard: {decoded_msg}")
-                            decoded_msg = {
-                                "role": "user" if 'role' not in decoded_msg else decoded_msg['role'],
-                                "content": str(decoded_msg) if 'content' not in decoded_msg else decoded_msg['content']
-                            }
-                        serialized_messages.append(json.dumps(decoded_msg).encode('utf-8'))
-                    except (json.JSONDecodeError, UnicodeDecodeError) as e:
-                        print(f"[WARNING] Erreur de décodage du message, conversion en message utilisateur: {e}")
-                        # Créer un message utilisateur avec le contenu brut
-                        serialized_messages.append(
-                            json.dumps({"role": "user", "content": msg.decode('utf-8', errors='replace')})
-                            .encode('utf-8')
-                        )
-                # Si le message est un dictionnaire, s'assurer qu'il a le bon format
-                elif isinstance(msg, dict):
-                    if 'role' not in msg or 'content' not in msg:
-                        print(f"[WARNING] Dictionnaire de message mal formaté, ajout des champs manquants: {msg}")
-                        msg = {
-                            "role": msg.get('role', 'user'), 
-                            "content": msg.get('content', str(msg))
-                        }
-                    serialized_messages.append(json.dumps(msg).encode('utf-8'))
-                # Si le message est une chaîne, le convertir en message utilisateur
-                elif isinstance(msg, str):
-                    print(f"[DEBUG] Conversion d'un message texte en message utilisateur: {msg[:100]}...")
-                    serialized_messages.append(
-                        json.dumps({"role": "user", "content": msg})
-                        .encode('utf-8')
-                    )
-                # Pour tout autre type, convertir en chaîne et créer un message utilisateur
-                else:
-                    print(f"[WARNING] Type de message non géré: {type(msg)}, conversion en chaîne")
-                    serialized_messages.append(
-                        json.dumps({"role": "user", "content": str(msg)})
-                        .encode('utf-8')
-                    )
-            except Exception as e:
-                print(f"[ERROR] Erreur lors du traitement d'un message: {e}")
-                print(f"[ERROR] Type du message: {type(msg)}")
-                print(f"[ERROR] Contenu du message: {msg}")
-                # En cas d'erreur, essayer de sauvegarder le message d'erreur
-                error_msg = f"[Erreur de traitement du message: {str(e)}]"
-                serialized_messages.append(
-                    json.dumps({"role": "system", "content": error_msg})
-                    .encode('utf-8')
-                )
-        
-        # Mettre à jour l'état avec les messages sérialisés
-        state['messages'] = serialized_messages
-        state['latest_user_message'] = state.get('latest_user_message', '')
-        state['scope'] = state.get('scope', '')
-        state['refined_prompt'] = state.get('refined_prompt', '')
-        state['refined_tools'] = state.get('refined_tools', '')
-        state['refined_agent'] = state.get('refined_agent', '')
-        
-        logger.info("Traitement de l'agent conseiller terminé avec succès")
+        logger.info(f"🔍 REASONER - Réponse complète reçue: {full_response[:200]}...")
+        state['scope'] = full_response
+
+        logger.info(f"🔍 Scope state: {state.get('scope', 'NOT SET')}")
         return state
         
     except Exception as e:
-        error_msg = f"Erreur lors de l'exécution de l'agent conseiller: {str(e)}"
+        error_msg = f"Error in define_scope: {str(e)}"
         logger.error(error_msg, exc_info=True)
         state['error'] = error_msg
         return state
-    
-# Coding Node with Feedback Handling
-async def coder_agent(state: AgentState):
-    """
-    Agent de génération de code qui utilise le fournisseur LLM unifié.
-    Gère la génération de code Python basée sur la demande de l'utilisateur et la portée du projet.
-    """
-    logger.info("Démarrage de l'agent de génération de code...")
-    
+
+def advisor_with_examples(state: AgentState) -> AgentState:
+    """Génère des conseils avec l'agent advisor"""
+    print("💡 ADVISOR - Starting with model:", llm_provider.config.primary_model)
+    logger.info("="*50)
+    logger.info("💡 ADVISOR STARTING")
+    logger.info(f"💡 Modèle: {llm_provider.config.primary_model}")
+    logger.info("="*50)
+    """Génère des conseils avec l'agent advisor"""
+    logger.info("="*50)
+    logger.info("💡 ADVISOR STARTING")
+    logger.info(f"💡 Modèle: {llm_provider.config.primary_model}")
+    logger.info("="*50)
+    """Generates advice and examples using the advisor agent"""
     try:
-        # Préparer l'historique des messages pour le LLM
-        messages = [
-            {
-                "role": "system",
-                "content": """Tu es un expert en développement Python. Ta tâche est de créer un script Python complet et exécutable 
-                pour un agent IA basé sur la demande de l'utilisateur. Tu dois fournir un code bien structuré, commenté 
-                et prêt à l'emploi. Inclus toutes les importations nécessaires et assure-toi que le code est conforme 
-                aux bonnes pratiques de développement Python."""
-            },
-            {
-                "role": "user",
-                "content": f"""
-                **Demande de l'utilisateur:**
-                {state['latest_user_message']}
-                
-                **Portée du projet:**
-                {state.get('scope', 'Aucune portée spécifiée')}
-                
-                **Instructions:**
-                1. Analyse attentivement la demande de l'utilisateur et la portée du projet.
-                2. Écris un script Python unique qui définit l'agent demandé.
-                3. Le script doit être complet et prêt à être exécuté.
-                4. Structure la sortie dans un seul bloc de code Python.
-                
-                **Format de sortie attendu:**
-                ```python
-                # main.py
-                import os
-                
-                # Définition de l'agent...
-                class MonAgent:
-                    def __init__(self):
-                        # Initialisation de l'agent
-                        pass
-                        
-                    def run(self):
-                        # Logique principale de l'agent
-                        pass
-                        
-                if __name__ == "__main__":
-                    agent = MonAgent()
-                    agent.run()
-                ```
-                """
-            }
-        ]
+        logger.info("---STEP: Generating advice with advisor agent---")
         
-        # Ajouter l'historique des messages précédents s'il y en a
-        if state.get('messages'):
-            for msg in state['messages']:
-                try:
-                    # Essayer de décoder le message si c'est des bytes
-                    if isinstance(msg, bytes):
-                        msg = msg.decode('utf-8')
-                    
-                    # Essayer de parser le message comme du JSON
-                    try:
-                        msg_data = json.loads(msg) if isinstance(msg, str) else msg
-                        role = msg_data.get('role', 'user')
-                        content = msg_data.get('content', str(msg_data))
-                        messages.append({"role": role, "content": content})
-                    except (json.JSONDecodeError, AttributeError):
-                        # Si le parsing échoue, ajouter le message brut
-                        messages.append({"role": "user", "content": str(msg)})
-                except Exception as e:
-                    logger.warning(f"Erreur lors du traitement d'un message: {e}")
+        # Log détaillé pour l'advisor
+        llm_model = llm_provider.config.primary_model
+        llm_provider_name = llm_provider.config.provider.lower()
+        logger.info(f"💡 ADVISOR - Modèle: {llm_provider_name}:{llm_model}")
         
-        logger.info(f"Génération du code avec le modèle {llm_provider.config.model}...")
-        
-        # Appeler le fournisseur LLM unifié
-        response = await llm_provider.generate(
-            messages=messages,
-            temperature=0.7,
-            max_tokens=4000
+        advisor = PydanticAgent(
+            get_llm_instance(llm_model),
+            system_prompt=advisor_prompt
         )
         
-        # Extraire le contenu de la réponse
-        generated_code = response.get('content', '')
+        logger.info("💡 ADVISOR - Envoi de la requête...")
+        result = advisor.run_sync("Generate advice based on the following scope", 
+                                     deps=state['scope'])
         
-        # Mettre à jour l'état avec le code généré
-        state['generated_code'] = generated_code
+        # Extraire le contenu du résultat
+        full_response = result.content if hasattr(result, 'content') else str(result)
+
+        logger.info(f"💡 ADVISOR - Réponse complète reçue: {full_response[:200]}...")
+        state['advisor_output'] = full_response
+        logger.info("Advice generated.")
+        return state
+
+    except Exception as e:
+        error_msg = f"Error in advisor: {str(e)}"
+        logger.error(error_msg, exc_info=True)
+        state['error'] = error_msg
+        return state
+
+def coder_agent(state: AgentState) -> AgentState:
+    """Génère le code avec l'agent coder"""
+    print("⚡ CODER - Starting with model:", llm_provider.config.primary_model)
+    logger.info("="*50)
+    logger.info("⚡ CODER STARTING")
+    logger.info(f"⚡ Modèle: {llm_provider.config.primary_model}")
+    logger.info("="*50)
+    """Génère le code avec l'agent coder"""
+    logger.info("="*50)
+    logger.info("⚡ CODER STARTING")
+    logger.info(f"⚡ Modèle: {llm_provider.config.primary_model}")
+    logger.info("="*50)
+    """Generates the final code using the coder agent"""
+    try:
+        logger.info("---STEP: Generating code with coder agent---")
         
-        # Extraire le code du bloc de code markdown si nécessaire
-        if '```python' in generated_code:
-            code_block = generated_code.split('```python')[1].split('```')[0]
-            state['generated_code'] = code_block.strip()
+        # Log détaillé pour le coder
+        llm_model = llm_provider.config.primary_model
+        llm_provider_name = llm_provider.config.provider.lower()
+        logger.info(f"⚡ CODER - Modèle: {llm_provider_name}:{llm_model}")
+        logger.info(f"⚡ CODER - Scope: {str(state['scope'])[:200]}...")
+        logger.info(f"⚡ CODER - Advisor Output: {str(state['advisor_output'])[:200]}...")
         
-        logger.info("Génération de code terminée avec succès")
+        coder = PydanticAgent(
+            get_llm_instance(llm_model),
+            system_prompt=coder_prompt_with_examples
+        )
+        
+        logger.info("⚡ CODER - Envoi de la requête...")
+        result = coder.run_sync("Generate code based on scope and advisor output", 
+                                  deps={'scope': state['scope'], 'advisor_output': state['advisor_output']})
+        
+        # Extraire le contenu du résultat
+        full_response = result.content if hasattr(result, 'content') else str(result)
+
+        logger.info(f"⚡ CODER - Réponse complète reçue: {full_response[:200]}...")
+        state['generated_code'] = full_response
+        logger.info("Code generated.")
         return state
         
     except Exception as e:
-        error_msg = f"Erreur lors de la génération du code: {str(e)}"
+        error_msg = f"Error in coder: {str(e)}"
         logger.error(error_msg, exc_info=True)
         state['error'] = error_msg
         return state
 
 # Initialize the StateGraph and build the workflow
-# This is moved out of the __name__ == '__main__' block to be accessible for imports
 builder = StateGraph(AgentState)
 builder.add_node("define_scope_with_reasoner", define_scope_with_reasoner)
 builder.add_node("advisor_with_examples", advisor_with_examples)
@@ -750,11 +240,9 @@ memory = MemorySaver()
 agentic_flow = builder.compile(checkpointer=memory)
 
 if __name__ == '__main__':
-    # Use the agentic_flow initialized above
     try:
-        # Créer un état initial
         initial_state = {
-            'latest_user_message': 'Bonjour, pouvez-vous m\'aider à créer un agent IA ?',
+            'latest_user_message': 'Hello, can you help me create an AI agent?',
             'next_user_message': '',
             'messages': [],
             'scope': '',
@@ -765,17 +253,15 @@ if __name__ == '__main__':
             'refined_agent': ''
         }
         
-        # Exécuter le flux
-        print("Démarrage de l'exécution du flux d'agent...")
+        print("Starting agentic flow execution...")
         result = agentic_flow.invoke(initial_state)
         
-        # Afficher le résultat
-        print("\nRésultat de l'exécution:")
-        print(f"- Dernier message: {result.get('latest_user_message', '')}")
-        print(f"- Portée définie: {bool(result.get('scope', ''))}")
-        print(f"- Code généré: {bool(result.get('generated_code', ''))}")
+        print("\nExecution Result:")
+        print(f"- Latest Message: {result.get('latest_user_message', '')}")
+        print(f"- Scope Defined: {bool(result.get('scope', ''))}")
+        print(f"- Code Generated: {bool(result.get('generated_code', ''))}")
         
     except Exception as e:
-        print(f"\n[ERREUR] Une erreur est survenue: {str(e)}")
-        print(f"[ERREUR] Type: {type(e).__name__}")
-        print(f"[ERREUR] Traceback: {traceback.format_exc()}")
+        print(f"\n[ERROR] An error occurred: {str(e)}")
+        print(f"[ERROR] Type: {type(e).__name__}")
+        print(f"[ERROR] Traceback: {traceback.format_exc()}")

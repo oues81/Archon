@@ -8,11 +8,18 @@ import httpx
 import os
 import sys
 import json
+import logging
 from typing import List
 from pydantic import BaseModel
 from pydantic_ai import Agent, ModelRetry, RunContext
 from pydantic_ai.models.anthropic import AnthropicModel
+from pydantic_ai.models.openai import OpenAIModel
+from pydantic_ai.models import Model  # Import direct depuis pydantic_ai.models
 from archon.models.ollama_model import OllamaModel
+from typing import Any, Dict, List, Optional, AsyncIterator, Union, cast, AsyncGenerator
+from openai import AsyncOpenAI
+import aiohttp
+import json
 
 # Add the parent directory to sys.path to allow importing from the parent directory
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
@@ -25,6 +32,13 @@ from archon.agent_tools import (
     get_file_content_tool
 )
 
+# Configuration du logger
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
+handler = logging.StreamHandler()
+handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
+logger.addHandler(handler)
+
 load_dotenv()
 
 provider = get_env_var('LLM_PROVIDER') or 'Ollama'  # Par défaut sur Ollama
@@ -33,15 +47,59 @@ base_url = get_env_var('BASE_URL') or 'http://localhost:11434'  # Utilisation de
 api_key = get_env_var('LLM_API_KEY') or 'no-llm-api-key-provided'
 
 # Configuration du modèle en fonction du fournisseur
-if provider == "Anthropic":
-    model = AnthropicModel(llm, api_key=api_key)
-elif provider == "Ollama":
-    # Pour Ollama, on utilise OllamaModel avec l'URL de base
-    model_name = llm.split(':')[0]  # Prendre juste le nom du modèle sans le tag
-    model = OllamaModel(model_name=model_name, base_url=base_url)
-else:
-    # Par défaut, on utilise OpenAI
-    model = llm
+provider_lower = provider.lower()
+logger.info(f"Chargement du fournisseur: {provider_lower}, modèle: {llm}, base_url: {base_url}")
+
+try:
+    if provider_lower == "anthropic":
+        logger.info(f"Initialisation du modèle Anthropic: {llm}")
+        model = AnthropicModel(llm, api_key=api_key)
+        
+    elif provider_lower == "ollama":
+        # Configuration pour Ollama
+        model_name = llm.split(':')[0]  # Prendre juste le nom du modèle sans le tag
+        logger.info(f"Initialisation du modèle Ollama: {model_name} (URL: {base_url})")
+        model = OllamaModel(model_name=model_name, base_url=base_url)
+        
+    elif provider_lower == "openrouter":
+        # Configuration pour OpenRouter
+        logger.info(f"Initialisation du modèle OpenRouter: {llm}")
+        
+        # Configuration des en-têtes pour OpenRouter
+        headers = {
+            "HTTP-Referer": "https://github.com/oues/archon",
+            "X-Title": "Archon AI Agent"
+        }
+        
+        # Utilisation d'un modèle Ollama local comme modèle factice pour pydantic-ai
+        # Nous allons intercepter les appels plus tard pour les rediriger vers OpenRouter
+        logger.info("Utilisation d'un modèle Ollama local comme modèle factice")
+        model = OllamaModel(model_name="phi3:mini", base_url="http://host.docker.internal:11434")
+        
+        # Enregistrement des informations OpenRouter pour une utilisation ultérieure
+        model._openrouter_config = {
+            'api_key': api_key,
+            'model': llm,
+            'headers': headers
+        }
+        
+    elif provider_lower == "openai":
+        # Configuration pour OpenAI standard
+        openai_url = base_url if base_url else "https://api.openai.com/v1"
+        logger.info(f"Initialisation du modèle OpenAI: {llm} (URL: {openai_url})")
+        model = OpenAIModel(
+            model_name=llm,
+            api_key=api_key,
+            base_url=openai_url
+        )
+        
+    else:
+        logger.warning(f"Fournisseur non reconnu: {provider_lower}. Utilisation du modèle brut.")
+        model = llm
+        
+except Exception as e:
+    logger.error(f"Erreur lors de l'initialisation du modèle {llm} avec le fournisseur {provider_lower}: {str(e)}")
+    raise
 
 embedding_model = get_env_var('EMBEDDING_MODEL') or 'text-embedding-3-small'
 

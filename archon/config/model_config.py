@@ -95,8 +95,8 @@ class ModelConfig:
     @classmethod
     def _from_openrouter(cls, config: dict) -> 'ModelConfig':
         """Crée une configuration pour OpenRouter."""
-        # Modèles gratuits sur OpenRouter (juillet 2025)
-        model_name = config['model_name'] or 'gryphe/mythomax-l2-13b'
+        # Utiliser le modèle spécifié ou un modèle gratuit par défaut
+        model_name = config['model_name'] or 'mistralai/mistral-7b-instruct:free'
         base_url = 'https://openrouter.ai/api/v1'
         api_key = config['api_key'] or os.getenv('OPENROUTER_API_KEY')
         
@@ -104,15 +104,18 @@ class ModelConfig:
             raise ValueError("La clé API OpenRouter (OPENROUTER_API_KEY) est requise")
         
         # Nettoyer le nom du modèle des préfixes openrouter/
-        model_name = model_name.replace('openrouter:', '').replace('openrouter/', '')
+        clean_model_name = model_name.replace('openrouter:', '').replace('openrouter/', '')
         
         logger.info(f"[CONFIG] Utilisation du fournisseur: openrouter")
-        logger.info(f"[CONFIG] Modèle: {model_name}")
+        logger.info(f"[CONFIG] Modèle: {clean_model_name}")
         logger.info(f"[CONFIG] URL de base: {base_url}")
+        
+        # Pour les modèles avec :free, on utilise le nom nettoyé
+        model_to_use = clean_model_name.split(':')[0] if ':free' in clean_model_name else clean_model_name
         
         return cls(
             provider='openrouter',
-            model_name=model_name,
+            model_name=model_to_use,  # Utiliser le nom nettoyé
             base_url=base_url,
             api_key=api_key,
             temperature=float(os.getenv('TEMPERATURE', '0.7')),

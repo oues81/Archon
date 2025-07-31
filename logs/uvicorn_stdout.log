@@ -1,0 +1,9 @@
+2025-07-31 03:20:21 - archon.llm_provider - INFO - Configuration pour OpenRouter...
+2025-07-31 03:20:21 - archon.llm_provider - INFO - Configuration OpenRouter terminée.
+2025-07-31 03:20:22 - archon.archon_graph - INFO - LLM Provider: OpenRouter
+2025-07-31 03:20:22 - archon.archon_graph - INFO - Reasoner Model: mistralai/mistral-7b-instruct:free
+2025-07-31 03:20:22 - archon.archon_graph - INFO - Primary Model: mistralai/mistral-7b-instruct:free
+2025-07-31 03:20:23 - uvicorn.error - INFO - Started server process [14]
+2025-07-31 03:20:23 - uvicorn.error - INFO - Waiting for application startup.
+2025-07-31 03:20:23 - uvicorn.error - INFO - Application startup complete.
+2025-07-31 03:20:23 - uvicorn.error - INFO - Uvicorn running on http://0.0.0.0:8110 (Press CTRL+C to quit)

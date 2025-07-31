@@ -169,7 +169,7 @@ def start_services(compose_file: str, compose_dir: Path) -> bool:
     
     # Démarrer les services en arrière-plan
     return_code, _ = run_command(
-        ["docker", "compose", "-f", compose_file, "up", "-d", "archon"],
+        ["docker", "compose", "-f", compose_file, "up", "-d", "archon", "mcp-server"],
         cwd=compose_dir
     )
     

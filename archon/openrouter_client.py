@@ -1,5 +1,5 @@
 """
-Client pour l'API OpenRouter
+Client pour l'API OpenRouter avec support des modèles gratuits
 """
 import os
 import json
@@ -7,6 +7,7 @@ import httpx
 from typing import Dict, Any, Optional, List, Union
 from dataclasses import dataclass
 from dotenv import load_dotenv
+from pydantic_ai.models.openai import OpenAIModel
 
 # Charger les variables d'environnement
 load_dotenv()
@@ -26,6 +27,13 @@ class OpenRouterClient:
     def __init__(self, config: Optional[OpenRouterConfig] = None):
         self.config = config or OpenRouterConfig()
         self.headers = self._prepare_headers()
+        
+        # Initialiser le modèle OpenAI avec la configuration OpenRouter
+        self.model = OpenAIModel(
+            model_name=self.config.default_model.replace('openrouter:', '').replace('openrouter/', ''),
+            base_url=self.config.base_url,
+            api_key=self.config.api_key
+        )
     
     def _prepare_headers(self) -> Dict[str, str]:
         """Prépare les en-têtes pour les requêtes HTTP"""

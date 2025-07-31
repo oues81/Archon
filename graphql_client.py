@@ -1,8 +1,36 @@
 import os
+import logging
 from typing import Any, Dict, List, Optional
 from gql import gql, Client
 from gql.transport.aiohttp import AIOHTTPTransport
-from .utils import get_env_var, write_to_log
+
+# Configuration du logger
+logger = logging.getLogger(__name__)
+
+def get_env_var(name: str, default: str = None) -> str:
+    """Récupère une variable d'environnement avec une valeur par défaut optionnelle.
+    
+    Args:
+        name: Nom de la variable d'environnement
+        default: Valeur par défaut si la variable n'existe pas
+        
+    Returns:
+        La valeur de la variable d'environnement ou la valeur par défaut
+    """
+    value = os.getenv(name, default)
+    if value is None:
+        logger.warning(f"La variable d'environnement {name} n'est pas définie")
+    return value
+
+def write_to_log(message: str, level: str = 'info'):
+    """Écrit un message dans les logs avec le niveau spécifié.
+    
+    Args:
+        message: Le message à logger
+        level: Niveau de log ('debug', 'info', 'warning', 'error', 'critical')
+    """
+    log_level = getattr(logging, level.upper(), logging.INFO)
+    logger.log(log_level, message)
 
 class SupabaseGraphQLClient:
     def __init__(self):

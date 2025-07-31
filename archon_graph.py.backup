@@ -1,0 +1,190 @@
+"""
+Archon Graph - Agent Workflow Management
+Utilizes a unified LLM provider to support multiple backends (Ollama, OpenAI, OpenRouter)
+"""
+import json
+import logging
+import os
+import sys
+import traceback
+from datetime import datetime
+from typing import Annotated, List, Any, Optional, Dict, Union
+from typing_extensions import TypedDict
+
+# Logger Configuration
+logger = logging.getLogger(__name__)
+
+# Path Configuration
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+# Unified LLM Provider Import
+from archon.llm_provider import llm_provider
+
+# Pydantic AI Compatibility Imports
+from pydantic_ai import RunContext, Agent as PydanticAgent, ModelRetry
+from pydantic_ai.messages import (
+    ModelMessage,
+    ModelMessagesTypeAdapter,
+    ModelRequest,
+    ModelResponse,
+    TextPart,
+    SystemPromptPart,
+    UserPromptPart
+)
+
+# LangGraph Imports
+try:
+    from langgraph.graph import StateGraph, END
+    from langgraph.graph.state import START
+    from langgraph.checkpoint.memory import MemorySaver
+except ImportError as e:
+    logger.warning(f"Could not import LangGraph: {e}")
+    class StateGraph:
+        def __init__(self, *args, **kwargs): pass
+    END = None
+    START = None
+    MemorySaver = object
+
+# Prompt Imports
+from archon.agent_prompts import (
+    prompt_refiner_agent_prompt, advisor_prompt, coder_prompt_with_examples
+)
+
+# Log models on startup
+logger.info(f"LLM Provider: {llm_provider.config.provider}")
+logger.info(f"Reasoner Model: {llm_provider.config.reasoner_model}")
+logger.info(f"Primary Model: {llm_provider.config.primary_model}")
+
+# Agent State Definition
+class AgentState(TypedDict):
+    latest_user_message: str
+    next_user_message: str
+    messages: List[Any]
+    scope: str
+    advisor_output: str
+    file_list: List[str]
+    refined_prompt: str
+    refined_tools: str
+    refined_agent: str
+    generated_code: Optional[str] = None
+    error: Optional[str] = None
+
+def define_scope_with_reasoner(state: AgentState) -> AgentState:
+    """Defines the project scope using a reasoner agent"""
+    try:
+        logger.info("---STEP: Defining scope with reasoner agent---")
+        
+        reasoner = PydanticAgent(
+            model=llm_provider.config.reasoner_model,
+            prompt_template=prompt_refiner_agent_prompt,
+            **llm_provider.pydantic_ai_config
+        )
+        
+        context = RunContext(
+            data={'user_request': state['latest_user_message']}
+        )
+        
+        result = reasoner.run(context)
+        state['scope'] = result
+        logger.info(f"Scope defined: {result}")
+        return state
+        
+    except Exception as e:
+        error_msg = f"Error in define_scope: {str(e)}"
+        logger.error(error_msg, exc_info=True)
+        state['error'] = error_msg
+        return state
+
+def advisor_with_examples(state: AgentState) -> AgentState:
+    """Generates advice and examples using the advisor agent"""
+    try:
+        logger.info("---STEP: Generating advice with advisor agent---")
+        
+        advisor = PydanticAgent(
+            model=llm_provider.config.primary_model,
+            prompt_template=advisor_prompt,
+            **llm_provider.pydantic_ai_config
+        )
+        
+        context = RunContext(
+            data={'scope': state['scope']}
+        )
+        
+        result = advisor.run(context)
+        state['advisor_output'] = result
+        logger.info("Advice generated.")
+        return state
+
+    except Exception as e:
+        error_msg = f"Error in advisor: {str(e)}"
+        logger.error(error_msg, exc_info=True)
+        state['error'] = error_msg
+        return state
+
+def coder_agent(state: AgentState) -> AgentState:
+    """Generates the final code using the coder agent"""
+    try:
+        logger.info("---STEP: Generating code with coder agent---")
+        
+        coder = PydanticAgent(
+            model=llm_provider.config.primary_model,
+            prompt_template=coder_prompt_with_examples,
+            **llm_provider.pydantic_ai_config
+        )
+        
+        context = RunContext(
+            data={
+                'scope': state['scope'],
+                'advisor_output': state['advisor_output']
+            }
+        )
+        
+        result = coder.run(context)
+        state['generated_code'] = result
+        logger.info("Code generated.")
+        return state
+        
+    except Exception as e:
+        error_msg = f"Error in coder: {str(e)}"
+        logger.error(error_msg, exc_info=True)
+        state['error'] = error_msg
+        return state
+
+# Initialize the StateGraph and build the workflow
+builder = StateGraph(AgentState)
+builder.add_node("define_scope_with_reasoner", define_scope_with_reasoner)
+builder.add_node("advisor_with_examples", advisor_with_examples)
+builder.add_node("coder_agent", coder_agent)
+builder.set_entry_point("define_scope_with_reasoner")
+builder.add_edge("define_scope_with_reasoner", "advisor_with_examples")
+builder.add_edge("advisor_with_examples", "coder_agent")
+builder.add_edge("coder_agent", END)
+memory = MemorySaver()
+agentic_flow = builder.compile(checkpointer=memory)
+
+if __name__ == '__main__':
+    try:
+        initial_state = {
+            'latest_user_message': 'Hello, can you help me create an AI agent?',
+            'next_user_message': '',
+            'messages': [],
+            'scope': '',
+            'advisor_output': '',
+            'file_list': [],
+            'refined_prompt': '',
+            'refined_tools': '',
+            'refined_agent': ''
+        }
+        
+        print("Starting agentic flow execution...")
+        result = agentic_flow.invoke(initial_state)
+        
+        print("\nExecution Result:")
+        print(f"- Latest Message: {result.get('latest_user_message', '')}")
+        print(f"- Scope Defined: {bool(result.get('scope', ''))}")
+        print(f"- Code Generated: {bool(result.get('generated_code', ''))}")
+        
+    except Exception as e:
+        print(f"\n[ERROR] An error occurred: {str(e)}")
+        print(f"[ERROR] Type: {type(e).__name__}")
+        print(f"[ERROR] Traceback: {traceback.format_exc()}")
