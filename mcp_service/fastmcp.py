@@ -11,7 +11,7 @@ class FastMCP:
         self.log_level = log_level
         self.timeout = request_timeout
         self.tools = {}
-        self.app.add_api_route("/", self.handle_rpc, methods=["POST"])
+        self.app.add_api_route("/api/v1/execute", self.handle_rpc, methods=["POST"]) # Changed from "/"
         self.app.add_api_route("/health", self.health_check, methods=["GET"])
 
     async def health_check(self):
@@ -29,7 +29,7 @@ class FastMCP:
 
     async def handle_rpc(self, request: Request):
         body = await request.json()
-        method = body.get("method")
+        method = body.get("command") # Changed from "method" to "command" to match client
         params = body.get("params", {})
         request_id = body.get("id")
 

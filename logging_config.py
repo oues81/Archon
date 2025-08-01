@@ -2,6 +2,15 @@ import logging
 import logging.handlers
 import os
 from pathlib import Path
+from datetime import datetime, timezone, timedelta
+
+# Configuration du fuseau horaire (UTC-5 pour l'heure de l'Est)
+EASTERN = timezone(timedelta(hours=-5))
+
+def custom_time(*args):
+    return datetime.now(EASTERN).timetuple()
+
+logging.Formatter.converter = custom_time
 
 # Configuration des répertoires
 LOG_DIR = Path("/app/logs")
