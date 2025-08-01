@@ -1,5 +1,5 @@
 [client]
-showErrorDetails = "none"
+showErrorDetails = "full"
 
 [theme]
 primaryColor = "#EB2D8C"

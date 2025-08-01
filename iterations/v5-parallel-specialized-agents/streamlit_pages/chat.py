@@ -6,7 +6,7 @@ import os
 
 # Add the current directory to Python path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from archon.archon_graph import agentic_flow
+from ...archon.archon_graph import agentic_flow
 
 @st.cache_resource
 def get_thread_id():

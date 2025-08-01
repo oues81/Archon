@@ -41,6 +41,7 @@ nvidia-cublas-cu12 = { version = "*", optional = true }
 nvidia-cuda-nvrtc-cu12 = { version = "*", optional = true }
 logfire = "^3.22.0"
 html2text = "^2025.4.15"
+gql = "^3.5.3"
 
 [[tool.poetry.source]]
 name = "pytorch-cpu"
@@ -51,12 +52,16 @@ priority = "explicit"
 [tool.poetry.extras]
 # Keep this empty to prevent any optional dependencies
 
+[tool.pytest.ini_options]
+python_paths = [".", "../../tests"]
+
 [build-system]
 requires = ["poetry-core>=1.0.0"]
 build-backend = "poetry.core.masonry.api"
 
+
 [tool.poetry.group.dev.dependencies]
-pytest = "^7.4.0"
+pytest = ">=8.2"
 pytest-cov = "^4.1.0"
 black = "^23.7.0"
 isort = "^5.12.0"

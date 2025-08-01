@@ -20,7 +20,7 @@ from typing_extensions import TypedDict
 from typing import Optional, Dict, Any, List
 
 # Importer agentic_flow depuis le bon emplacement
-from archon.archon_graph import agentic_flow
+from .archon_graph import agentic_flow
 try:
     from langgraph.types import Command
 except ImportError:

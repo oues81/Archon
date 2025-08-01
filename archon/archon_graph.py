@@ -12,6 +12,9 @@ from datetime import datetime
 from typing import Annotated, List, Any, Optional, Dict, Union
 from typing_extensions import TypedDict
 
+# Configuration OpenRouter simplifiée
+logging.info("🔧 Configuration OpenRouter simplifiée")
+
 # Logger Configuration
 logger = logging.getLogger(__name__)
 
@@ -25,6 +28,8 @@ from archon.llm_provider import llm_provider
 from pydantic_ai import RunContext, Agent as PydanticAgent, ModelRetry
 from pydantic_ai.models.openai import OpenAIModel
 from pydantic_ai.providers.openai import OpenAIProvider
+from pydantic_ai.settings import ModelSettings
+import httpx
 
 from pydantic_ai.messages import (
     ModelMessage,
@@ -46,8 +51,54 @@ def get_llm_instance(model_name: str):
         ollama_provider = OpenAIProvider(base_url=f"{llm_provider.config.base_url}/v1")
         return OpenAIModel(model_name=model_name, provider=ollama_provider)
     elif provider_name == "openrouter":
-        logger.info(f"Configuration d'OpenRouter avec la chaîne: openrouter:{model_name}")
-        return f"openrouter:{model_name}"
+        logger.info(f"🔧 Configuration d'OpenRouter via l'API compatible OpenAI")
+        if not llm_provider.config.api_key:
+            raise ValueError("❌ La clé API OpenRouter n'est pas configurée.")
+
+        # Journaliser la clé API (version masquée) pour le débogage
+        api_key = llm_provider.config.api_key
+        masked_key = api_key[:6] + "*****" + api_key[-4:] if len(api_key) > 10 else "***"
+        logger.info(f"🔑 Utilisation de la clé API OpenRouter: {masked_key}")
+
+        try:
+            # Utiliser directement la configuration de llm_provider.py
+            # Cette approche garantit que les en-têtes d'authentification sont correctement configurés
+            from openai import AsyncOpenAI
+            
+            # Créer un client OpenAI avec l'authentification correcte
+            openai_client = AsyncOpenAI(
+                api_key=api_key,
+                base_url="https://openrouter.ai/api/v1",
+                default_headers={
+                    "HTTP-Referer": "http://localhost",
+                    "X-Title": "Archon"
+                }
+            )
+            
+            # Créer le provider avec ce client
+            openrouter_provider = OpenAIProvider(
+                openai_client=openai_client
+            )
+            
+            logger.info(f"✅ Provider OpenRouter correctement initialisé avec le modèle {model_name}")
+            model = OpenAIModel(model_name=model_name, provider=openrouter_provider)
+            
+            # Configurer les en-têtes supplémentaires pour OpenRouter
+            # Dans la version 0.4.7 de pydantic-ai, les en-têtes doivent être configurés différemment
+            # Nous passons directement les en-têtes au client HTTP du fournisseur
+            if hasattr(openrouter_provider.client, "http_client") and hasattr(openrouter_provider.client.http_client, "headers"):
+                openrouter_provider.client.http_client.headers.update({
+                    "HTTP-Referer": "http://localhost",
+                    "X-Title": "Archon"
+                })
+                logger.info("✅ En-têtes supplémentaires configurés pour OpenRouter")
+            
+            return model
+        except Exception as e:
+            logger.error(f"❌ Erreur lors de l'initialisation du provider OpenRouter: {str(e)}")
+            import traceback
+            logger.error(traceback.format_exc())
+            raise
     else:
         raise ValueError(f"Fournisseur LLM non supporté pour pydantic-ai: {provider_name}")
 
@@ -165,7 +216,7 @@ def advisor_with_examples(state: AgentState) -> AgentState:
         
         logger.info("💡 ADVISOR - Envoi de la requête...")
         result = advisor.run_sync("Generate advice based on the following scope", 
-                                     deps=state['scope'])
+                                  deps={'scope': state['scope']})
         
         # Extraire le contenu du résultat
         full_response = result.content if hasattr(result, 'content') else str(result)
@@ -201,8 +252,25 @@ def coder_agent(state: AgentState) -> AgentState:
         llm_model = llm_provider.config.primary_model
         llm_provider_name = llm_provider.config.provider.lower()
         logger.info(f"⚡ CODER - Modèle: {llm_provider_name}:{llm_model}")
-        logger.info(f"⚡ CODER - Scope: {str(state['scope'])[:200]}...")
-        logger.info(f"⚡ CODER - Advisor Output: {str(state['advisor_output'])[:200]}...")
+        
+        # Vérification de l'existence des clés dans l'état
+        scope = state.get('scope', '')
+        advisor_output = state.get('advisor_output', '')
+        
+        if not scope:
+            logger.warning("⚡ CODER - Attention: La clé 'scope' est vide ou manquante")
+            scope = "Aucun scope défini. Veuillez fournir plus d'informations."
+            
+        if not advisor_output:
+            logger.warning("⚡ CODER - Attention: La clé 'advisor_output' est vide ou manquante")
+            advisor_output = "Aucune recommandation de l'advisor. Utilisez le scope pour générer le code."
+            
+        # Mise à jour de l'état pour garantir que ces clés existent
+        state['scope'] = scope
+        state['advisor_output'] = advisor_output
+        
+        logger.info(f"⚡ CODER - Scope: {scope[:200]}...")
+        logger.info(f"⚡ CODER - Advisor Output: {advisor_output[:200]}...")
         
         coder = PydanticAgent(
             get_llm_instance(llm_model),

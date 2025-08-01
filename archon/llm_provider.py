@@ -13,6 +13,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 import httpx
 from dotenv import load_dotenv
+import importlib.util
 
 # Configurer le logger
 logger = logging.getLogger(__name__)
@@ -88,25 +89,38 @@ class LLMProvider:
             logger.error(traceback.format_exc())
 
     def _setup_openrouter(self):
-        """Configure le client pour OpenRouter"""
-        logger.info("Configuration pour OpenRouter...")
+        """Configure le client pour OpenRouter avec une approche directe"""
+        logger.info("🔧 Configuration pour OpenRouter...")
+        
+        # Vérifier que la clé API est configurée
         self.config.api_key = get_env_from_profile("OPENROUTER_API_KEY")
-        self.config.base_url = get_env_from_profile("OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1")
         if not self.config.api_key:
-            raise ValueError("La clé API OpenRouter (OPENROUTER_API_KEY) n'est pas définie.")
-        self.pydantic_ai_config = {
-            "provider": "openrouter",
-            "api_key": self.config.api_key,
-            "base_url": self.config.base_url
-        }
-        self.client = httpx.AsyncClient(
-            base_url=self.config.base_url,
-            headers={
-                "Authorization": f"Bearer {self.config.api_key}",
-                "Content-Type": "application/json"
-            }
-        )
-        logger.info("Configuration OpenRouter terminée.")
+            logger.error("❌ La clé API OpenRouter n'est pas configurée")
+            raise ValueError("La clé API OpenRouter est requise")
+            
+        # URL de base pour OpenRouter
+        self.config.base_url = "https://openrouter.ai/api/v1"
+        
+        # Journaliser la configuration
+        logger.info(f"🔑 Clé API OpenRouter configurée: {self.config.api_key[:6]}*****")
+        
+        # Client HTTP avec tous les en-têtes requis par OpenRouter
+        try:
+            self.client = httpx.AsyncClient(
+                base_url=self.config.base_url,
+                headers={
+                    "Authorization": f"Bearer {self.config.api_key}",
+                    "Content-Type": "application/json",
+                    "HTTP-Referer": "http://localhost",
+                    "X-Title": "Archon"
+                }
+            )
+            
+        except Exception as e:
+            logger.error(f"❌ Erreur lors de la création du client HTTP OpenRouter: {str(e)}")
+            raise
+        
+        logger.info("✅ Configuration OpenRouter terminée.")
 
     def _setup_openai(self):
         """Configure le client pour OpenAI"""

@@ -226,7 +226,8 @@ def main() -> int:
 
     # Obtenir le chemin du répertoire du script
     script_dir = Path(__file__).parent.resolve()
-    compose_dir = script_dir.parent
+    # Le projet racine est deux niveaux au-dessus du script
+    compose_dir = script_dir.parent.parent
     compose_file = args.compose_file
     
     # Nettoyage si demandé
