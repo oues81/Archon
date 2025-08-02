@@ -10988,3 +10988,2020 @@ pydantic_ai.exceptions.ModelHTTPError: status_code: 400, model_name: deepseek/de
 2025-08-01 22:40:29 - archon.archon_graph - INFO - LLM Provider: OpenRouter
 2025-08-01 22:40:29 - archon.archon_graph - INFO - Reasoner Model: deepseek/deepseek-chat-v3-0324:free
 2025-08-01 22:40:29 - archon.archon_graph - INFO - Primary Model: moonshotai/moonshot-v1-128k:free
+2025-08-01 22:57:08 - archon.llm_provider - INFO - Configuration pour Ollama...
+2025-08-01 22:57:08 - archon.llm_provider - INFO - Configuration Ollama terminée. URL de base: http://ollama:11434
+2025-08-01 22:57:09 - archon.archon_graph - INFO - LLM Provider: Ollama
+2025-08-01 22:57:09 - archon.archon_graph - INFO - Reasoner Model: tinyllama
+2025-08-01 22:57:09 - archon.archon_graph - INFO - Primary Model: tinyllama
+2025-08-01 22:57:31 - archon.llm_provider - INFO - Configuration pour OpenAI...
+2025-08-01 22:57:31 - archon.llm_provider - INFO - Configuration OpenAI terminée.
+2025-08-01 22:57:32 - archon.archon_graph - INFO - LLM Provider: OpenAI
+2025-08-01 22:57:32 - archon.archon_graph - INFO - Reasoner Model: gpt-4.1-nano
+2025-08-01 22:57:32 - archon.archon_graph - INFO - Primary Model: gpt-4.1-nano
+2025-08-01 22:57:54 - archon.llm_provider - INFO - 🔧 Configuration pour OpenRouter...
+2025-08-01 22:57:54 - archon.llm_provider - INFO - 🔑 Clé API OpenRouter configurée: sk-or-*****
+2025-08-01 22:57:54 - archon.llm_provider - INFO - ✅ Configuration OpenRouter terminée.
+2025-08-01 22:57:55 - archon.archon_graph - INFO - LLM Provider: OpenRouter
+2025-08-01 22:57:55 - archon.archon_graph - INFO - Reasoner Model: deepseek/deepseek-chat-v3-0324:free
+2025-08-01 22:57:55 - archon.archon_graph - INFO - Primary Model: moonshotai/moonshot-v1-128k:free
+2025-08-01 23:01:02 - archon.llm_provider - INFO - Configuration pour Ollama...
+2025-08-01 23:01:02 - archon.llm_provider - INFO - Configuration Ollama terminée. URL de base: http://ollama:11434
+2025-08-01 23:01:04 - archon.archon_graph - INFO - LLM Provider: Ollama
+2025-08-01 23:01:04 - archon.archon_graph - INFO - Reasoner Model: tinyllama
+2025-08-01 23:01:04 - archon.archon_graph - INFO - Primary Model: tinyllama
+2025-08-01 23:01:25 - archon.llm_provider - INFO - Configuration pour OpenAI...
+2025-08-01 23:01:25 - archon.llm_provider - INFO - Configuration OpenAI terminée.
+2025-08-01 23:01:26 - archon.archon_graph - INFO - LLM Provider: OpenAI
+2025-08-01 23:01:26 - archon.archon_graph - INFO - Reasoner Model: gpt-4.1-nano
+2025-08-01 23:01:26 - archon.archon_graph - INFO - Primary Model: gpt-4.1-nano
+2025-08-01 23:01:49 - archon.llm_provider - INFO - 🔧 Configuration pour OpenRouter...
+2025-08-01 23:01:49 - archon.llm_provider - INFO - 🔑 Clé API OpenRouter configurée: sk-or-*****
+2025-08-01 23:01:49 - archon.llm_provider - INFO - ✅ Configuration OpenRouter terminée.
+2025-08-01 23:01:50 - archon.archon_graph - INFO - LLM Provider: OpenRouter
+2025-08-01 23:01:50 - archon.archon_graph - INFO - Reasoner Model: deepseek/deepseek-chat-v3-0324:free
+2025-08-01 23:01:50 - archon.archon_graph - INFO - Primary Model: moonshotai/moonshot-v1-128k:free
+2025-08-01 23:22:27 - archon.archon_graph - INFO - ==================================================
+2025-08-01 23:22:27 - archon.archon_graph - INFO - 🔍 REASONER STARTING
+2025-08-01 23:22:27 - archon.archon_graph - INFO - 🔍 Modèle: deepseek/deepseek-chat-v3-0324:free
+2025-08-01 23:22:27 - archon.archon_graph - INFO - ==================================================
+2025-08-01 23:22:27 - archon.archon_graph - INFO - ==================================================
+2025-08-01 23:22:27 - archon.archon_graph - INFO - 🔍 REASONER STARTING
+2025-08-01 23:22:27 - archon.archon_graph - INFO - 🔍 Modèle: deepseek/deepseek-chat-v3-0324:free
+2025-08-01 23:22:27 - archon.archon_graph - INFO - ==================================================
+2025-08-01 23:22:27 - archon.archon_graph - INFO - ---STEP: Defining scope with reasoner agent---
+2025-08-01 23:22:27 - archon.archon_graph - INFO - 🧠 REASONER - Modèle: openrouter:deepseek/deepseek-chat-v3-0324:free
+2025-08-01 23:22:27 - archon.archon_graph - INFO - 🧠 REASONER - Message utilisateur: Bonjour! Peux-tu me confirmer que tu fonctionnes correctement?
+2025-08-01 23:22:27 - archon.archon_graph - INFO - 🔧 Configuration d'OpenRouter via l'API compatible OpenAI
+2025-08-01 23:22:27 - archon.archon_graph - INFO - 🔑 Utilisation de la clé API OpenRouter: sk-or-*****f651
+2025-08-01 23:22:27 - archon.archon_graph - INFO - ✅ Provider OpenRouter correctement initialisé avec le modèle deepseek/deepseek-chat-v3-0324:free
+2025-08-01 23:22:27 - archon.archon_graph - INFO - 🔍 REASONER - Envoi de la requête...
+2025-08-01 23:22:34 - archon.archon_graph - INFO - 🔍 REASONER - Réponse complète reçue: AgentRunResult(output='Voici une version améliorée de votre demande pour plus de clarté et de précision :\n\n**Prompt raffiné :**  \n"Bonjour ! Peux-tu me confirmer que tu fonctionnes normalement en r...
+2025-08-01 23:22:34 - archon.archon_graph - INFO - 🔍 Scope state: AgentRunResult(output='Voici une version améliorée de votre demande pour plus de clarté et de précision :\n\n**Prompt raffiné :**  \n"Bonjour ! Peux-tu me confirmer que tu fonctionnes normalement en répondant à ces deux points :  \n1. Décris brièvement ton état opérationnel (par exemple : disponibilité des fonctions de base, traitement du langage).  \n2. Donne un exemple concret de ta capacité actuelle en résolvant ce micro-défi : quelle est la capitale de l\'Éthiopie ?"  \n\n**Améliorations apportées :**  \n1. **Clarification** : La demande explicite une réponse structurée plutôt qu\'une simple confirmation.  \n2. **Test concret** : L\'ajout d\'une question factuelle permet une vérification immédiate.  \n3. **Attentes explicites** : Le format guide la réponse vers une auto-évaluation utile.  \n\n*Exemple de réponse attendue :*  \n"1. Je fonctionne normalement : traitement du langage actif et accès aux connaissances de base.  \n2. La capitale de l\'Éthiopie est Addis-Abeba."  \n\nCette version facilite un diagnostic plus précis tout en restant concise.')
+2025-08-01 23:22:34 - archon.archon_graph - INFO - ==================================================
+2025-08-01 23:22:34 - archon.archon_graph - INFO - 💡 ADVISOR STARTING
+2025-08-01 23:22:34 - archon.archon_graph - INFO - 💡 Modèle: moonshotai/moonshot-v1-128k:free
+2025-08-01 23:22:34 - archon.archon_graph - INFO - ==================================================
+2025-08-01 23:22:34 - archon.archon_graph - INFO - ==================================================
+2025-08-01 23:22:34 - archon.archon_graph - INFO - 💡 ADVISOR STARTING
+2025-08-01 23:22:34 - archon.archon_graph - INFO - 💡 Modèle: moonshotai/moonshot-v1-128k:free
+2025-08-01 23:22:34 - archon.archon_graph - INFO - ==================================================
+2025-08-01 23:22:34 - archon.archon_graph - INFO - ---STEP: Generating advice with advisor agent---
+2025-08-01 23:22:34 - archon.archon_graph - INFO - 💡 ADVISOR - Modèle: openrouter:moonshotai/moonshot-v1-128k:free
+2025-08-01 23:22:34 - archon.archon_graph - INFO - 🔧 Configuration d'OpenRouter via l'API compatible OpenAI
+2025-08-01 23:22:34 - archon.archon_graph - INFO - 🔑 Utilisation de la clé API OpenRouter: sk-or-*****f651
+2025-08-01 23:22:34 - archon.archon_graph - INFO - ✅ Provider OpenRouter correctement initialisé avec le modèle moonshotai/moonshot-v1-128k:free
+2025-08-01 23:22:34 - archon.archon_graph - INFO - 💡 ADVISOR - Envoi de la requête...
+2025-08-01 23:22:34 - archon.archon_graph - ERROR - Error in advisor: status_code: 400, model_name: moonshotai/moonshot-v1-128k:free, body: {'message': 'moonshotai/moonshot-v1-128k:free is not a valid model ID', 'code': 400}
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.10/site-packages/pydantic_ai/models/openai.py", line 332, in _completions_create
+    return await self.client.chat.completions.create(
+  File "/usr/local/lib/python3.10/site-packages/openai/resources/chat/completions/completions.py", line 2454, in create
+    return await self._post(
+  File "/usr/local/lib/python3.10/site-packages/openai/_base_client.py", line 1791, in post
+    return await self.request(cast_to, opts, stream=stream, stream_cls=stream_cls)
+  File "/usr/local/lib/python3.10/site-packages/openai/_base_client.py", line 1591, in request
+    raise self._make_status_error_from_response(err.response) from None
+openai.BadRequestError: Error code: 400 - {'error': {'message': 'moonshotai/moonshot-v1-128k:free is not a valid model ID', 'code': 400}, 'user_id': 'user_2uwmzv9q93NaENGKkEBzdBUH7MI'}
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/app/archon/archon_graph.py", line 218, in advisor_with_examples
+    result = advisor.run_sync("Generate advice based on the following scope",
+  File "/usr/local/lib/python3.10/site-packages/pydantic_ai/agent.py", line 987, in run_sync
+    return get_event_loop().run_until_complete(
+  File "/usr/local/lib/python3.10/asyncio/base_events.py", line 649, in run_until_complete
+    return future.result()
+  File "/usr/local/lib/python3.10/site-packages/pydantic_ai/agent.py", line 562, in run
+    async for _ in agent_run:
+  File "/usr/local/lib/python3.10/site-packages/pydantic_ai/agent.py", line 2173, in __anext__
+    next_node = await self._graph_run.__anext__()
+  File "/usr/local/lib/python3.10/site-packages/pydantic_graph/graph.py", line 809, in __anext__
+    return await self.next(self._next_node)
+  File "/usr/local/lib/python3.10/site-packages/pydantic_graph/graph.py", line 782, in next
+    self._next_node = await node.run(ctx)
+  File "/usr/local/lib/python3.10/site-packages/pydantic_ai/_agent_graph.py", line 299, in run
+    return await self._make_request(ctx)
+  File "/usr/local/lib/python3.10/site-packages/pydantic_ai/_agent_graph.py", line 359, in _make_request
+    model_response = await ctx.deps.model.request(message_history, model_settings, model_request_parameters)
+  File "/usr/local/lib/python3.10/site-packages/pydantic_ai/models/openai.py", line 244, in request
+    response = await self._completions_create(
+  File "/usr/local/lib/python3.10/site-packages/pydantic_ai/models/openai.py", line 361, in _completions_create
+    raise ModelHTTPError(status_code=status_code, model_name=self.model_name, body=e.body) from e
+pydantic_ai.exceptions.ModelHTTPError: status_code: 400, model_name: moonshotai/moonshot-v1-128k:free, body: {'message': 'moonshotai/moonshot-v1-128k:free is not a valid model ID', 'code': 400}
+2025-08-01 23:22:34 - archon.archon_graph - INFO - ==================================================
+2025-08-01 23:22:34 - archon.archon_graph - INFO - ⚡ CODER STARTING
+2025-08-01 23:22:34 - archon.archon_graph - INFO - ⚡ Modèle: moonshotai/moonshot-v1-128k:free
+2025-08-01 23:22:34 - archon.archon_graph - INFO - ==================================================
+2025-08-01 23:22:34 - archon.archon_graph - INFO - ==================================================
+2025-08-01 23:22:34 - archon.archon_graph - INFO - ⚡ CODER STARTING
+2025-08-01 23:22:34 - archon.archon_graph - INFO - ⚡ Modèle: moonshotai/moonshot-v1-128k:free
+2025-08-01 23:22:34 - archon.archon_graph - INFO - ==================================================
+2025-08-01 23:22:34 - archon.archon_graph - INFO - ---STEP: Generating code with coder agent---
+2025-08-01 23:22:34 - archon.archon_graph - INFO - ⚡ CODER - Modèle: openrouter:moonshotai/moonshot-v1-128k:free
+2025-08-01 23:22:34 - archon.archon_graph - WARNING - ⚡ CODER - Attention: La clé 'advisor_output' est vide ou manquante
+2025-08-01 23:22:34 - archon.archon_graph - INFO - ⚡ CODER - Scope: AgentRunResult(output='Voici une version améliorée de votre demande pour plus de clarté et de précision :\n\n**Prompt raffiné :**  \n"Bonjour ! Peux-tu me confirmer que tu fonctionnes normalement en r...
+2025-08-01 23:22:34 - archon.archon_graph - INFO - ⚡ CODER - Advisor Output: Aucune recommandation de l'advisor. Utilisez le scope pour générer le code....
+2025-08-01 23:22:34 - archon.archon_graph - INFO - 🔧 Configuration d'OpenRouter via l'API compatible OpenAI
+2025-08-01 23:22:34 - archon.archon_graph - INFO - 🔑 Utilisation de la clé API OpenRouter: sk-or-*****f651
+2025-08-01 23:22:34 - archon.archon_graph - INFO - ✅ Provider OpenRouter correctement initialisé avec le modèle moonshotai/moonshot-v1-128k:free
+2025-08-01 23:22:34 - archon.archon_graph - INFO - ⚡ CODER - Envoi de la requête...
+2025-08-01 23:22:34 - archon.archon_graph - ERROR - Error in coder: status_code: 400, model_name: moonshotai/moonshot-v1-128k:free, body: {'message': 'moonshotai/moonshot-v1-128k:free is not a valid model ID', 'code': 400}
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.10/site-packages/pydantic_ai/models/openai.py", line 332, in _completions_create
+    return await self.client.chat.completions.create(
+  File "/usr/local/lib/python3.10/site-packages/openai/resources/chat/completions/completions.py", line 2454, in create
+    return await self._post(
+  File "/usr/local/lib/python3.10/site-packages/openai/_base_client.py", line 1791, in post
+    return await self.request(cast_to, opts, stream=stream, stream_cls=stream_cls)
+  File "/usr/local/lib/python3.10/site-packages/openai/_base_client.py", line 1591, in request
+    raise self._make_status_error_from_response(err.response) from None
+openai.BadRequestError: Error code: 400 - {'error': {'message': 'moonshotai/moonshot-v1-128k:free is not a valid model ID', 'code': 400}, 'user_id': 'user_2uwmzv9q93NaENGKkEBzdBUH7MI'}
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/app/archon/archon_graph.py", line 281, in coder_agent
+    result = coder.run_sync("Generate code based on scope and advisor output",
+  File "/usr/local/lib/python3.10/site-packages/pydantic_ai/agent.py", line 987, in run_sync
+    return get_event_loop().run_until_complete(
+  File "/usr/local/lib/python3.10/asyncio/base_events.py", line 649, in run_until_complete
+    return future.result()
+  File "/usr/local/lib/python3.10/site-packages/pydantic_ai/agent.py", line 562, in run
+    async for _ in agent_run:
+  File "/usr/local/lib/python3.10/site-packages/pydantic_ai/agent.py", line 2173, in __anext__
+    next_node = await self._graph_run.__anext__()
+  File "/usr/local/lib/python3.10/site-packages/pydantic_graph/graph.py", line 809, in __anext__
+    return await self.next(self._next_node)
+  File "/usr/local/lib/python3.10/site-packages/pydantic_graph/graph.py", line 782, in next
+    self._next_node = await node.run(ctx)
+  File "/usr/local/lib/python3.10/site-packages/pydantic_ai/_agent_graph.py", line 299, in run
+    return await self._make_request(ctx)
+  File "/usr/local/lib/python3.10/site-packages/pydantic_ai/_agent_graph.py", line 359, in _make_request
+    model_response = await ctx.deps.model.request(message_history, model_settings, model_request_parameters)
+  File "/usr/local/lib/python3.10/site-packages/pydantic_ai/models/openai.py", line 244, in request
+    response = await self._completions_create(
+  File "/usr/local/lib/python3.10/site-packages/pydantic_ai/models/openai.py", line 361, in _completions_create
+    raise ModelHTTPError(status_code=status_code, model_name=self.model_name, body=e.body) from e
+pydantic_ai.exceptions.ModelHTTPError: status_code: 400, model_name: moonshotai/moonshot-v1-128k:free, body: {'message': 'moonshotai/moonshot-v1-128k:free is not a valid model ID', 'code': 400}
+2025-08-01 23:23:19 - archon.archon_graph - INFO - ==================================================
+2025-08-01 23:23:19 - archon.archon_graph - INFO - 🔍 REASONER STARTING
+2025-08-01 23:23:19 - archon.archon_graph - INFO - 🔍 Modèle: deepseek/deepseek-chat-v3-0324:free
+2025-08-01 23:23:19 - archon.archon_graph - INFO - ==================================================
+2025-08-01 23:23:19 - archon.archon_graph - INFO - ==================================================
+2025-08-01 23:23:19 - archon.archon_graph - INFO - 🔍 REASONER STARTING
+2025-08-01 23:23:19 - archon.archon_graph - INFO - 🔍 Modèle: deepseek/deepseek-chat-v3-0324:free
+2025-08-01 23:23:19 - archon.archon_graph - INFO - ==================================================
+2025-08-01 23:23:19 - archon.archon_graph - INFO - ---STEP: Defining scope with reasoner agent---
+2025-08-01 23:23:19 - archon.archon_graph - INFO - 🧠 REASONER - Modèle: openrouter:deepseek/deepseek-chat-v3-0324:free
+2025-08-01 23:23:19 - archon.archon_graph - INFO - 🧠 REASONER - Message utilisateur: Test avec OpenRouter - peux-tu me confirmer que tu fonctionnes?
+2025-08-01 23:23:19 - archon.archon_graph - INFO - 🔧 Configuration d'OpenRouter via l'API compatible OpenAI
+2025-08-01 23:23:19 - archon.archon_graph - INFO - 🔑 Utilisation de la clé API OpenRouter: sk-or-*****f651
+2025-08-01 23:23:19 - archon.archon_graph - INFO - ✅ Provider OpenRouter correctement initialisé avec le modèle deepseek/deepseek-chat-v3-0324:free
+2025-08-01 23:23:19 - archon.archon_graph - INFO - 🔍 REASONER - Envoi de la requête...
+2025-08-01 23:23:25 - archon.archon_graph - INFO - 🔍 REASONER - Réponse complète reçue: AgentRunResult(output='Voici une version affinée de votre prompt pour plus de clarté et de précision :  \n\n**"Bonjour ! Je teste OpenRouter et j\'aimerais confirmer que tu fonctionnes correctement. P...
+2025-08-01 23:23:25 - archon.archon_graph - INFO - 🔍 Scope state: AgentRunResult(output='Voici une version affinée de votre prompt pour plus de clarté et de précision :  \n\n**"Bonjour ! Je teste OpenRouter et j\'aimerais confirmer que tu fonctionnes correctement. Peux-tu me répondre avec :  \n1. Une brève confirmation de ton activité (ex : \'Opérationnel\').  \n2. Une phrase démontrant tes capacités (ex : rédaction, traduction, analyse).  \n3. Une indication sur la plateforme utilisée (ex : \'Via OpenRouter\').  \n\nMerci !"**  \n\n### Améliorations apportées :  \n1. **Clarté** : La demande est plus structurée.  \n2. **Spécificité** : Les attentes sont détaillées (exemples inclus).  \n3. **Format** : Réponse organisée en points pour faciliter la vérification.  \n4. **Contraintes implicites** : Oriente la réponse vers un test fonctionnel.  \n\n❔ *Souhaitez-vous ajouter d’autres éléments (comme un ton spécifique ou des détails techniques) ?*')
+2025-08-01 23:23:25 - archon.archon_graph - INFO - ==================================================
+2025-08-01 23:23:25 - archon.archon_graph - INFO - 💡 ADVISOR STARTING
+2025-08-01 23:23:25 - archon.archon_graph - INFO - 💡 Modèle: moonshotai/moonshot-v1-128k:free
+2025-08-01 23:23:25 - archon.archon_graph - INFO - ==================================================
+2025-08-01 23:23:25 - archon.archon_graph - INFO - ==================================================
+2025-08-01 23:23:25 - archon.archon_graph - INFO - 💡 ADVISOR STARTING
+2025-08-01 23:23:25 - archon.archon_graph - INFO - 💡 Modèle: moonshotai/moonshot-v1-128k:free
+2025-08-01 23:23:25 - archon.archon_graph - INFO - ==================================================
+2025-08-01 23:23:25 - archon.archon_graph - INFO - ---STEP: Generating advice with advisor agent---
+2025-08-01 23:23:25 - archon.archon_graph - INFO - 💡 ADVISOR - Modèle: openrouter:moonshotai/moonshot-v1-128k:free
+2025-08-01 23:23:25 - archon.archon_graph - INFO - 🔧 Configuration d'OpenRouter via l'API compatible OpenAI
+2025-08-01 23:23:25 - archon.archon_graph - INFO - 🔑 Utilisation de la clé API OpenRouter: sk-or-*****f651
+2025-08-01 23:23:25 - archon.archon_graph - INFO - ✅ Provider OpenRouter correctement initialisé avec le modèle moonshotai/moonshot-v1-128k:free
+2025-08-01 23:23:25 - archon.archon_graph - INFO - 💡 ADVISOR - Envoi de la requête...
+2025-08-01 23:23:25 - archon.archon_graph - ERROR - Error in advisor: status_code: 400, model_name: moonshotai/moonshot-v1-128k:free, body: {'message': 'moonshotai/moonshot-v1-128k:free is not a valid model ID', 'code': 400}
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.10/site-packages/pydantic_ai/models/openai.py", line 332, in _completions_create
+    return await self.client.chat.completions.create(
+  File "/usr/local/lib/python3.10/site-packages/openai/resources/chat/completions/completions.py", line 2454, in create
+    return await self._post(
+  File "/usr/local/lib/python3.10/site-packages/openai/_base_client.py", line 1791, in post
+    return await self.request(cast_to, opts, stream=stream, stream_cls=stream_cls)
+  File "/usr/local/lib/python3.10/site-packages/openai/_base_client.py", line 1591, in request
+    raise self._make_status_error_from_response(err.response) from None
+openai.BadRequestError: Error code: 400 - {'error': {'message': 'moonshotai/moonshot-v1-128k:free is not a valid model ID', 'code': 400}, 'user_id': 'user_2uwmzv9q93NaENGKkEBzdBUH7MI'}
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/app/archon/archon_graph.py", line 218, in advisor_with_examples
+    result = advisor.run_sync("Generate advice based on the following scope",
+  File "/usr/local/lib/python3.10/site-packages/pydantic_ai/agent.py", line 987, in run_sync
+    return get_event_loop().run_until_complete(
+  File "/usr/local/lib/python3.10/asyncio/base_events.py", line 649, in run_until_complete
+    return future.result()
+  File "/usr/local/lib/python3.10/site-packages/pydantic_ai/agent.py", line 562, in run
+    async for _ in agent_run:
+  File "/usr/local/lib/python3.10/site-packages/pydantic_ai/agent.py", line 2173, in __anext__
+    next_node = await self._graph_run.__anext__()
+  File "/usr/local/lib/python3.10/site-packages/pydantic_graph/graph.py", line 809, in __anext__
+    return await self.next(self._next_node)
+  File "/usr/local/lib/python3.10/site-packages/pydantic_graph/graph.py", line 782, in next
+    self._next_node = await node.run(ctx)
+  File "/usr/local/lib/python3.10/site-packages/pydantic_ai/_agent_graph.py", line 299, in run
+    return await self._make_request(ctx)
+  File "/usr/local/lib/python3.10/site-packages/pydantic_ai/_agent_graph.py", line 359, in _make_request
+    model_response = await ctx.deps.model.request(message_history, model_settings, model_request_parameters)
+  File "/usr/local/lib/python3.10/site-packages/pydantic_ai/models/openai.py", line 244, in request
+    response = await self._completions_create(
+  File "/usr/local/lib/python3.10/site-packages/pydantic_ai/models/openai.py", line 361, in _completions_create
+    raise ModelHTTPError(status_code=status_code, model_name=self.model_name, body=e.body) from e
+pydantic_ai.exceptions.ModelHTTPError: status_code: 400, model_name: moonshotai/moonshot-v1-128k:free, body: {'message': 'moonshotai/moonshot-v1-128k:free is not a valid model ID', 'code': 400}
+2025-08-01 23:23:25 - archon.archon_graph - INFO - ==================================================
+2025-08-01 23:23:25 - archon.archon_graph - INFO - ⚡ CODER STARTING
+2025-08-01 23:23:25 - archon.archon_graph - INFO - ⚡ Modèle: moonshotai/moonshot-v1-128k:free
+2025-08-01 23:23:25 - archon.archon_graph - INFO - ==================================================
+2025-08-01 23:23:25 - archon.archon_graph - INFO - ==================================================
+2025-08-01 23:23:25 - archon.archon_graph - INFO - ⚡ CODER STARTING
+2025-08-01 23:23:25 - archon.archon_graph - INFO - ⚡ Modèle: moonshotai/moonshot-v1-128k:free
+2025-08-01 23:23:25 - archon.archon_graph - INFO - ==================================================
+2025-08-01 23:23:25 - archon.archon_graph - INFO - ---STEP: Generating code with coder agent---
+2025-08-01 23:23:25 - archon.archon_graph - INFO - ⚡ CODER - Modèle: openrouter:moonshotai/moonshot-v1-128k:free
+2025-08-01 23:23:25 - archon.archon_graph - WARNING - ⚡ CODER - Attention: La clé 'advisor_output' est vide ou manquante
+2025-08-01 23:23:25 - archon.archon_graph - INFO - ⚡ CODER - Scope: AgentRunResult(output='Voici une version affinée de votre prompt pour plus de clarté et de précision :  \n\n**"Bonjour ! Je teste OpenRouter et j\'aimerais confirmer que tu fonctionnes correctement. P...
+2025-08-01 23:23:25 - archon.archon_graph - INFO - ⚡ CODER - Advisor Output: Aucune recommandation de l'advisor. Utilisez le scope pour générer le code....
+2025-08-01 23:23:25 - archon.archon_graph - INFO - 🔧 Configuration d'OpenRouter via l'API compatible OpenAI
+2025-08-01 23:23:25 - archon.archon_graph - INFO - 🔑 Utilisation de la clé API OpenRouter: sk-or-*****f651
+2025-08-01 23:23:25 - archon.archon_graph - INFO - ✅ Provider OpenRouter correctement initialisé avec le modèle moonshotai/moonshot-v1-128k:free
+2025-08-01 23:23:25 - archon.archon_graph - INFO - ⚡ CODER - Envoi de la requête...
+2025-08-01 23:23:26 - archon.archon_graph - ERROR - Error in coder: status_code: 400, model_name: moonshotai/moonshot-v1-128k:free, body: {'message': 'moonshotai/moonshot-v1-128k:free is not a valid model ID', 'code': 400}
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.10/site-packages/pydantic_ai/models/openai.py", line 332, in _completions_create
+    return await self.client.chat.completions.create(
+  File "/usr/local/lib/python3.10/site-packages/openai/resources/chat/completions/completions.py", line 2454, in create
+    return await self._post(
+  File "/usr/local/lib/python3.10/site-packages/openai/_base_client.py", line 1791, in post
+    return await self.request(cast_to, opts, stream=stream, stream_cls=stream_cls)
+  File "/usr/local/lib/python3.10/site-packages/openai/_base_client.py", line 1591, in request
+    raise self._make_status_error_from_response(err.response) from None
+openai.BadRequestError: Error code: 400 - {'error': {'message': 'moonshotai/moonshot-v1-128k:free is not a valid model ID', 'code': 400}, 'user_id': 'user_2uwmzv9q93NaENGKkEBzdBUH7MI'}
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/app/archon/archon_graph.py", line 281, in coder_agent
+    result = coder.run_sync("Generate code based on scope and advisor output",
+  File "/usr/local/lib/python3.10/site-packages/pydantic_ai/agent.py", line 987, in run_sync
+    return get_event_loop().run_until_complete(
+  File "/usr/local/lib/python3.10/asyncio/base_events.py", line 649, in run_until_complete
+    return future.result()
+  File "/usr/local/lib/python3.10/site-packages/pydantic_ai/agent.py", line 562, in run
+    async for _ in agent_run:
+  File "/usr/local/lib/python3.10/site-packages/pydantic_ai/agent.py", line 2173, in __anext__
+    next_node = await self._graph_run.__anext__()
+  File "/usr/local/lib/python3.10/site-packages/pydantic_graph/graph.py", line 809, in __anext__
+    return await self.next(self._next_node)
+  File "/usr/local/lib/python3.10/site-packages/pydantic_graph/graph.py", line 782, in next
+    self._next_node = await node.run(ctx)
+  File "/usr/local/lib/python3.10/site-packages/pydantic_ai/_agent_graph.py", line 299, in run
+    return await self._make_request(ctx)
+  File "/usr/local/lib/python3.10/site-packages/pydantic_ai/_agent_graph.py", line 359, in _make_request
+    model_response = await ctx.deps.model.request(message_history, model_settings, model_request_parameters)
+  File "/usr/local/lib/python3.10/site-packages/pydantic_ai/models/openai.py", line 244, in request
+    response = await self._completions_create(
+  File "/usr/local/lib/python3.10/site-packages/pydantic_ai/models/openai.py", line 361, in _completions_create
+    raise ModelHTTPError(status_code=status_code, model_name=self.model_name, body=e.body) from e
+pydantic_ai.exceptions.ModelHTTPError: status_code: 400, model_name: moonshotai/moonshot-v1-128k:free, body: {'message': 'moonshotai/moonshot-v1-128k:free is not a valid model ID', 'code': 400}
+2025-08-01 23:23:57 - archon.archon_graph - INFO - ==================================================
+2025-08-01 23:23:57 - archon.archon_graph - INFO - 🔍 REASONER STARTING
+2025-08-01 23:23:57 - archon.archon_graph - INFO - 🔍 Modèle: deepseek/deepseek-chat-v3-0324:free
+2025-08-01 23:23:57 - archon.archon_graph - INFO - ==================================================
+2025-08-01 23:23:57 - archon.archon_graph - INFO - ==================================================
+2025-08-01 23:23:57 - archon.archon_graph - INFO - 🔍 REASONER STARTING
+2025-08-01 23:23:57 - archon.archon_graph - INFO - 🔍 Modèle: deepseek/deepseek-chat-v3-0324:free
+2025-08-01 23:23:57 - archon.archon_graph - INFO - ==================================================
+2025-08-01 23:23:57 - archon.archon_graph - INFO - ---STEP: Defining scope with reasoner agent---
+2025-08-01 23:23:57 - archon.archon_graph - INFO - 🧠 REASONER - Modèle: openrouter:deepseek/deepseek-chat-v3-0324:free
+2025-08-01 23:23:57 - archon.archon_graph - INFO - 🧠 REASONER - Message utilisateur: Test avec Ollama via Archon - peux-tu me confirmer que tu fonctionnes?
+2025-08-01 23:23:57 - archon.archon_graph - INFO - 🔧 Configuration d'OpenRouter via l'API compatible OpenAI
+2025-08-01 23:23:57 - archon.archon_graph - INFO - 🔑 Utilisation de la clé API OpenRouter: sk-or-*****f651
+2025-08-01 23:23:57 - archon.archon_graph - INFO - ✅ Provider OpenRouter correctement initialisé avec le modèle deepseek/deepseek-chat-v3-0324:free
+2025-08-01 23:23:57 - archon.archon_graph - INFO - 🔍 REASONER - Envoi de la requête...
+2025-08-01 23:24:11 - archon.archon_graph - INFO - 🔍 REASONER - Réponse complète reçue: AgentRunResult(output='**Refined Prompt:**  \n\n"Je teste Ollama via Archon. Peux-tu me confirmer que tu es opérationnel et capable de répondre à mes requêtes ? Si oui, réponds simplement *« Fonctionn...
+2025-08-01 23:24:11 - archon.archon_graph - INFO - 🔍 Scope state: AgentRunResult(output='**Refined Prompt:**  \n\n"Je teste Ollama via Archon. Peux-tu me confirmer que tu es opérationnel et capable de répondre à mes requêtes ? Si oui, réponds simplement *« Fonctionnel »* et indique brièvement ta version ou tes capacités actuelles pour vérification."  \n\n**Justification des améliorations :**  \n1. **Clarté** : La demande est plus directe et explicite sur l’objectif (vérification opérationnelle).  \n2. **Spécificité** : Ajout d’une instruction précise pour la réponse (*« Fonctionnel »* + détails utiles).  \n3. **Contraintes** : Limite la réponse à l’essentiel pour un test efficace.  \n4. **Format** : Proposition d’une structure simple pour standardiser la sortie.  \n\n*Optionnel* : Si un exemple est nécessaire, inclure :  \n"Exemple de réponse attendue : *« Fonctionnel – Version Ollama 1.0, capable de traiter du texte et des requêtes basiques. »*"  \n\n→ Cela évite toute ambiguïté et accélère le diagnostic.')
+2025-08-01 23:24:11 - archon.archon_graph - INFO - ==================================================
+2025-08-01 23:24:11 - archon.archon_graph - INFO - 💡 ADVISOR STARTING
+2025-08-01 23:24:11 - archon.archon_graph - INFO - 💡 Modèle: moonshotai/moonshot-v1-128k:free
+2025-08-01 23:24:11 - archon.archon_graph - INFO - ==================================================
+2025-08-01 23:24:11 - archon.archon_graph - INFO - ==================================================
+2025-08-01 23:24:11 - archon.archon_graph - INFO - 💡 ADVISOR STARTING
+2025-08-01 23:24:11 - archon.archon_graph - INFO - 💡 Modèle: moonshotai/moonshot-v1-128k:free
+2025-08-01 23:24:11 - archon.archon_graph - INFO - ==================================================
+2025-08-01 23:24:11 - archon.archon_graph - INFO - ---STEP: Generating advice with advisor agent---
+2025-08-01 23:24:11 - archon.archon_graph - INFO - 💡 ADVISOR - Modèle: openrouter:moonshotai/moonshot-v1-128k:free
+2025-08-01 23:24:11 - archon.archon_graph - INFO - 🔧 Configuration d'OpenRouter via l'API compatible OpenAI
+2025-08-01 23:24:11 - archon.archon_graph - INFO - 🔑 Utilisation de la clé API OpenRouter: sk-or-*****f651
+2025-08-01 23:24:12 - archon.archon_graph - INFO - ✅ Provider OpenRouter correctement initialisé avec le modèle moonshotai/moonshot-v1-128k:free
+2025-08-01 23:24:12 - archon.archon_graph - INFO - 💡 ADVISOR - Envoi de la requête...
+2025-08-01 23:24:12 - archon.archon_graph - ERROR - Error in advisor: status_code: 400, model_name: moonshotai/moonshot-v1-128k:free, body: {'message': 'moonshotai/moonshot-v1-128k:free is not a valid model ID', 'code': 400}
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.10/site-packages/pydantic_ai/models/openai.py", line 332, in _completions_create
+    return await self.client.chat.completions.create(
+  File "/usr/local/lib/python3.10/site-packages/openai/resources/chat/completions/completions.py", line 2454, in create
+    return await self._post(
+  File "/usr/local/lib/python3.10/site-packages/openai/_base_client.py", line 1791, in post
+    return await self.request(cast_to, opts, stream=stream, stream_cls=stream_cls)
+  File "/usr/local/lib/python3.10/site-packages/openai/_base_client.py", line 1591, in request
+    raise self._make_status_error_from_response(err.response) from None
+openai.BadRequestError: Error code: 400 - {'error': {'message': 'moonshotai/moonshot-v1-128k:free is not a valid model ID', 'code': 400}, 'user_id': 'user_2uwmzv9q93NaENGKkEBzdBUH7MI'}
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/app/archon/archon_graph.py", line 218, in advisor_with_examples
+    result = advisor.run_sync("Generate advice based on the following scope",
+  File "/usr/local/lib/python3.10/site-packages/pydantic_ai/agent.py", line 987, in run_sync
+    return get_event_loop().run_until_complete(
+  File "/usr/local/lib/python3.10/asyncio/base_events.py", line 649, in run_until_complete
+    return future.result()
+  File "/usr/local/lib/python3.10/site-packages/pydantic_ai/agent.py", line 562, in run
+    async for _ in agent_run:
+  File "/usr/local/lib/python3.10/site-packages/pydantic_ai/agent.py", line 2173, in __anext__
+    next_node = await self._graph_run.__anext__()
+  File "/usr/local/lib/python3.10/site-packages/pydantic_graph/graph.py", line 809, in __anext__
+    return await self.next(self._next_node)
+  File "/usr/local/lib/python3.10/site-packages/pydantic_graph/graph.py", line 782, in next
+    self._next_node = await node.run(ctx)
+  File "/usr/local/lib/python3.10/site-packages/pydantic_ai/_agent_graph.py", line 299, in run
+    return await self._make_request(ctx)
+  File "/usr/local/lib/python3.10/site-packages/pydantic_ai/_agent_graph.py", line 359, in _make_request
+    model_response = await ctx.deps.model.request(message_history, model_settings, model_request_parameters)
+  File "/usr/local/lib/python3.10/site-packages/pydantic_ai/models/openai.py", line 244, in request
+    response = await self._completions_create(
+  File "/usr/local/lib/python3.10/site-packages/pydantic_ai/models/openai.py", line 361, in _completions_create
+    raise ModelHTTPError(status_code=status_code, model_name=self.model_name, body=e.body) from e
+pydantic_ai.exceptions.ModelHTTPError: status_code: 400, model_name: moonshotai/moonshot-v1-128k:free, body: {'message': 'moonshotai/moonshot-v1-128k:free is not a valid model ID', 'code': 400}
+2025-08-01 23:24:12 - archon.archon_graph - INFO - ==================================================
+2025-08-01 23:24:12 - archon.archon_graph - INFO - ⚡ CODER STARTING
+2025-08-01 23:24:12 - archon.archon_graph - INFO - ⚡ Modèle: moonshotai/moonshot-v1-128k:free
+2025-08-01 23:24:12 - archon.archon_graph - INFO - ==================================================
+2025-08-01 23:24:12 - archon.archon_graph - INFO - ==================================================
+2025-08-01 23:24:12 - archon.archon_graph - INFO - ⚡ CODER STARTING
+2025-08-01 23:24:12 - archon.archon_graph - INFO - ⚡ Modèle: moonshotai/moonshot-v1-128k:free
+2025-08-01 23:24:12 - archon.archon_graph - INFO - ==================================================
+2025-08-01 23:24:12 - archon.archon_graph - INFO - ---STEP: Generating code with coder agent---
+2025-08-01 23:24:12 - archon.archon_graph - INFO - ⚡ CODER - Modèle: openrouter:moonshotai/moonshot-v1-128k:free
+2025-08-01 23:24:12 - archon.archon_graph - WARNING - ⚡ CODER - Attention: La clé 'advisor_output' est vide ou manquante
+2025-08-01 23:24:12 - archon.archon_graph - INFO - ⚡ CODER - Scope: AgentRunResult(output='**Refined Prompt:**  \n\n"Je teste Ollama via Archon. Peux-tu me confirmer que tu es opérationnel et capable de répondre à mes requêtes ? Si oui, réponds simplement *« Fonctionn...
+2025-08-01 23:24:12 - archon.archon_graph - INFO - ⚡ CODER - Advisor Output: Aucune recommandation de l'advisor. Utilisez le scope pour générer le code....
+2025-08-01 23:24:12 - archon.archon_graph - INFO - 🔧 Configuration d'OpenRouter via l'API compatible OpenAI
+2025-08-01 23:24:12 - archon.archon_graph - INFO - 🔑 Utilisation de la clé API OpenRouter: sk-or-*****f651
+2025-08-01 23:24:12 - archon.archon_graph - INFO - ✅ Provider OpenRouter correctement initialisé avec le modèle moonshotai/moonshot-v1-128k:free
+2025-08-01 23:24:12 - archon.archon_graph - INFO - ⚡ CODER - Envoi de la requête...
+2025-08-01 23:24:12 - archon.archon_graph - ERROR - Error in coder: status_code: 400, model_name: moonshotai/moonshot-v1-128k:free, body: {'message': 'moonshotai/moonshot-v1-128k:free is not a valid model ID', 'code': 400}
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.10/site-packages/pydantic_ai/models/openai.py", line 332, in _completions_create
+    return await self.client.chat.completions.create(
+  File "/usr/local/lib/python3.10/site-packages/openai/resources/chat/completions/completions.py", line 2454, in create
+    return await self._post(
+  File "/usr/local/lib/python3.10/site-packages/openai/_base_client.py", line 1791, in post
+    return await self.request(cast_to, opts, stream=stream, stream_cls=stream_cls)
+  File "/usr/local/lib/python3.10/site-packages/openai/_base_client.py", line 1591, in request
+    raise self._make_status_error_from_response(err.response) from None
+openai.BadRequestError: Error code: 400 - {'error': {'message': 'moonshotai/moonshot-v1-128k:free is not a valid model ID', 'code': 400}, 'user_id': 'user_2uwmzv9q93NaENGKkEBzdBUH7MI'}
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/app/archon/archon_graph.py", line 281, in coder_agent
+    result = coder.run_sync("Generate code based on scope and advisor output",
+  File "/usr/local/lib/python3.10/site-packages/pydantic_ai/agent.py", line 987, in run_sync
+    return get_event_loop().run_until_complete(
+  File "/usr/local/lib/python3.10/asyncio/base_events.py", line 649, in run_until_complete
+    return future.result()
+  File "/usr/local/lib/python3.10/site-packages/pydantic_ai/agent.py", line 562, in run
+    async for _ in agent_run:
+  File "/usr/local/lib/python3.10/site-packages/pydantic_ai/agent.py", line 2173, in __anext__
+    next_node = await self._graph_run.__anext__()
+  File "/usr/local/lib/python3.10/site-packages/pydantic_graph/graph.py", line 809, in __anext__
+    return await self.next(self._next_node)
+  File "/usr/local/lib/python3.10/site-packages/pydantic_graph/graph.py", line 782, in next
+    self._next_node = await node.run(ctx)
+  File "/usr/local/lib/python3.10/site-packages/pydantic_ai/_agent_graph.py", line 299, in run
+    return await self._make_request(ctx)
+  File "/usr/local/lib/python3.10/site-packages/pydantic_ai/_agent_graph.py", line 359, in _make_request
+    model_response = await ctx.deps.model.request(message_history, model_settings, model_request_parameters)
+  File "/usr/local/lib/python3.10/site-packages/pydantic_ai/models/openai.py", line 244, in request
+    response = await self._completions_create(
+  File "/usr/local/lib/python3.10/site-packages/pydantic_ai/models/openai.py", line 361, in _completions_create
+    raise ModelHTTPError(status_code=status_code, model_name=self.model_name, body=e.body) from e
+pydantic_ai.exceptions.ModelHTTPError: status_code: 400, model_name: moonshotai/moonshot-v1-128k:free, body: {'message': 'moonshotai/moonshot-v1-128k:free is not a valid model ID', 'code': 400}
+2025-08-01 23:24:23 - archon.archon_graph - INFO - ==================================================
+2025-08-01 23:24:23 - archon.archon_graph - INFO - 🔍 REASONER STARTING
+2025-08-01 23:24:23 - archon.archon_graph - INFO - 🔍 Modèle: deepseek/deepseek-chat-v3-0324:free
+2025-08-01 23:24:23 - archon.archon_graph - INFO - ==================================================
+2025-08-01 23:24:23 - archon.archon_graph - INFO - ==================================================
+2025-08-01 23:24:23 - archon.archon_graph - INFO - 🔍 REASONER STARTING
+2025-08-01 23:24:23 - archon.archon_graph - INFO - 🔍 Modèle: deepseek/deepseek-chat-v3-0324:free
+2025-08-01 23:24:23 - archon.archon_graph - INFO - ==================================================
+2025-08-01 23:24:23 - archon.archon_graph - INFO - ---STEP: Defining scope with reasoner agent---
+2025-08-01 23:24:23 - archon.archon_graph - INFO - 🧠 REASONER - Modèle: openrouter:deepseek/deepseek-chat-v3-0324:free
+2025-08-01 23:24:23 - archon.archon_graph - INFO - 🧠 REASONER - Message utilisateur: Test avec OpenAI - peux-tu me confirmer que tu fonctionnes?
+2025-08-01 23:24:23 - archon.archon_graph - INFO - 🔧 Configuration d'OpenRouter via l'API compatible OpenAI
+2025-08-01 23:24:23 - archon.archon_graph - INFO - 🔑 Utilisation de la clé API OpenRouter: sk-or-*****f651
+2025-08-01 23:24:23 - archon.archon_graph - INFO - ✅ Provider OpenRouter correctement initialisé avec le modèle deepseek/deepseek-chat-v3-0324:free
+2025-08-01 23:24:23 - archon.archon_graph - INFO - 🔍 REASONER - Envoi de la requête...
+2025-08-01 23:24:31 - archon.archon_graph - INFO - 🔍 REASONER - Réponse complète reçue: AgentRunResult(output='Certainly! Here\'s a refined version of your prompt with improved clarity and specificity:  \n\n**Refined Prompt:**  \n"Bonjour! Je teste les fonctionnalités de l\'API OpenAI av...
+2025-08-01 23:24:31 - archon.archon_graph - INFO - 🔍 Scope state: AgentRunResult(output='Certainly! Here\'s a refined version of your prompt with improved clarity and specificity:  \n\n**Refined Prompt:**  \n"Bonjour! Je teste les fonctionnalités de l\'API OpenAI avec toi. Peux-tu me confirmer que tu es opérationnel et prêt à répondre à mes requêtes? Par exemple, tu pourrais me donner une courte réponse pour vérifier que tout fonctionne correctement."  \n\n**Key Improvements:**  \n1. **Clarity & Context** – Specifies that this is an OpenAI API functionality test.  \n2. **Actionable Request** – Explicitly asks for confirmation of operability and a test response.  \n3. **Example** – Suggests a short reply as a way to verify functionality.  \n\nThis version ensures a more structured and informative interaction while preserving the original intent.  \n\n*(Réponse de test: Oui, je fonctionne correctement et suis prêt à répondre à vos questions !)*')
+2025-08-01 23:24:31 - archon.archon_graph - INFO - ==================================================
+2025-08-01 23:24:31 - archon.archon_graph - INFO - 💡 ADVISOR STARTING
+2025-08-01 23:24:31 - archon.archon_graph - INFO - 💡 Modèle: moonshotai/moonshot-v1-128k:free
+2025-08-01 23:24:31 - archon.archon_graph - INFO - ==================================================
+2025-08-01 23:24:31 - archon.archon_graph - INFO - ==================================================
+2025-08-01 23:24:31 - archon.archon_graph - INFO - 💡 ADVISOR STARTING
+2025-08-01 23:24:31 - archon.archon_graph - INFO - 💡 Modèle: moonshotai/moonshot-v1-128k:free
+2025-08-01 23:24:31 - archon.archon_graph - INFO - ==================================================
+2025-08-01 23:24:31 - archon.archon_graph - INFO - ---STEP: Generating advice with advisor agent---
+2025-08-01 23:24:31 - archon.archon_graph - INFO - 💡 ADVISOR - Modèle: openrouter:moonshotai/moonshot-v1-128k:free
+2025-08-01 23:24:31 - archon.archon_graph - INFO - 🔧 Configuration d'OpenRouter via l'API compatible OpenAI
+2025-08-01 23:24:31 - archon.archon_graph - INFO - 🔑 Utilisation de la clé API OpenRouter: sk-or-*****f651
+2025-08-01 23:24:31 - archon.archon_graph - INFO - ✅ Provider OpenRouter correctement initialisé avec le modèle moonshotai/moonshot-v1-128k:free
+2025-08-01 23:24:31 - archon.archon_graph - INFO - 💡 ADVISOR - Envoi de la requête...
+2025-08-01 23:24:32 - archon.archon_graph - ERROR - Error in advisor: status_code: 400, model_name: moonshotai/moonshot-v1-128k:free, body: {'message': 'moonshotai/moonshot-v1-128k:free is not a valid model ID', 'code': 400}
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.10/site-packages/pydantic_ai/models/openai.py", line 332, in _completions_create
+    return await self.client.chat.completions.create(
+  File "/usr/local/lib/python3.10/site-packages/openai/resources/chat/completions/completions.py", line 2454, in create
+    return await self._post(
+  File "/usr/local/lib/python3.10/site-packages/openai/_base_client.py", line 1791, in post
+    return await self.request(cast_to, opts, stream=stream, stream_cls=stream_cls)
+  File "/usr/local/lib/python3.10/site-packages/openai/_base_client.py", line 1591, in request
+    raise self._make_status_error_from_response(err.response) from None
+openai.BadRequestError: Error code: 400 - {'error': {'message': 'moonshotai/moonshot-v1-128k:free is not a valid model ID', 'code': 400}, 'user_id': 'user_2uwmzv9q93NaENGKkEBzdBUH7MI'}
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/app/archon/archon_graph.py", line 218, in advisor_with_examples
+    result = advisor.run_sync("Generate advice based on the following scope",
+  File "/usr/local/lib/python3.10/site-packages/pydantic_ai/agent.py", line 987, in run_sync
+    return get_event_loop().run_until_complete(
+  File "/usr/local/lib/python3.10/asyncio/base_events.py", line 649, in run_until_complete
+    return future.result()
+  File "/usr/local/lib/python3.10/site-packages/pydantic_ai/agent.py", line 562, in run
+    async for _ in agent_run:
+  File "/usr/local/lib/python3.10/site-packages/pydantic_ai/agent.py", line 2173, in __anext__
+    next_node = await self._graph_run.__anext__()
+  File "/usr/local/lib/python3.10/site-packages/pydantic_graph/graph.py", line 809, in __anext__
+    return await self.next(self._next_node)
+  File "/usr/local/lib/python3.10/site-packages/pydantic_graph/graph.py", line 782, in next
+    self._next_node = await node.run(ctx)
+  File "/usr/local/lib/python3.10/site-packages/pydantic_ai/_agent_graph.py", line 299, in run
+    return await self._make_request(ctx)
+  File "/usr/local/lib/python3.10/site-packages/pydantic_ai/_agent_graph.py", line 359, in _make_request
+    model_response = await ctx.deps.model.request(message_history, model_settings, model_request_parameters)
+  File "/usr/local/lib/python3.10/site-packages/pydantic_ai/models/openai.py", line 244, in request
+    response = await self._completions_create(
+  File "/usr/local/lib/python3.10/site-packages/pydantic_ai/models/openai.py", line 361, in _completions_create
+    raise ModelHTTPError(status_code=status_code, model_name=self.model_name, body=e.body) from e
+pydantic_ai.exceptions.ModelHTTPError: status_code: 400, model_name: moonshotai/moonshot-v1-128k:free, body: {'message': 'moonshotai/moonshot-v1-128k:free is not a valid model ID', 'code': 400}
+2025-08-01 23:24:32 - archon.archon_graph - INFO - ==================================================
+2025-08-01 23:24:32 - archon.archon_graph - INFO - ⚡ CODER STARTING
+2025-08-01 23:24:32 - archon.archon_graph - INFO - ⚡ Modèle: moonshotai/moonshot-v1-128k:free
+2025-08-01 23:24:32 - archon.archon_graph - INFO - ==================================================
+2025-08-01 23:24:32 - archon.archon_graph - INFO - ==================================================
+2025-08-01 23:24:32 - archon.archon_graph - INFO - ⚡ CODER STARTING
+2025-08-01 23:24:32 - archon.archon_graph - INFO - ⚡ Modèle: moonshotai/moonshot-v1-128k:free
+2025-08-01 23:24:32 - archon.archon_graph - INFO - ==================================================
+2025-08-01 23:24:32 - archon.archon_graph - INFO - ---STEP: Generating code with coder agent---
+2025-08-01 23:24:32 - archon.archon_graph - INFO - ⚡ CODER - Modèle: openrouter:moonshotai/moonshot-v1-128k:free
+2025-08-01 23:24:32 - archon.archon_graph - WARNING - ⚡ CODER - Attention: La clé 'advisor_output' est vide ou manquante
+2025-08-01 23:24:32 - archon.archon_graph - INFO - ⚡ CODER - Scope: AgentRunResult(output='Certainly! Here\'s a refined version of your prompt with improved clarity and specificity:  \n\n**Refined Prompt:**  \n"Bonjour! Je teste les fonctionnalités de l\'API OpenAI av...
+2025-08-01 23:24:32 - archon.archon_graph - INFO - ⚡ CODER - Advisor Output: Aucune recommandation de l'advisor. Utilisez le scope pour générer le code....
+2025-08-01 23:24:32 - archon.archon_graph - INFO - 🔧 Configuration d'OpenRouter via l'API compatible OpenAI
+2025-08-01 23:24:32 - archon.archon_graph - INFO - 🔑 Utilisation de la clé API OpenRouter: sk-or-*****f651
+2025-08-01 23:24:32 - archon.archon_graph - INFO - ✅ Provider OpenRouter correctement initialisé avec le modèle moonshotai/moonshot-v1-128k:free
+2025-08-01 23:24:32 - archon.archon_graph - INFO - ⚡ CODER - Envoi de la requête...
+2025-08-01 23:24:32 - archon.archon_graph - ERROR - Error in coder: status_code: 400, model_name: moonshotai/moonshot-v1-128k:free, body: {'message': 'moonshotai/moonshot-v1-128k:free is not a valid model ID', 'code': 400}
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.10/site-packages/pydantic_ai/models/openai.py", line 332, in _completions_create
+    return await self.client.chat.completions.create(
+  File "/usr/local/lib/python3.10/site-packages/openai/resources/chat/completions/completions.py", line 2454, in create
+    return await self._post(
+  File "/usr/local/lib/python3.10/site-packages/openai/_base_client.py", line 1791, in post
+    return await self.request(cast_to, opts, stream=stream, stream_cls=stream_cls)
+  File "/usr/local/lib/python3.10/site-packages/openai/_base_client.py", line 1591, in request
+    raise self._make_status_error_from_response(err.response) from None
+openai.BadRequestError: Error code: 400 - {'error': {'message': 'moonshotai/moonshot-v1-128k:free is not a valid model ID', 'code': 400}, 'user_id': 'user_2uwmzv9q93NaENGKkEBzdBUH7MI'}
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/app/archon/archon_graph.py", line 281, in coder_agent
+    result = coder.run_sync("Generate code based on scope and advisor output",
+  File "/usr/local/lib/python3.10/site-packages/pydantic_ai/agent.py", line 987, in run_sync
+    return get_event_loop().run_until_complete(
+  File "/usr/local/lib/python3.10/asyncio/base_events.py", line 649, in run_until_complete
+    return future.result()
+  File "/usr/local/lib/python3.10/site-packages/pydantic_ai/agent.py", line 562, in run
+    async for _ in agent_run:
+  File "/usr/local/lib/python3.10/site-packages/pydantic_ai/agent.py", line 2173, in __anext__
+    next_node = await self._graph_run.__anext__()
+  File "/usr/local/lib/python3.10/site-packages/pydantic_graph/graph.py", line 809, in __anext__
+    return await self.next(self._next_node)
+  File "/usr/local/lib/python3.10/site-packages/pydantic_graph/graph.py", line 782, in next
+    self._next_node = await node.run(ctx)
+  File "/usr/local/lib/python3.10/site-packages/pydantic_ai/_agent_graph.py", line 299, in run
+    return await self._make_request(ctx)
+  File "/usr/local/lib/python3.10/site-packages/pydantic_ai/_agent_graph.py", line 359, in _make_request
+    model_response = await ctx.deps.model.request(message_history, model_settings, model_request_parameters)
+  File "/usr/local/lib/python3.10/site-packages/pydantic_ai/models/openai.py", line 244, in request
+    response = await self._completions_create(
+  File "/usr/local/lib/python3.10/site-packages/pydantic_ai/models/openai.py", line 361, in _completions_create
+    raise ModelHTTPError(status_code=status_code, model_name=self.model_name, body=e.body) from e
+pydantic_ai.exceptions.ModelHTTPError: status_code: 400, model_name: moonshotai/moonshot-v1-128k:free, body: {'message': 'moonshotai/moonshot-v1-128k:free is not a valid model ID', 'code': 400}
+2025-08-01 23:25:54 - archon.llm_provider - INFO - Configuration pour OpenAI...
+2025-08-01 23:25:54 - archon.llm_provider - INFO - Configuration OpenAI terminée.
+2025-08-01 23:25:55 - archon.archon_graph - INFO - LLM Provider: OpenAI
+2025-08-01 23:25:55 - archon.archon_graph - INFO - Reasoner Model: gpt-4.1-nano
+2025-08-01 23:25:55 - archon.archon_graph - INFO - Primary Model: gpt-4.1-nano
+2025-08-01 23:26:05 - archon.archon_graph - INFO - ==================================================
+2025-08-01 23:26:05 - archon.archon_graph - INFO - 🔍 REASONER STARTING
+2025-08-01 23:26:05 - archon.archon_graph - INFO - 🔍 Modèle: gpt-4.1-nano
+2025-08-01 23:26:05 - archon.archon_graph - INFO - ==================================================
+2025-08-01 23:26:05 - archon.archon_graph - INFO - ==================================================
+2025-08-01 23:26:05 - archon.archon_graph - INFO - 🔍 REASONER STARTING
+2025-08-01 23:26:05 - archon.archon_graph - INFO - 🔍 Modèle: gpt-4.1-nano
+2025-08-01 23:26:05 - archon.archon_graph - INFO - ==================================================
+2025-08-01 23:26:05 - archon.archon_graph - INFO - ---STEP: Defining scope with reasoner agent---
+2025-08-01 23:26:05 - archon.archon_graph - INFO - 🧠 REASONER - Modèle: openai:gpt-4.1-nano
+2025-08-01 23:26:05 - archon.archon_graph - INFO - 🧠 REASONER - Message utilisateur: Test avec OpenRouter - peux-tu me confirmer que tu fonctionnes?
+2025-08-01 23:26:05 - archon.archon_graph - ERROR - Error in define_scope: Fournisseur LLM non supporté pour pydantic-ai: openai
+Traceback (most recent call last):
+  File "/app/archon/archon_graph.py", line 169, in define_scope_with_reasoner
+    get_llm_instance(llm_model),
+  File "/app/archon/archon_graph.py", line 103, in get_llm_instance
+    raise ValueError(f"Fournisseur LLM non supporté pour pydantic-ai: {provider_name}")
+ValueError: Fournisseur LLM non supporté pour pydantic-ai: openai
+2025-08-01 23:26:05 - archon.archon_graph - INFO - ==================================================
+2025-08-01 23:26:05 - archon.archon_graph - INFO - 💡 ADVISOR STARTING
+2025-08-01 23:26:05 - archon.archon_graph - INFO - 💡 Modèle: gpt-4.1-nano
+2025-08-01 23:26:05 - archon.archon_graph - INFO - ==================================================
+2025-08-01 23:26:05 - archon.archon_graph - INFO - ==================================================
+2025-08-01 23:26:05 - archon.archon_graph - INFO - 💡 ADVISOR STARTING
+2025-08-01 23:26:05 - archon.archon_graph - INFO - 💡 Modèle: gpt-4.1-nano
+2025-08-01 23:26:05 - archon.archon_graph - INFO - ==================================================
+2025-08-01 23:26:05 - archon.archon_graph - INFO - ---STEP: Generating advice with advisor agent---
+2025-08-01 23:26:05 - archon.archon_graph - INFO - 💡 ADVISOR - Modèle: openai:gpt-4.1-nano
+2025-08-01 23:26:05 - archon.archon_graph - ERROR - Error in advisor: Fournisseur LLM non supporté pour pydantic-ai: openai
+Traceback (most recent call last):
+  File "/app/archon/archon_graph.py", line 213, in advisor_with_examples
+    get_llm_instance(llm_model),
+  File "/app/archon/archon_graph.py", line 103, in get_llm_instance
+    raise ValueError(f"Fournisseur LLM non supporté pour pydantic-ai: {provider_name}")
+ValueError: Fournisseur LLM non supporté pour pydantic-ai: openai
+2025-08-01 23:26:05 - archon.archon_graph - INFO - ==================================================
+2025-08-01 23:26:05 - archon.archon_graph - INFO - ⚡ CODER STARTING
+2025-08-01 23:26:05 - archon.archon_graph - INFO - ⚡ Modèle: gpt-4.1-nano
+2025-08-01 23:26:05 - archon.archon_graph - INFO - ==================================================
+2025-08-01 23:26:05 - archon.archon_graph - INFO - ==================================================
+2025-08-01 23:26:05 - archon.archon_graph - INFO - ⚡ CODER STARTING
+2025-08-01 23:26:05 - archon.archon_graph - INFO - ⚡ Modèle: gpt-4.1-nano
+2025-08-01 23:26:05 - archon.archon_graph - INFO - ==================================================
+2025-08-01 23:26:05 - archon.archon_graph - INFO - ---STEP: Generating code with coder agent---
+2025-08-01 23:26:05 - archon.archon_graph - INFO - ⚡ CODER - Modèle: openai:gpt-4.1-nano
+2025-08-01 23:26:05 - archon.archon_graph - WARNING - ⚡ CODER - Attention: La clé 'scope' est vide ou manquante
+2025-08-01 23:26:05 - archon.archon_graph - WARNING - ⚡ CODER - Attention: La clé 'advisor_output' est vide ou manquante
+2025-08-01 23:26:05 - archon.archon_graph - INFO - ⚡ CODER - Scope: Aucun scope défini. Veuillez fournir plus d'informations....
+2025-08-01 23:26:05 - archon.archon_graph - INFO - ⚡ CODER - Advisor Output: Aucune recommandation de l'advisor. Utilisez le scope pour générer le code....
+2025-08-01 23:26:05 - archon.archon_graph - ERROR - Error in coder: Fournisseur LLM non supporté pour pydantic-ai: openai
+Traceback (most recent call last):
+  File "/app/archon/archon_graph.py", line 276, in coder_agent
+    get_llm_instance(llm_model),
+  File "/app/archon/archon_graph.py", line 103, in get_llm_instance
+    raise ValueError(f"Fournisseur LLM non supporté pour pydantic-ai: {provider_name}")
+ValueError: Fournisseur LLM non supporté pour pydantic-ai: openai
+2025-08-01 23:26:17 - archon.archon_graph - INFO - ==================================================
+2025-08-01 23:26:17 - archon.archon_graph - INFO - 🔍 REASONER STARTING
+2025-08-01 23:26:17 - archon.archon_graph - INFO - 🔍 Modèle: gpt-4.1-nano
+2025-08-01 23:26:17 - archon.archon_graph - INFO - ==================================================
+2025-08-01 23:26:17 - archon.archon_graph - INFO - ==================================================
+2025-08-01 23:26:17 - archon.archon_graph - INFO - 🔍 REASONER STARTING
+2025-08-01 23:26:17 - archon.archon_graph - INFO - 🔍 Modèle: gpt-4.1-nano
+2025-08-01 23:26:17 - archon.archon_graph - INFO - ==================================================
+2025-08-01 23:26:17 - archon.archon_graph - INFO - ---STEP: Defining scope with reasoner agent---
+2025-08-01 23:26:17 - archon.archon_graph - INFO - 🧠 REASONER - Modèle: openai:gpt-4.1-nano
+2025-08-01 23:26:17 - archon.archon_graph - INFO - 🧠 REASONER - Message utilisateur: Bonjour! Peux-tu me confirmer que tu fonctionnes correctement?
+2025-08-01 23:26:17 - archon.archon_graph - ERROR - Error in define_scope: Fournisseur LLM non supporté pour pydantic-ai: openai
+Traceback (most recent call last):
+  File "/app/archon/archon_graph.py", line 169, in define_scope_with_reasoner
+    get_llm_instance(llm_model),
+  File "/app/archon/archon_graph.py", line 103, in get_llm_instance
+    raise ValueError(f"Fournisseur LLM non supporté pour pydantic-ai: {provider_name}")
+ValueError: Fournisseur LLM non supporté pour pydantic-ai: openai
+2025-08-01 23:26:17 - archon.archon_graph - INFO - ==================================================
+2025-08-01 23:26:17 - archon.archon_graph - INFO - 💡 ADVISOR STARTING
+2025-08-01 23:26:17 - archon.archon_graph - INFO - 💡 Modèle: gpt-4.1-nano
+2025-08-01 23:26:17 - archon.archon_graph - INFO - ==================================================
+2025-08-01 23:26:17 - archon.archon_graph - INFO - ==================================================
+2025-08-01 23:26:17 - archon.archon_graph - INFO - 💡 ADVISOR STARTING
+2025-08-01 23:26:17 - archon.archon_graph - INFO - 💡 Modèle: gpt-4.1-nano
+2025-08-01 23:26:17 - archon.archon_graph - INFO - ==================================================
+2025-08-01 23:26:17 - archon.archon_graph - INFO - ---STEP: Generating advice with advisor agent---
+2025-08-01 23:26:17 - archon.archon_graph - INFO - 💡 ADVISOR - Modèle: openai:gpt-4.1-nano
+2025-08-01 23:26:17 - archon.archon_graph - ERROR - Error in advisor: Fournisseur LLM non supporté pour pydantic-ai: openai
+Traceback (most recent call last):
+  File "/app/archon/archon_graph.py", line 213, in advisor_with_examples
+    get_llm_instance(llm_model),
+  File "/app/archon/archon_graph.py", line 103, in get_llm_instance
+    raise ValueError(f"Fournisseur LLM non supporté pour pydantic-ai: {provider_name}")
+ValueError: Fournisseur LLM non supporté pour pydantic-ai: openai
+2025-08-01 23:26:17 - archon.archon_graph - INFO - ==================================================
+2025-08-01 23:26:17 - archon.archon_graph - INFO - ⚡ CODER STARTING
+2025-08-01 23:26:17 - archon.archon_graph - INFO - ⚡ Modèle: gpt-4.1-nano
+2025-08-01 23:26:17 - archon.archon_graph - INFO - ==================================================
+2025-08-01 23:26:17 - archon.archon_graph - INFO - ==================================================
+2025-08-01 23:26:17 - archon.archon_graph - INFO - ⚡ CODER STARTING
+2025-08-01 23:26:17 - archon.archon_graph - INFO - ⚡ Modèle: gpt-4.1-nano
+2025-08-01 23:26:17 - archon.archon_graph - INFO - ==================================================
+2025-08-01 23:26:17 - archon.archon_graph - INFO - ---STEP: Generating code with coder agent---
+2025-08-01 23:26:17 - archon.archon_graph - INFO - ⚡ CODER - Modèle: openai:gpt-4.1-nano
+2025-08-01 23:26:17 - archon.archon_graph - WARNING - ⚡ CODER - Attention: La clé 'scope' est vide ou manquante
+2025-08-01 23:26:17 - archon.archon_graph - WARNING - ⚡ CODER - Attention: La clé 'advisor_output' est vide ou manquante
+2025-08-01 23:26:17 - archon.archon_graph - INFO - ⚡ CODER - Scope: Aucun scope défini. Veuillez fournir plus d'informations....
+2025-08-01 23:26:17 - archon.archon_graph - INFO - ⚡ CODER - Advisor Output: Aucune recommandation de l'advisor. Utilisez le scope pour générer le code....
+2025-08-01 23:26:17 - archon.archon_graph - ERROR - Error in coder: Fournisseur LLM non supporté pour pydantic-ai: openai
+Traceback (most recent call last):
+  File "/app/archon/archon_graph.py", line 276, in coder_agent
+    get_llm_instance(llm_model),
+  File "/app/archon/archon_graph.py", line 103, in get_llm_instance
+    raise ValueError(f"Fournisseur LLM non supporté pour pydantic-ai: {provider_name}")
+ValueError: Fournisseur LLM non supporté pour pydantic-ai: openai
+2025-08-01 23:45:21 - archon.archon_graph - INFO - ==================================================
+2025-08-01 23:45:21 - archon.archon_graph - INFO - 🔍 REASONER STARTING
+2025-08-01 23:45:21 - archon.archon_graph - INFO - 🔍 Modèle: gpt-4.1-nano
+2025-08-01 23:45:21 - archon.archon_graph - INFO - ==================================================
+2025-08-01 23:45:21 - archon.archon_graph - INFO - ==================================================
+2025-08-01 23:45:21 - archon.archon_graph - INFO - 🔍 REASONER STARTING
+2025-08-01 23:45:21 - archon.archon_graph - INFO - 🔍 Modèle: gpt-4.1-nano
+2025-08-01 23:45:21 - archon.archon_graph - INFO - ==================================================
+2025-08-01 23:45:21 - archon.archon_graph - INFO - ---STEP: Defining scope with reasoner agent---
+2025-08-01 23:45:21 - archon.archon_graph - INFO - 🧠 REASONER - Modèle: openai:gpt-4.1-nano
+2025-08-01 23:45:21 - archon.archon_graph - INFO - 🧠 REASONER - Message utilisateur: 
+2025-08-01 23:45:21 - archon.archon_graph - ERROR - Error in define_scope: Fournisseur LLM non supporté pour pydantic-ai: openai
+Traceback (most recent call last):
+  File "/app/archon/archon_graph.py", line 169, in define_scope_with_reasoner
+    get_llm_instance(llm_model),
+  File "/app/archon/archon_graph.py", line 103, in get_llm_instance
+    raise ValueError(f"Fournisseur LLM non supporté pour pydantic-ai: {provider_name}")
+ValueError: Fournisseur LLM non supporté pour pydantic-ai: openai
+2025-08-01 23:45:21 - archon.archon_graph - INFO - ==================================================
+2025-08-01 23:45:21 - archon.archon_graph - INFO - 💡 ADVISOR STARTING
+2025-08-01 23:45:21 - archon.archon_graph - INFO - 💡 Modèle: gpt-4.1-nano
+2025-08-01 23:45:21 - archon.archon_graph - INFO - ==================================================
+2025-08-01 23:45:21 - archon.archon_graph - INFO - ==================================================
+2025-08-01 23:45:21 - archon.archon_graph - INFO - 💡 ADVISOR STARTING
+2025-08-01 23:45:21 - archon.archon_graph - INFO - 💡 Modèle: gpt-4.1-nano
+2025-08-01 23:45:21 - archon.archon_graph - INFO - ==================================================
+2025-08-01 23:45:21 - archon.archon_graph - INFO - ---STEP: Generating advice with advisor agent---
+2025-08-01 23:45:21 - archon.archon_graph - INFO - 💡 ADVISOR - Modèle: openai:gpt-4.1-nano
+2025-08-01 23:45:21 - archon.archon_graph - ERROR - Error in advisor: Fournisseur LLM non supporté pour pydantic-ai: openai
+Traceback (most recent call last):
+  File "/app/archon/archon_graph.py", line 213, in advisor_with_examples
+    get_llm_instance(llm_model),
+  File "/app/archon/archon_graph.py", line 103, in get_llm_instance
+    raise ValueError(f"Fournisseur LLM non supporté pour pydantic-ai: {provider_name}")
+ValueError: Fournisseur LLM non supporté pour pydantic-ai: openai
+2025-08-01 23:45:21 - archon.archon_graph - INFO - ==================================================
+2025-08-01 23:45:21 - archon.archon_graph - INFO - ⚡ CODER STARTING
+2025-08-01 23:45:21 - archon.archon_graph - INFO - ⚡ Modèle: gpt-4.1-nano
+2025-08-01 23:45:21 - archon.archon_graph - INFO - ==================================================
+2025-08-01 23:45:21 - archon.archon_graph - INFO - ==================================================
+2025-08-01 23:45:21 - archon.archon_graph - INFO - ⚡ CODER STARTING
+2025-08-01 23:45:21 - archon.archon_graph - INFO - ⚡ Modèle: gpt-4.1-nano
+2025-08-01 23:45:21 - archon.archon_graph - INFO - ==================================================
+2025-08-01 23:45:21 - archon.archon_graph - INFO - ---STEP: Generating code with coder agent---
+2025-08-01 23:45:21 - archon.archon_graph - INFO - ⚡ CODER - Modèle: openai:gpt-4.1-nano
+2025-08-01 23:45:21 - archon.archon_graph - WARNING - ⚡ CODER - Attention: La clé 'scope' est vide ou manquante
+2025-08-01 23:45:21 - archon.archon_graph - WARNING - ⚡ CODER - Attention: La clé 'advisor_output' est vide ou manquante
+2025-08-01 23:45:21 - archon.archon_graph - INFO - ⚡ CODER - Scope: Aucun scope défini. Veuillez fournir plus d'informations....
+2025-08-01 23:45:21 - archon.archon_graph - INFO - ⚡ CODER - Advisor Output: Aucune recommandation de l'advisor. Utilisez le scope pour générer le code....
+2025-08-01 23:45:21 - archon.archon_graph - ERROR - Error in coder: Fournisseur LLM non supporté pour pydantic-ai: openai
+Traceback (most recent call last):
+  File "/app/archon/archon_graph.py", line 276, in coder_agent
+    get_llm_instance(llm_model),
+  File "/app/archon/archon_graph.py", line 103, in get_llm_instance
+    raise ValueError(f"Fournisseur LLM non supporté pour pydantic-ai: {provider_name}")
+ValueError: Fournisseur LLM non supporté pour pydantic-ai: openai
+2025-08-01 23:45:35 - archon.archon_graph - INFO - ==================================================
+2025-08-01 23:45:35 - archon.archon_graph - INFO - 🔍 REASONER STARTING
+2025-08-01 23:45:35 - archon.archon_graph - INFO - 🔍 Modèle: gpt-4.1-nano
+2025-08-01 23:45:35 - archon.archon_graph - INFO - ==================================================
+2025-08-01 23:45:35 - archon.archon_graph - INFO - ==================================================
+2025-08-01 23:45:35 - archon.archon_graph - INFO - 🔍 REASONER STARTING
+2025-08-01 23:45:35 - archon.archon_graph - INFO - 🔍 Modèle: gpt-4.1-nano
+2025-08-01 23:45:35 - archon.archon_graph - INFO - ==================================================
+2025-08-01 23:45:35 - archon.archon_graph - INFO - ---STEP: Defining scope with reasoner agent---
+2025-08-01 23:45:35 - archon.archon_graph - INFO - 🧠 REASONER - Modèle: openai:gpt-4.1-nano
+2025-08-01 23:45:35 - archon.archon_graph - INFO - 🧠 REASONER - Message utilisateur: 
+2025-08-01 23:45:35 - archon.archon_graph - ERROR - Error in define_scope: Fournisseur LLM non supporté pour pydantic-ai: openai
+Traceback (most recent call last):
+  File "/app/archon/archon_graph.py", line 169, in define_scope_with_reasoner
+    get_llm_instance(llm_model),
+  File "/app/archon/archon_graph.py", line 103, in get_llm_instance
+    raise ValueError(f"Fournisseur LLM non supporté pour pydantic-ai: {provider_name}")
+ValueError: Fournisseur LLM non supporté pour pydantic-ai: openai
+2025-08-01 23:45:35 - archon.archon_graph - INFO - ==================================================
+2025-08-01 23:45:35 - archon.archon_graph - INFO - 💡 ADVISOR STARTING
+2025-08-01 23:45:35 - archon.archon_graph - INFO - 💡 Modèle: gpt-4.1-nano
+2025-08-01 23:45:35 - archon.archon_graph - INFO - ==================================================
+2025-08-01 23:45:35 - archon.archon_graph - INFO - ==================================================
+2025-08-01 23:45:35 - archon.archon_graph - INFO - 💡 ADVISOR STARTING
+2025-08-01 23:45:35 - archon.archon_graph - INFO - 💡 Modèle: gpt-4.1-nano
+2025-08-01 23:45:35 - archon.archon_graph - INFO - ==================================================
+2025-08-01 23:45:35 - archon.archon_graph - INFO - ---STEP: Generating advice with advisor agent---
+2025-08-01 23:45:35 - archon.archon_graph - INFO - 💡 ADVISOR - Modèle: openai:gpt-4.1-nano
+2025-08-01 23:45:35 - archon.archon_graph - ERROR - Error in advisor: Fournisseur LLM non supporté pour pydantic-ai: openai
+Traceback (most recent call last):
+  File "/app/archon/archon_graph.py", line 213, in advisor_with_examples
+    get_llm_instance(llm_model),
+  File "/app/archon/archon_graph.py", line 103, in get_llm_instance
+    raise ValueError(f"Fournisseur LLM non supporté pour pydantic-ai: {provider_name}")
+ValueError: Fournisseur LLM non supporté pour pydantic-ai: openai
+2025-08-01 23:45:35 - archon.archon_graph - INFO - ==================================================
+2025-08-01 23:45:35 - archon.archon_graph - INFO - ⚡ CODER STARTING
+2025-08-01 23:45:35 - archon.archon_graph - INFO - ⚡ Modèle: gpt-4.1-nano
+2025-08-01 23:45:35 - archon.archon_graph - INFO - ==================================================
+2025-08-01 23:45:35 - archon.archon_graph - INFO - ==================================================
+2025-08-01 23:45:35 - archon.archon_graph - INFO - ⚡ CODER STARTING
+2025-08-01 23:45:35 - archon.archon_graph - INFO - ⚡ Modèle: gpt-4.1-nano
+2025-08-01 23:45:35 - archon.archon_graph - INFO - ==================================================
+2025-08-01 23:45:35 - archon.archon_graph - INFO - ---STEP: Generating code with coder agent---
+2025-08-01 23:45:35 - archon.archon_graph - INFO - ⚡ CODER - Modèle: openai:gpt-4.1-nano
+2025-08-01 23:45:35 - archon.archon_graph - WARNING - ⚡ CODER - Attention: La clé 'scope' est vide ou manquante
+2025-08-01 23:45:35 - archon.archon_graph - WARNING - ⚡ CODER - Attention: La clé 'advisor_output' est vide ou manquante
+2025-08-01 23:45:35 - archon.archon_graph - INFO - ⚡ CODER - Scope: Aucun scope défini. Veuillez fournir plus d'informations....
+2025-08-01 23:45:35 - archon.archon_graph - INFO - ⚡ CODER - Advisor Output: Aucune recommandation de l'advisor. Utilisez le scope pour générer le code....
+2025-08-01 23:45:35 - archon.archon_graph - ERROR - Error in coder: Fournisseur LLM non supporté pour pydantic-ai: openai
+Traceback (most recent call last):
+  File "/app/archon/archon_graph.py", line 276, in coder_agent
+    get_llm_instance(llm_model),
+  File "/app/archon/archon_graph.py", line 103, in get_llm_instance
+    raise ValueError(f"Fournisseur LLM non supporté pour pydantic-ai: {provider_name}")
+ValueError: Fournisseur LLM non supporté pour pydantic-ai: openai
+2025-08-01 23:55:01 - archon.archon_graph - INFO - ==================================================
+2025-08-01 23:55:01 - archon.archon_graph - INFO - 🔍 REASONER STARTING
+2025-08-01 23:55:01 - archon.archon_graph - INFO - 🔍 Modèle: gpt-4.1-nano
+2025-08-01 23:55:01 - archon.archon_graph - INFO - ==================================================
+2025-08-01 23:55:01 - archon.archon_graph - INFO - ==================================================
+2025-08-01 23:55:01 - archon.archon_graph - INFO - 🔍 REASONER STARTING
+2025-08-01 23:55:01 - archon.archon_graph - INFO - 🔍 Modèle: gpt-4.1-nano
+2025-08-01 23:55:01 - archon.archon_graph - INFO - ==================================================
+2025-08-01 23:55:01 - archon.archon_graph - INFO - ---STEP: Defining scope with reasoner agent---
+2025-08-01 23:55:01 - archon.archon_graph - INFO - 🧠 REASONER - Modèle: openai:gpt-4.1-nano
+2025-08-01 23:55:01 - archon.archon_graph - INFO - 🧠 REASONER - Message utilisateur: 
+2025-08-01 23:55:01 - archon.archon_graph - ERROR - Error in define_scope: Fournisseur LLM non supporté pour pydantic-ai: openai
+Traceback (most recent call last):
+  File "/app/archon/archon_graph.py", line 169, in define_scope_with_reasoner
+    get_llm_instance(llm_model),
+  File "/app/archon/archon_graph.py", line 103, in get_llm_instance
+    raise ValueError(f"Fournisseur LLM non supporté pour pydantic-ai: {provider_name}")
+ValueError: Fournisseur LLM non supporté pour pydantic-ai: openai
+2025-08-01 23:55:01 - archon.archon_graph - INFO - ==================================================
+2025-08-01 23:55:01 - archon.archon_graph - INFO - 💡 ADVISOR STARTING
+2025-08-01 23:55:01 - archon.archon_graph - INFO - 💡 Modèle: gpt-4.1-nano
+2025-08-01 23:55:01 - archon.archon_graph - INFO - ==================================================
+2025-08-01 23:55:01 - archon.archon_graph - INFO - ==================================================
+2025-08-01 23:55:01 - archon.archon_graph - INFO - 💡 ADVISOR STARTING
+2025-08-01 23:55:01 - archon.archon_graph - INFO - 💡 Modèle: gpt-4.1-nano
+2025-08-01 23:55:01 - archon.archon_graph - INFO - ==================================================
+2025-08-01 23:55:01 - archon.archon_graph - INFO - ---STEP: Generating advice with advisor agent---
+2025-08-01 23:55:01 - archon.archon_graph - INFO - 💡 ADVISOR - Modèle: openai:gpt-4.1-nano
+2025-08-01 23:55:01 - archon.archon_graph - ERROR - Error in advisor: Fournisseur LLM non supporté pour pydantic-ai: openai
+Traceback (most recent call last):
+  File "/app/archon/archon_graph.py", line 213, in advisor_with_examples
+    get_llm_instance(llm_model),
+  File "/app/archon/archon_graph.py", line 103, in get_llm_instance
+    raise ValueError(f"Fournisseur LLM non supporté pour pydantic-ai: {provider_name}")
+ValueError: Fournisseur LLM non supporté pour pydantic-ai: openai
+2025-08-01 23:55:01 - archon.archon_graph - INFO - ==================================================
+2025-08-01 23:55:01 - archon.archon_graph - INFO - ⚡ CODER STARTING
+2025-08-01 23:55:01 - archon.archon_graph - INFO - ⚡ Modèle: gpt-4.1-nano
+2025-08-01 23:55:01 - archon.archon_graph - INFO - ==================================================
+2025-08-01 23:55:01 - archon.archon_graph - INFO - ==================================================
+2025-08-01 23:55:01 - archon.archon_graph - INFO - ⚡ CODER STARTING
+2025-08-01 23:55:01 - archon.archon_graph - INFO - ⚡ Modèle: gpt-4.1-nano
+2025-08-01 23:55:01 - archon.archon_graph - INFO - ==================================================
+2025-08-01 23:55:01 - archon.archon_graph - INFO - ---STEP: Generating code with coder agent---
+2025-08-01 23:55:01 - archon.archon_graph - INFO - ⚡ CODER - Modèle: openai:gpt-4.1-nano
+2025-08-01 23:55:01 - archon.archon_graph - WARNING - ⚡ CODER - Attention: La clé 'scope' est vide ou manquante
+2025-08-01 23:55:01 - archon.archon_graph - WARNING - ⚡ CODER - Attention: La clé 'advisor_output' est vide ou manquante
+2025-08-01 23:55:01 - archon.archon_graph - INFO - ⚡ CODER - Scope: Aucun scope défini. Veuillez fournir plus d'informations....
+2025-08-01 23:55:01 - archon.archon_graph - INFO - ⚡ CODER - Advisor Output: Aucune recommandation de l'advisor. Utilisez le scope pour générer le code....
+2025-08-01 23:55:01 - archon.archon_graph - ERROR - Error in coder: Fournisseur LLM non supporté pour pydantic-ai: openai
+Traceback (most recent call last):
+  File "/app/archon/archon_graph.py", line 276, in coder_agent
+    get_llm_instance(llm_model),
+  File "/app/archon/archon_graph.py", line 103, in get_llm_instance
+    raise ValueError(f"Fournisseur LLM non supporté pour pydantic-ai: {provider_name}")
+ValueError: Fournisseur LLM non supporté pour pydantic-ai: openai
+2025-08-01 23:58:08 - archon.llm_provider - INFO - 🔧 Configuration pour OpenRouter...
+2025-08-01 23:58:08 - archon.llm_provider - INFO - 🔑 Clé API OpenRouter configurée: sk-or-*****
+2025-08-01 23:58:08 - archon.llm_provider - INFO - ✅ Configuration OpenRouter terminée.
+2025-08-01 23:58:09 - archon.archon_graph - INFO - LLM Provider: OpenRouter
+2025-08-01 23:58:09 - archon.archon_graph - INFO - Reasoner Model: deepseek/deepseek-chat-v3-0324:free
+2025-08-01 23:58:09 - archon.archon_graph - INFO - Primary Model: moonshotai/kimi-k2:free
+2025-08-02 00:00:04 - archon.llm_provider - INFO - 🔧 Configuration pour OpenRouter...
+2025-08-02 00:00:04 - archon.llm_provider - INFO - 🔑 Clé API OpenRouter configurée: sk-or-*****
+2025-08-02 00:00:04 - archon.llm_provider - INFO - ✅ Configuration OpenRouter terminée.
+2025-08-02 00:00:05 - archon.archon_graph - INFO - LLM Provider: OpenRouter
+2025-08-02 00:00:05 - archon.archon_graph - INFO - Reasoner Model: deepseek/deepseek-chat-v3-0324:free
+2025-08-02 00:00:05 - archon.archon_graph - INFO - Primary Model: moonshotai/kimi-k2:free
+2025-08-02 00:08:17 - archon.llm_provider - INFO - 🔧 Configuration pour OpenRouter...
+2025-08-02 00:08:17 - archon.llm_provider - INFO - 🔑 Clé API OpenRouter configurée: sk-or-*****
+2025-08-02 00:08:17 - archon.llm_provider - INFO - ✅ Configuration OpenRouter terminée.
+2025-08-02 00:08:18 - archon.archon_graph - INFO - LLM Provider: OpenRouter
+2025-08-02 00:08:18 - archon.archon_graph - INFO - Reasoner Model: deepseek/deepseek-chat-v3-0324:free
+2025-08-02 00:08:18 - archon.archon_graph - INFO - Primary Model: moonshotai/kimi-k2:free
+2025-08-02 00:16:54 - archon.archon_graph - INFO - ==================================================
+2025-08-02 00:16:54 - archon.archon_graph - INFO - 🔍 REASONER STARTING
+2025-08-02 00:16:54 - archon.archon_graph - INFO - 🔍 Modèle: deepseek/deepseek-chat-v3-0324:free
+2025-08-02 00:16:54 - archon.archon_graph - INFO - ==================================================
+2025-08-02 00:16:54 - archon.archon_graph - INFO - ==================================================
+2025-08-02 00:16:54 - archon.archon_graph - INFO - 🔍 REASONER STARTING
+2025-08-02 00:16:54 - archon.archon_graph - INFO - 🔍 Modèle: deepseek/deepseek-chat-v3-0324:free
+2025-08-02 00:16:54 - archon.archon_graph - INFO - ==================================================
+2025-08-02 00:16:54 - archon.archon_graph - INFO - ---STEP: Defining scope with reasoner agent---
+2025-08-02 00:16:54 - archon.archon_graph - INFO - 🧠 REASONER - Modèle: openrouter:deepseek/deepseek-chat-v3-0324:free
+2025-08-02 00:16:54 - archon.archon_graph - INFO - 🧠 REASONER - Message utilisateur: Test avec OpenRouter - peux-tu me confirmer que tu fonctionnes?
+2025-08-02 00:16:54 - archon.archon_graph - INFO - 🔧 Configuration d'OpenRouter via l'API compatible OpenAI
+2025-08-02 00:16:54 - archon.archon_graph - INFO - 🔑 Utilisation de la clé API OpenRouter: sk-or-*****f651
+2025-08-02 00:16:54 - archon.archon_graph - INFO - ✅ Provider OpenRouter correctement initialisé avec le modèle deepseek/deepseek-chat-v3-0324:free
+2025-08-02 00:16:54 - archon.archon_graph - INFO - 🔍 REASONER - Envoi de la requête...
+2025-08-02 00:17:01 - archon.archon_graph - INFO - 🔍 REASONER - Réponse complète reçue: AgentRunResult(output='Voici une version plus claire et professionnelle de votre prompt :  \n\n**"Je teste OpenRouter. Peux-tu me confirmer que tu fonctionnes correctement et réponds à ma requête ? Si...
+2025-08-02 00:17:01 - archon.archon_graph - INFO - 🔍 Scope state: AgentRunResult(output='Voici une version plus claire et professionnelle de votre prompt :  \n\n**"Je teste OpenRouter. Peux-tu me confirmer que tu fonctionnes correctement et réponds à ma requête ? Si oui, réponds simplement par \'Fonctionnel.\'"**  \n\nAméliorations apportées :  \n1. **Clarté** : La demande est plus directe et explicite.  \n2. **Format de réponse** : Spécifie une réponse concise pour faciliter la confirmation.  \n3. **Précision** : Ajoute une incitation à répondre seulement si l\'agent est opérationnel.  \n\nVous obtiendrez ainsi une validation rapide et sans ambiguïté.  \n\n*(En interne, oui, je fonctionne, mais pour confirmer OpenRouter, vous recevrez "Fonctionnel." comme réponse attendue.)* 😊  \n\n➡️ Souhaitez-vous adapter ce prompt pour un autre contexte ?')
+2025-08-02 00:17:01 - archon.archon_graph - INFO - ==================================================
+2025-08-02 00:17:01 - archon.archon_graph - INFO - 💡 ADVISOR STARTING
+2025-08-02 00:17:01 - archon.archon_graph - INFO - 💡 Modèle: moonshotai/kimi-k2:free
+2025-08-02 00:17:01 - archon.archon_graph - INFO - ==================================================
+2025-08-02 00:17:01 - archon.archon_graph - INFO - ==================================================
+2025-08-02 00:17:01 - archon.archon_graph - INFO - 💡 ADVISOR STARTING
+2025-08-02 00:17:01 - archon.archon_graph - INFO - 💡 Modèle: moonshotai/kimi-k2:free
+2025-08-02 00:17:01 - archon.archon_graph - INFO - ==================================================
+2025-08-02 00:17:01 - archon.archon_graph - INFO - ---STEP: Generating advice with advisor agent---
+2025-08-02 00:17:01 - archon.archon_graph - INFO - 💡 ADVISOR - Modèle: openrouter:moonshotai/kimi-k2:free
+2025-08-02 00:17:01 - archon.archon_graph - INFO - 🔧 Configuration d'OpenRouter via l'API compatible OpenAI
+2025-08-02 00:17:01 - archon.archon_graph - INFO - 🔑 Utilisation de la clé API OpenRouter: sk-or-*****f651
+2025-08-02 00:17:01 - archon.archon_graph - INFO - ✅ Provider OpenRouter correctement initialisé avec le modèle moonshotai/kimi-k2:free
+2025-08-02 00:17:01 - archon.archon_graph - INFO - 💡 ADVISOR - Envoi de la requête...
+2025-08-02 00:17:03 - archon.archon_graph - INFO - 💡 ADVISOR - Réponse complète reçue: AgentRunResult(output='Sure—could you share the exact scope statement so I can map it to the right examples, built-in tools, and MCP servers?')...
+2025-08-02 00:17:03 - archon.archon_graph - INFO - Advice generated.
+2025-08-02 00:17:03 - archon.archon_graph - INFO - ==================================================
+2025-08-02 00:17:03 - archon.archon_graph - INFO - ⚡ CODER STARTING
+2025-08-02 00:17:03 - archon.archon_graph - INFO - ⚡ Modèle: moonshotai/kimi-k2:free
+2025-08-02 00:17:03 - archon.archon_graph - INFO - ==================================================
+2025-08-02 00:17:03 - archon.archon_graph - INFO - ==================================================
+2025-08-02 00:17:03 - archon.archon_graph - INFO - ⚡ CODER STARTING
+2025-08-02 00:17:03 - archon.archon_graph - INFO - ⚡ Modèle: moonshotai/kimi-k2:free
+2025-08-02 00:17:03 - archon.archon_graph - INFO - ==================================================
+2025-08-02 00:17:03 - archon.archon_graph - INFO - ---STEP: Generating code with coder agent---
+2025-08-02 00:17:03 - archon.archon_graph - INFO - ⚡ CODER - Modèle: openrouter:moonshotai/kimi-k2:free
+2025-08-02 00:17:03 - archon.archon_graph - INFO - ⚡ CODER - Scope: AgentRunResult(output='Voici une version plus claire et professionnelle de votre prompt :  \n\n**"Je teste OpenRouter. Peux-tu me confirmer que tu fonctionnes correctement et réponds à ma requête ? Si...
+2025-08-02 00:17:03 - archon.archon_graph - INFO - ⚡ CODER - Advisor Output: AgentRunResult(output='Sure—could you share the exact scope statement so I can map it to the right examples, built-in tools, and MCP servers?')...
+2025-08-02 00:17:03 - archon.archon_graph - INFO - 🔧 Configuration d'OpenRouter via l'API compatible OpenAI
+2025-08-02 00:17:03 - archon.archon_graph - INFO - 🔑 Utilisation de la clé API OpenRouter: sk-or-*****f651
+2025-08-02 00:17:03 - archon.archon_graph - INFO - ✅ Provider OpenRouter correctement initialisé avec le modèle moonshotai/kimi-k2:free
+2025-08-02 00:17:03 - archon.archon_graph - INFO - ⚡ CODER - Envoi de la requête...
+2025-08-02 00:17:58 - archon.archon_graph - INFO - ⚡ CODER - Réponse complète reçue: AgentRunResult(output='```python\nimport asyncio\nimport os\nfrom typing import List, Optional, Dict, Any\nimport json\n\nimport logfire\nfrom httpx import AsyncClient\nfrom pydantic import BaseModel,...
+2025-08-02 00:17:58 - archon.archon_graph - INFO - Code generated.
+2025-08-02 00:19:26 - archon.archon_graph - INFO - ==================================================
+2025-08-02 00:19:26 - archon.archon_graph - INFO - 🔍 REASONER STARTING
+2025-08-02 00:19:26 - archon.archon_graph - INFO - 🔍 Modèle: deepseek/deepseek-chat-v3-0324:free
+2025-08-02 00:19:26 - archon.archon_graph - INFO - ==================================================
+2025-08-02 00:19:26 - archon.archon_graph - INFO - ==================================================
+2025-08-02 00:19:26 - archon.archon_graph - INFO - 🔍 REASONER STARTING
+2025-08-02 00:19:26 - archon.archon_graph - INFO - 🔍 Modèle: deepseek/deepseek-chat-v3-0324:free
+2025-08-02 00:19:26 - archon.archon_graph - INFO - ==================================================
+2025-08-02 00:19:26 - archon.archon_graph - INFO - ---STEP: Defining scope with reasoner agent---
+2025-08-02 00:19:26 - archon.archon_graph - INFO - 🧠 REASONER - Modèle: openrouter:deepseek/deepseek-chat-v3-0324:free
+2025-08-02 00:19:26 - archon.archon_graph - INFO - 🧠 REASONER - Message utilisateur: Test avec OpenRouter - peux-tu me confirmer que tu fonctionnes?
+2025-08-02 00:19:26 - archon.archon_graph - INFO - 🔧 Configuration d'OpenRouter via l'API compatible OpenAI
+2025-08-02 00:19:26 - archon.archon_graph - INFO - 🔑 Utilisation de la clé API OpenRouter: sk-or-*****f651
+2025-08-02 00:19:26 - archon.archon_graph - INFO - ✅ Provider OpenRouter correctement initialisé avec le modèle deepseek/deepseek-chat-v3-0324:free
+2025-08-02 00:19:26 - archon.archon_graph - INFO - 🔍 REASONER - Envoi de la requête...
+2025-08-02 00:19:39 - archon.archon_graph - INFO - 🔍 REASONER - Réponse complète reçue: AgentRunResult(output='Voici une version plus claire et professionnelle de votre prompt, qui précise l\'intention tout en restant concise :\n\n**Prompt raffiné :**  \n*"Je teste la connexion avec Open...
+2025-08-02 00:19:39 - archon.archon_graph - INFO - 🔍 Scope state: AgentRunResult(output='Voici une version plus claire et professionnelle de votre prompt, qui précise l\'intention tout en restant concise :\n\n**Prompt raffiné :**  \n*"Je teste la connexion avec OpenRouter. Peux-tu me confirmer explicitement que tu es opérationnel et que cette requête passe correctement par leur plateforme ? Si oui, merci d\'indiquer \'Connexion OpenRouter confirmée\' dans ta réponse."*\n\n*Améliorations apportées :*  \n- **Clarification** du contexte (test de connexion)  \n- **Demande spécifique** de confirmation avec une formule précise à répéter  \n- **Tonalité professionnelle** tout en restant simple  \n\nCe format facilite une réponse binaire vérifiable, idéale pour des tests techniques.')
+2025-08-02 00:19:39 - archon.archon_graph - INFO - ==================================================
+2025-08-02 00:19:39 - archon.archon_graph - INFO - 💡 ADVISOR STARTING
+2025-08-02 00:19:39 - archon.archon_graph - INFO - 💡 Modèle: moonshotai/kimi-k2:free
+2025-08-02 00:19:39 - archon.archon_graph - INFO - ==================================================
+2025-08-02 00:19:39 - archon.archon_graph - INFO - ==================================================
+2025-08-02 00:19:39 - archon.archon_graph - INFO - 💡 ADVISOR STARTING
+2025-08-02 00:19:39 - archon.archon_graph - INFO - 💡 Modèle: moonshotai/kimi-k2:free
+2025-08-02 00:19:39 - archon.archon_graph - INFO - ==================================================
+2025-08-02 00:19:39 - archon.archon_graph - INFO - ---STEP: Generating advice with advisor agent---
+2025-08-02 00:19:39 - archon.archon_graph - INFO - 💡 ADVISOR - Modèle: openrouter:moonshotai/kimi-k2:free
+2025-08-02 00:19:39 - archon.archon_graph - INFO - 🔧 Configuration d'OpenRouter via l'API compatible OpenAI
+2025-08-02 00:19:39 - archon.archon_graph - INFO - 🔑 Utilisation de la clé API OpenRouter: sk-or-*****f651
+2025-08-02 00:19:39 - archon.archon_graph - INFO - ✅ Provider OpenRouter correctement initialisé avec le modèle moonshotai/kimi-k2:free
+2025-08-02 00:19:39 - archon.archon_graph - INFO - 💡 ADVISOR - Envoi de la requête...
+2025-08-02 00:19:45 - archon.archon_graph - INFO - 💡 ADVISOR - Réponse complète reçue: AgentRunResult(output='I need a little more detail about the “scope” so I can give you the best-fit starting agent and the specific files I’d draw from. Could you share:\n\n• What kind of advice you w...
+2025-08-02 00:19:45 - archon.archon_graph - INFO - Advice generated.
+2025-08-02 00:19:45 - archon.archon_graph - INFO - ==================================================
+2025-08-02 00:19:45 - archon.archon_graph - INFO - ⚡ CODER STARTING
+2025-08-02 00:19:45 - archon.archon_graph - INFO - ⚡ Modèle: moonshotai/kimi-k2:free
+2025-08-02 00:19:45 - archon.archon_graph - INFO - ==================================================
+2025-08-02 00:19:45 - archon.archon_graph - INFO - ==================================================
+2025-08-02 00:19:45 - archon.archon_graph - INFO - ⚡ CODER STARTING
+2025-08-02 00:19:45 - archon.archon_graph - INFO - ⚡ Modèle: moonshotai/kimi-k2:free
+2025-08-02 00:19:45 - archon.archon_graph - INFO - ==================================================
+2025-08-02 00:19:45 - archon.archon_graph - INFO - ---STEP: Generating code with coder agent---
+2025-08-02 00:19:45 - archon.archon_graph - INFO - ⚡ CODER - Modèle: openrouter:moonshotai/kimi-k2:free
+2025-08-02 00:19:45 - archon.archon_graph - INFO - ⚡ CODER - Scope: AgentRunResult(output='Voici une version plus claire et professionnelle de votre prompt, qui précise l\'intention tout en restant concise :\n\n**Prompt raffiné :**  \n*"Je teste la connexion avec Open...
+2025-08-02 00:19:45 - archon.archon_graph - INFO - ⚡ CODER - Advisor Output: AgentRunResult(output='I need a little more detail about the “scope” so I can give you the best-fit starting agent and the specific files I’d draw from. Could you share:\n\n• What kind of advice you w...
+2025-08-02 00:19:45 - archon.archon_graph - INFO - 🔧 Configuration d'OpenRouter via l'API compatible OpenAI
+2025-08-02 00:19:45 - archon.archon_graph - INFO - 🔑 Utilisation de la clé API OpenRouter: sk-or-*****f651
+2025-08-02 00:19:45 - archon.archon_graph - INFO - ✅ Provider OpenRouter correctement initialisé avec le modèle moonshotai/kimi-k2:free
+2025-08-02 00:19:45 - archon.archon_graph - INFO - ⚡ CODER - Envoi de la requête...
+2025-08-02 00:20:47 - archon.archon_graph - INFO - ⚡ CODER - Réponse complète reçue: AgentRunResult(output='```python\nimport asyncio\nimport os\nfrom typing import Any, Literal, Annotated, Optional\n\nimport logfire\nfrom httpx import AsyncClient\nfrom pydantic import BaseModel, Fiel...
+2025-08-02 00:20:47 - archon.archon_graph - INFO - Code generated.
+2025-08-02 01:03:33 - archon.llm_provider - INFO - 🔧 Configuration pour OpenRouter...
+2025-08-02 01:03:33 - archon.llm_provider - INFO - 🔑 Clé API OpenRouter configurée: ${OPEN*****
+2025-08-02 01:03:34 - archon.llm_provider - INFO - ✅ Configuration OpenRouter terminée.
+2025-08-02 01:03:35 - archon.archon_graph - INFO - LLM Provider: OpenRouter
+2025-08-02 01:03:35 - archon.archon_graph - INFO - Reasoner Model: deepseek/deepseek-chat-v3-0324:free
+2025-08-02 01:03:35 - archon.archon_graph - INFO - Primary Model: moonshotai/kimi-k2:free
+2025-08-02 05:36:22 - archon.llm_provider - INFO - 🔧 Configuration pour OpenRouter...
+2025-08-02 05:36:22 - archon.llm_provider - INFO - 🔑 Clé API OpenRouter configurée: ${OPEN*****
+2025-08-02 05:36:22 - archon.llm_provider - INFO - ✅ Configuration OpenRouter terminée.
+2025-08-02 05:36:23 - archon.archon_graph - INFO - LLM Provider: OpenRouter
+2025-08-02 05:36:23 - archon.archon_graph - INFO - Reasoner Model: deepseek/deepseek-chat-v3-0324:free
+2025-08-02 05:36:23 - archon.archon_graph - INFO - Primary Model: moonshotai/kimi-k2:free
+2025-08-02 05:55:40 - archon.archon_graph - INFO - ==================================================
+2025-08-02 05:55:40 - archon.archon_graph - INFO - 🔍 REASONER STARTING
+2025-08-02 05:55:40 - archon.archon_graph - INFO - 🔍 Modèle: deepseek/deepseek-chat-v3-0324:free
+2025-08-02 05:55:40 - archon.archon_graph - INFO - ==================================================
+2025-08-02 05:55:40 - archon.archon_graph - INFO - ==================================================
+2025-08-02 05:55:40 - archon.archon_graph - INFO - 🔍 REASONER STARTING
+2025-08-02 05:55:40 - archon.archon_graph - INFO - 🔍 Modèle: deepseek/deepseek-chat-v3-0324:free
+2025-08-02 05:55:40 - archon.archon_graph - INFO - ==================================================
+2025-08-02 05:55:40 - archon.archon_graph - INFO - ---STEP: Defining scope with reasoner agent---
+2025-08-02 05:55:40 - archon.archon_graph - INFO - 🧠 REASONER - Modèle: openrouter:deepseek/deepseek-chat-v3-0324:free
+2025-08-02 05:55:40 - archon.archon_graph - INFO - 🧠 REASONER - Message utilisateur: Bonjour! Peux-tu me confirmer que tu fonctionnes correctement?
+2025-08-02 05:55:40 - archon.archon_graph - INFO - 🔧 Configuration d'OpenRouter via l'API compatible OpenAI
+2025-08-02 05:55:40 - archon.archon_graph - INFO - 🔑 Utilisation de la clé API OpenRouter: ${OPEN*****KEY}
+2025-08-02 05:55:40 - archon.archon_graph - INFO - ✅ Provider OpenRouter correctement initialisé avec le modèle deepseek/deepseek-chat-v3-0324:free
+2025-08-02 05:55:40 - archon.archon_graph - INFO - 🔍 REASONER - Envoi de la requête...
+2025-08-02 05:55:40 - archon.archon_graph - ERROR - Error in define_scope: status_code: 401, model_name: deepseek/deepseek-chat-v3-0324:free, body: {'message': 'No auth credentials found', 'code': 401}
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.10/site-packages/pydantic_ai/models/openai.py", line 332, in _completions_create
+    return await self.client.chat.completions.create(
+  File "/usr/local/lib/python3.10/site-packages/openai/resources/chat/completions/completions.py", line 2454, in create
+    return await self._post(
+  File "/usr/local/lib/python3.10/site-packages/openai/_base_client.py", line 1791, in post
+    return await self.request(cast_to, opts, stream=stream, stream_cls=stream_cls)
+  File "/usr/local/lib/python3.10/site-packages/openai/_base_client.py", line 1591, in request
+    raise self._make_status_error_from_response(err.response) from None
+openai.AuthenticationError: Error code: 401 - {'error': {'message': 'No auth credentials found', 'code': 401}}
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/app/archon/archon_graph.py", line 174, in define_scope_with_reasoner
+    result = reasoner_agent.run_sync(state['latest_user_message'])
+  File "/usr/local/lib/python3.10/site-packages/pydantic_ai/agent.py", line 987, in run_sync
+    return get_event_loop().run_until_complete(
+  File "/usr/local/lib/python3.10/asyncio/base_events.py", line 649, in run_until_complete
+    return future.result()
+  File "/usr/local/lib/python3.10/site-packages/pydantic_ai/agent.py", line 562, in run
+    async for _ in agent_run:
+  File "/usr/local/lib/python3.10/site-packages/pydantic_ai/agent.py", line 2173, in __anext__
+    next_node = await self._graph_run.__anext__()
+  File "/usr/local/lib/python3.10/site-packages/pydantic_graph/graph.py", line 809, in __anext__
+    return await self.next(self._next_node)
+  File "/usr/local/lib/python3.10/site-packages/pydantic_graph/graph.py", line 782, in next
+    self._next_node = await node.run(ctx)
+  File "/usr/local/lib/python3.10/site-packages/pydantic_ai/_agent_graph.py", line 299, in run
+    return await self._make_request(ctx)
+  File "/usr/local/lib/python3.10/site-packages/pydantic_ai/_agent_graph.py", line 359, in _make_request
+    model_response = await ctx.deps.model.request(message_history, model_settings, model_request_parameters)
+  File "/usr/local/lib/python3.10/site-packages/pydantic_ai/models/openai.py", line 244, in request
+    response = await self._completions_create(
+  File "/usr/local/lib/python3.10/site-packages/pydantic_ai/models/openai.py", line 361, in _completions_create
+    raise ModelHTTPError(status_code=status_code, model_name=self.model_name, body=e.body) from e
+pydantic_ai.exceptions.ModelHTTPError: status_code: 401, model_name: deepseek/deepseek-chat-v3-0324:free, body: {'message': 'No auth credentials found', 'code': 401}
+2025-08-02 05:55:40 - archon.archon_graph - INFO - ==================================================
+2025-08-02 05:55:40 - archon.archon_graph - INFO - 💡 ADVISOR STARTING
+2025-08-02 05:55:40 - archon.archon_graph - INFO - 💡 Modèle: moonshotai/kimi-k2:free
+2025-08-02 05:55:40 - archon.archon_graph - INFO - ==================================================
+2025-08-02 05:55:40 - archon.archon_graph - INFO - ==================================================
+2025-08-02 05:55:40 - archon.archon_graph - INFO - 💡 ADVISOR STARTING
+2025-08-02 05:55:40 - archon.archon_graph - INFO - 💡 Modèle: moonshotai/kimi-k2:free
+2025-08-02 05:55:40 - archon.archon_graph - INFO - ==================================================
+2025-08-02 05:55:40 - archon.archon_graph - INFO - ---STEP: Generating advice with advisor agent---
+2025-08-02 05:55:40 - archon.archon_graph - INFO - 💡 ADVISOR - Modèle: openrouter:moonshotai/kimi-k2:free
+2025-08-02 05:55:40 - archon.archon_graph - INFO - 🔧 Configuration d'OpenRouter via l'API compatible OpenAI
+2025-08-02 05:55:40 - archon.archon_graph - INFO - 🔑 Utilisation de la clé API OpenRouter: ${OPEN*****KEY}
+2025-08-02 05:55:40 - archon.archon_graph - INFO - ✅ Provider OpenRouter correctement initialisé avec le modèle moonshotai/kimi-k2:free
+2025-08-02 05:55:40 - archon.archon_graph - INFO - 💡 ADVISOR - Envoi de la requête...
+2025-08-02 05:55:41 - archon.archon_graph - ERROR - Error in advisor: status_code: 401, model_name: moonshotai/kimi-k2:free, body: {'message': 'No auth credentials found', 'code': 401}
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.10/site-packages/pydantic_ai/models/openai.py", line 332, in _completions_create
+    return await self.client.chat.completions.create(
+  File "/usr/local/lib/python3.10/site-packages/openai/resources/chat/completions/completions.py", line 2454, in create
+    return await self._post(
+  File "/usr/local/lib/python3.10/site-packages/openai/_base_client.py", line 1791, in post
+    return await self.request(cast_to, opts, stream=stream, stream_cls=stream_cls)
+  File "/usr/local/lib/python3.10/site-packages/openai/_base_client.py", line 1591, in request
+    raise self._make_status_error_from_response(err.response) from None
+openai.AuthenticationError: Error code: 401 - {'error': {'message': 'No auth credentials found', 'code': 401}}
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/app/archon/archon_graph.py", line 218, in advisor_with_examples
+    result = advisor.run_sync("Generate advice based on the following scope",
+  File "/usr/local/lib/python3.10/site-packages/pydantic_ai/agent.py", line 987, in run_sync
+    return get_event_loop().run_until_complete(
+  File "/usr/local/lib/python3.10/asyncio/base_events.py", line 649, in run_until_complete
+    return future.result()
+  File "/usr/local/lib/python3.10/site-packages/pydantic_ai/agent.py", line 562, in run
+    async for _ in agent_run:
+  File "/usr/local/lib/python3.10/site-packages/pydantic_ai/agent.py", line 2173, in __anext__
+    next_node = await self._graph_run.__anext__()
+  File "/usr/local/lib/python3.10/site-packages/pydantic_graph/graph.py", line 809, in __anext__
+    return await self.next(self._next_node)
+  File "/usr/local/lib/python3.10/site-packages/pydantic_graph/graph.py", line 782, in next
+    self._next_node = await node.run(ctx)
+  File "/usr/local/lib/python3.10/site-packages/pydantic_ai/_agent_graph.py", line 299, in run
+    return await self._make_request(ctx)
+  File "/usr/local/lib/python3.10/site-packages/pydantic_ai/_agent_graph.py", line 359, in _make_request
+    model_response = await ctx.deps.model.request(message_history, model_settings, model_request_parameters)
+  File "/usr/local/lib/python3.10/site-packages/pydantic_ai/models/openai.py", line 244, in request
+    response = await self._completions_create(
+  File "/usr/local/lib/python3.10/site-packages/pydantic_ai/models/openai.py", line 361, in _completions_create
+    raise ModelHTTPError(status_code=status_code, model_name=self.model_name, body=e.body) from e
+pydantic_ai.exceptions.ModelHTTPError: status_code: 401, model_name: moonshotai/kimi-k2:free, body: {'message': 'No auth credentials found', 'code': 401}
+2025-08-02 05:55:41 - archon.archon_graph - INFO - ==================================================
+2025-08-02 05:55:41 - archon.archon_graph - INFO - ⚡ CODER STARTING
+2025-08-02 05:55:41 - archon.archon_graph - INFO - ⚡ Modèle: moonshotai/kimi-k2:free
+2025-08-02 05:55:41 - archon.archon_graph - INFO - ==================================================
+2025-08-02 05:55:41 - archon.archon_graph - INFO - ==================================================
+2025-08-02 05:55:41 - archon.archon_graph - INFO - ⚡ CODER STARTING
+2025-08-02 05:55:41 - archon.archon_graph - INFO - ⚡ Modèle: moonshotai/kimi-k2:free
+2025-08-02 05:55:41 - archon.archon_graph - INFO - ==================================================
+2025-08-02 05:55:41 - archon.archon_graph - INFO - ---STEP: Generating code with coder agent---
+2025-08-02 05:55:41 - archon.archon_graph - INFO - ⚡ CODER - Modèle: openrouter:moonshotai/kimi-k2:free
+2025-08-02 05:55:41 - archon.archon_graph - WARNING - ⚡ CODER - Attention: La clé 'scope' est vide ou manquante
+2025-08-02 05:55:41 - archon.archon_graph - WARNING - ⚡ CODER - Attention: La clé 'advisor_output' est vide ou manquante
+2025-08-02 05:55:41 - archon.archon_graph - INFO - ⚡ CODER - Scope: Aucun scope défini. Veuillez fournir plus d'informations....
+2025-08-02 05:55:41 - archon.archon_graph - INFO - ⚡ CODER - Advisor Output: Aucune recommandation de l'advisor. Utilisez le scope pour générer le code....
+2025-08-02 05:55:41 - archon.archon_graph - INFO - 🔧 Configuration d'OpenRouter via l'API compatible OpenAI
+2025-08-02 05:55:41 - archon.archon_graph - INFO - 🔑 Utilisation de la clé API OpenRouter: ${OPEN*****KEY}
+2025-08-02 05:55:41 - archon.archon_graph - INFO - ✅ Provider OpenRouter correctement initialisé avec le modèle moonshotai/kimi-k2:free
+2025-08-02 05:55:41 - archon.archon_graph - INFO - ⚡ CODER - Envoi de la requête...
+2025-08-02 05:55:41 - archon.archon_graph - ERROR - Error in coder: status_code: 401, model_name: moonshotai/kimi-k2:free, body: {'message': 'No auth credentials found', 'code': 401}
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.10/site-packages/pydantic_ai/models/openai.py", line 332, in _completions_create
+    return await self.client.chat.completions.create(
+  File "/usr/local/lib/python3.10/site-packages/openai/resources/chat/completions/completions.py", line 2454, in create
+    return await self._post(
+  File "/usr/local/lib/python3.10/site-packages/openai/_base_client.py", line 1791, in post
+    return await self.request(cast_to, opts, stream=stream, stream_cls=stream_cls)
+  File "/usr/local/lib/python3.10/site-packages/openai/_base_client.py", line 1591, in request
+    raise self._make_status_error_from_response(err.response) from None
+openai.AuthenticationError: Error code: 401 - {'error': {'message': 'No auth credentials found', 'code': 401}}
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/app/archon/archon_graph.py", line 281, in coder_agent
+    result = coder.run_sync("Generate code based on scope and advisor output",
+  File "/usr/local/lib/python3.10/site-packages/pydantic_ai/agent.py", line 987, in run_sync
+    return get_event_loop().run_until_complete(
+  File "/usr/local/lib/python3.10/asyncio/base_events.py", line 649, in run_until_complete
+    return future.result()
+  File "/usr/local/lib/python3.10/site-packages/pydantic_ai/agent.py", line 562, in run
+    async for _ in agent_run:
+  File "/usr/local/lib/python3.10/site-packages/pydantic_ai/agent.py", line 2173, in __anext__
+    next_node = await self._graph_run.__anext__()
+  File "/usr/local/lib/python3.10/site-packages/pydantic_graph/graph.py", line 809, in __anext__
+    return await self.next(self._next_node)
+  File "/usr/local/lib/python3.10/site-packages/pydantic_graph/graph.py", line 782, in next
+    self._next_node = await node.run(ctx)
+  File "/usr/local/lib/python3.10/site-packages/pydantic_ai/_agent_graph.py", line 299, in run
+    return await self._make_request(ctx)
+  File "/usr/local/lib/python3.10/site-packages/pydantic_ai/_agent_graph.py", line 359, in _make_request
+    model_response = await ctx.deps.model.request(message_history, model_settings, model_request_parameters)
+  File "/usr/local/lib/python3.10/site-packages/pydantic_ai/models/openai.py", line 244, in request
+    response = await self._completions_create(
+  File "/usr/local/lib/python3.10/site-packages/pydantic_ai/models/openai.py", line 361, in _completions_create
+    raise ModelHTTPError(status_code=status_code, model_name=self.model_name, body=e.body) from e
+pydantic_ai.exceptions.ModelHTTPError: status_code: 401, model_name: moonshotai/kimi-k2:free, body: {'message': 'No auth credentials found', 'code': 401}
+2025-08-02 05:57:23 - archon.archon_graph - INFO - ==================================================
+2025-08-02 05:57:23 - archon.archon_graph - INFO - 🔍 REASONER STARTING
+2025-08-02 05:57:23 - archon.archon_graph - INFO - 🔍 Modèle: deepseek/deepseek-chat-v3-0324:free
+2025-08-02 05:57:23 - archon.archon_graph - INFO - ==================================================
+2025-08-02 05:57:23 - archon.archon_graph - INFO - ==================================================
+2025-08-02 05:57:23 - archon.archon_graph - INFO - 🔍 REASONER STARTING
+2025-08-02 05:57:23 - archon.archon_graph - INFO - 🔍 Modèle: deepseek/deepseek-chat-v3-0324:free
+2025-08-02 05:57:23 - archon.archon_graph - INFO - ==================================================
+2025-08-02 05:57:23 - archon.archon_graph - INFO - ---STEP: Defining scope with reasoner agent---
+2025-08-02 05:57:23 - archon.archon_graph - INFO - 🧠 REASONER - Modèle: openrouter:deepseek/deepseek-chat-v3-0324:free
+2025-08-02 05:57:23 - archon.archon_graph - INFO - 🧠 REASONER - Message utilisateur: Bonjour! Peux-tu me confirmer que tu fonctionnes correctement?
+2025-08-02 05:57:23 - archon.archon_graph - INFO - 🔧 Configuration d'OpenRouter via l'API compatible OpenAI
+2025-08-02 05:57:23 - archon.archon_graph - INFO - 🔑 Utilisation de la clé API OpenRouter: ${OPEN*****KEY}
+2025-08-02 05:57:23 - archon.archon_graph - INFO - ✅ Provider OpenRouter correctement initialisé avec le modèle deepseek/deepseek-chat-v3-0324:free
+2025-08-02 05:57:23 - archon.archon_graph - INFO - 🔍 REASONER - Envoi de la requête...
+2025-08-02 05:57:24 - archon.archon_graph - ERROR - Error in define_scope: status_code: 401, model_name: deepseek/deepseek-chat-v3-0324:free, body: {'message': 'No auth credentials found', 'code': 401}
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.10/site-packages/pydantic_ai/models/openai.py", line 332, in _completions_create
+    return await self.client.chat.completions.create(
+  File "/usr/local/lib/python3.10/site-packages/openai/resources/chat/completions/completions.py", line 2454, in create
+    return await self._post(
+  File "/usr/local/lib/python3.10/site-packages/openai/_base_client.py", line 1791, in post
+    return await self.request(cast_to, opts, stream=stream, stream_cls=stream_cls)
+  File "/usr/local/lib/python3.10/site-packages/openai/_base_client.py", line 1591, in request
+    raise self._make_status_error_from_response(err.response) from None
+openai.AuthenticationError: Error code: 401 - {'error': {'message': 'No auth credentials found', 'code': 401}}
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/app/archon/archon_graph.py", line 174, in define_scope_with_reasoner
+    result = reasoner_agent.run_sync(state['latest_user_message'])
+  File "/usr/local/lib/python3.10/site-packages/pydantic_ai/agent.py", line 987, in run_sync
+    return get_event_loop().run_until_complete(
+  File "/usr/local/lib/python3.10/asyncio/base_events.py", line 649, in run_until_complete
+    return future.result()
+  File "/usr/local/lib/python3.10/site-packages/pydantic_ai/agent.py", line 562, in run
+    async for _ in agent_run:
+  File "/usr/local/lib/python3.10/site-packages/pydantic_ai/agent.py", line 2173, in __anext__
+    next_node = await self._graph_run.__anext__()
+  File "/usr/local/lib/python3.10/site-packages/pydantic_graph/graph.py", line 809, in __anext__
+    return await self.next(self._next_node)
+  File "/usr/local/lib/python3.10/site-packages/pydantic_graph/graph.py", line 782, in next
+    self._next_node = await node.run(ctx)
+  File "/usr/local/lib/python3.10/site-packages/pydantic_ai/_agent_graph.py", line 299, in run
+    return await self._make_request(ctx)
+  File "/usr/local/lib/python3.10/site-packages/pydantic_ai/_agent_graph.py", line 359, in _make_request
+    model_response = await ctx.deps.model.request(message_history, model_settings, model_request_parameters)
+  File "/usr/local/lib/python3.10/site-packages/pydantic_ai/models/openai.py", line 244, in request
+    response = await self._completions_create(
+  File "/usr/local/lib/python3.10/site-packages/pydantic_ai/models/openai.py", line 361, in _completions_create
+    raise ModelHTTPError(status_code=status_code, model_name=self.model_name, body=e.body) from e
+pydantic_ai.exceptions.ModelHTTPError: status_code: 401, model_name: deepseek/deepseek-chat-v3-0324:free, body: {'message': 'No auth credentials found', 'code': 401}
+2025-08-02 05:57:24 - archon.archon_graph - INFO - ==================================================
+2025-08-02 05:57:24 - archon.archon_graph - INFO - 💡 ADVISOR STARTING
+2025-08-02 05:57:24 - archon.archon_graph - INFO - 💡 Modèle: moonshotai/kimi-k2:free
+2025-08-02 05:57:24 - archon.archon_graph - INFO - ==================================================
+2025-08-02 05:57:24 - archon.archon_graph - INFO - ==================================================
+2025-08-02 05:57:24 - archon.archon_graph - INFO - 💡 ADVISOR STARTING
+2025-08-02 05:57:24 - archon.archon_graph - INFO - 💡 Modèle: moonshotai/kimi-k2:free
+2025-08-02 05:57:24 - archon.archon_graph - INFO - ==================================================
+2025-08-02 05:57:24 - archon.archon_graph - INFO - ---STEP: Generating advice with advisor agent---
+2025-08-02 05:57:24 - archon.archon_graph - INFO - 💡 ADVISOR - Modèle: openrouter:moonshotai/kimi-k2:free
+2025-08-02 05:57:24 - archon.archon_graph - INFO - 🔧 Configuration d'OpenRouter via l'API compatible OpenAI
+2025-08-02 05:57:24 - archon.archon_graph - INFO - 🔑 Utilisation de la clé API OpenRouter: ${OPEN*****KEY}
+2025-08-02 05:57:24 - archon.archon_graph - INFO - ✅ Provider OpenRouter correctement initialisé avec le modèle moonshotai/kimi-k2:free
+2025-08-02 05:57:24 - archon.archon_graph - INFO - 💡 ADVISOR - Envoi de la requête...
+2025-08-02 05:57:24 - archon.archon_graph - ERROR - Error in advisor: status_code: 401, model_name: moonshotai/kimi-k2:free, body: {'message': 'No auth credentials found', 'code': 401}
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.10/site-packages/pydantic_ai/models/openai.py", line 332, in _completions_create
+    return await self.client.chat.completions.create(
+  File "/usr/local/lib/python3.10/site-packages/openai/resources/chat/completions/completions.py", line 2454, in create
+    return await self._post(
+  File "/usr/local/lib/python3.10/site-packages/openai/_base_client.py", line 1791, in post
+    return await self.request(cast_to, opts, stream=stream, stream_cls=stream_cls)
+  File "/usr/local/lib/python3.10/site-packages/openai/_base_client.py", line 1591, in request
+    raise self._make_status_error_from_response(err.response) from None
+openai.AuthenticationError: Error code: 401 - {'error': {'message': 'No auth credentials found', 'code': 401}}
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/app/archon/archon_graph.py", line 218, in advisor_with_examples
+    result = advisor.run_sync("Generate advice based on the following scope",
+  File "/usr/local/lib/python3.10/site-packages/pydantic_ai/agent.py", line 987, in run_sync
+    return get_event_loop().run_until_complete(
+  File "/usr/local/lib/python3.10/asyncio/base_events.py", line 649, in run_until_complete
+    return future.result()
+  File "/usr/local/lib/python3.10/site-packages/pydantic_ai/agent.py", line 562, in run
+    async for _ in agent_run:
+  File "/usr/local/lib/python3.10/site-packages/pydantic_ai/agent.py", line 2173, in __anext__
+    next_node = await self._graph_run.__anext__()
+  File "/usr/local/lib/python3.10/site-packages/pydantic_graph/graph.py", line 809, in __anext__
+    return await self.next(self._next_node)
+  File "/usr/local/lib/python3.10/site-packages/pydantic_graph/graph.py", line 782, in next
+    self._next_node = await node.run(ctx)
+  File "/usr/local/lib/python3.10/site-packages/pydantic_ai/_agent_graph.py", line 299, in run
+    return await self._make_request(ctx)
+  File "/usr/local/lib/python3.10/site-packages/pydantic_ai/_agent_graph.py", line 359, in _make_request
+    model_response = await ctx.deps.model.request(message_history, model_settings, model_request_parameters)
+  File "/usr/local/lib/python3.10/site-packages/pydantic_ai/models/openai.py", line 244, in request
+    response = await self._completions_create(
+  File "/usr/local/lib/python3.10/site-packages/pydantic_ai/models/openai.py", line 361, in _completions_create
+    raise ModelHTTPError(status_code=status_code, model_name=self.model_name, body=e.body) from e
+pydantic_ai.exceptions.ModelHTTPError: status_code: 401, model_name: moonshotai/kimi-k2:free, body: {'message': 'No auth credentials found', 'code': 401}
+2025-08-02 05:57:24 - archon.archon_graph - INFO - ==================================================
+2025-08-02 05:57:24 - archon.archon_graph - INFO - ⚡ CODER STARTING
+2025-08-02 05:57:24 - archon.archon_graph - INFO - ⚡ Modèle: moonshotai/kimi-k2:free
+2025-08-02 05:57:24 - archon.archon_graph - INFO - ==================================================
+2025-08-02 05:57:24 - archon.archon_graph - INFO - ==================================================
+2025-08-02 05:57:24 - archon.archon_graph - INFO - ⚡ CODER STARTING
+2025-08-02 05:57:24 - archon.archon_graph - INFO - ⚡ Modèle: moonshotai/kimi-k2:free
+2025-08-02 05:57:24 - archon.archon_graph - INFO - ==================================================
+2025-08-02 05:57:24 - archon.archon_graph - INFO - ---STEP: Generating code with coder agent---
+2025-08-02 05:57:24 - archon.archon_graph - INFO - ⚡ CODER - Modèle: openrouter:moonshotai/kimi-k2:free
+2025-08-02 05:57:24 - archon.archon_graph - WARNING - ⚡ CODER - Attention: La clé 'scope' est vide ou manquante
+2025-08-02 05:57:24 - archon.archon_graph - WARNING - ⚡ CODER - Attention: La clé 'advisor_output' est vide ou manquante
+2025-08-02 05:57:24 - archon.archon_graph - INFO - ⚡ CODER - Scope: Aucun scope défini. Veuillez fournir plus d'informations....
+2025-08-02 05:57:24 - archon.archon_graph - INFO - ⚡ CODER - Advisor Output: Aucune recommandation de l'advisor. Utilisez le scope pour générer le code....
+2025-08-02 05:57:24 - archon.archon_graph - INFO - 🔧 Configuration d'OpenRouter via l'API compatible OpenAI
+2025-08-02 05:57:24 - archon.archon_graph - INFO - 🔑 Utilisation de la clé API OpenRouter: ${OPEN*****KEY}
+2025-08-02 05:57:24 - archon.archon_graph - INFO - ✅ Provider OpenRouter correctement initialisé avec le modèle moonshotai/kimi-k2:free
+2025-08-02 05:57:24 - archon.archon_graph - INFO - ⚡ CODER - Envoi de la requête...
+2025-08-02 05:57:24 - archon.archon_graph - ERROR - Error in coder: status_code: 401, model_name: moonshotai/kimi-k2:free, body: {'message': 'No auth credentials found', 'code': 401}
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.10/site-packages/pydantic_ai/models/openai.py", line 332, in _completions_create
+    return await self.client.chat.completions.create(
+  File "/usr/local/lib/python3.10/site-packages/openai/resources/chat/completions/completions.py", line 2454, in create
+    return await self._post(
+  File "/usr/local/lib/python3.10/site-packages/openai/_base_client.py", line 1791, in post
+    return await self.request(cast_to, opts, stream=stream, stream_cls=stream_cls)
+  File "/usr/local/lib/python3.10/site-packages/openai/_base_client.py", line 1591, in request
+    raise self._make_status_error_from_response(err.response) from None
+openai.AuthenticationError: Error code: 401 - {'error': {'message': 'No auth credentials found', 'code': 401}}
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/app/archon/archon_graph.py", line 281, in coder_agent
+    result = coder.run_sync("Generate code based on scope and advisor output",
+  File "/usr/local/lib/python3.10/site-packages/pydantic_ai/agent.py", line 987, in run_sync
+    return get_event_loop().run_until_complete(
+  File "/usr/local/lib/python3.10/asyncio/base_events.py", line 649, in run_until_complete
+    return future.result()
+  File "/usr/local/lib/python3.10/site-packages/pydantic_ai/agent.py", line 562, in run
+    async for _ in agent_run:
+  File "/usr/local/lib/python3.10/site-packages/pydantic_ai/agent.py", line 2173, in __anext__
+    next_node = await self._graph_run.__anext__()
+  File "/usr/local/lib/python3.10/site-packages/pydantic_graph/graph.py", line 809, in __anext__
+    return await self.next(self._next_node)
+  File "/usr/local/lib/python3.10/site-packages/pydantic_graph/graph.py", line 782, in next
+    self._next_node = await node.run(ctx)
+  File "/usr/local/lib/python3.10/site-packages/pydantic_ai/_agent_graph.py", line 299, in run
+    return await self._make_request(ctx)
+  File "/usr/local/lib/python3.10/site-packages/pydantic_ai/_agent_graph.py", line 359, in _make_request
+    model_response = await ctx.deps.model.request(message_history, model_settings, model_request_parameters)
+  File "/usr/local/lib/python3.10/site-packages/pydantic_ai/models/openai.py", line 244, in request
+    response = await self._completions_create(
+  File "/usr/local/lib/python3.10/site-packages/pydantic_ai/models/openai.py", line 361, in _completions_create
+    raise ModelHTTPError(status_code=status_code, model_name=self.model_name, body=e.body) from e
+pydantic_ai.exceptions.ModelHTTPError: status_code: 401, model_name: moonshotai/kimi-k2:free, body: {'message': 'No auth credentials found', 'code': 401}
+2025-08-02 05:57:31 - archon.archon_graph - INFO - ==================================================
+2025-08-02 05:57:31 - archon.archon_graph - INFO - 🔍 REASONER STARTING
+2025-08-02 05:57:31 - archon.archon_graph - INFO - 🔍 Modèle: deepseek/deepseek-chat-v3-0324:free
+2025-08-02 05:57:31 - archon.archon_graph - INFO - ==================================================
+2025-08-02 05:57:31 - archon.archon_graph - INFO - ==================================================
+2025-08-02 05:57:31 - archon.archon_graph - INFO - 🔍 REASONER STARTING
+2025-08-02 05:57:31 - archon.archon_graph - INFO - 🔍 Modèle: deepseek/deepseek-chat-v3-0324:free
+2025-08-02 05:57:31 - archon.archon_graph - INFO - ==================================================
+2025-08-02 05:57:31 - archon.archon_graph - INFO - ---STEP: Defining scope with reasoner agent---
+2025-08-02 05:57:31 - archon.archon_graph - INFO - 🧠 REASONER - Modèle: openrouter:deepseek/deepseek-chat-v3-0324:free
+2025-08-02 05:57:31 - archon.archon_graph - INFO - 🧠 REASONER - Message utilisateur: Crée un agent FastAPI simple qui retourne "Hello World"
+2025-08-02 05:57:31 - archon.archon_graph - INFO - 🔧 Configuration d'OpenRouter via l'API compatible OpenAI
+2025-08-02 05:57:31 - archon.archon_graph - INFO - 🔑 Utilisation de la clé API OpenRouter: ${OPEN*****KEY}
+2025-08-02 05:57:31 - archon.archon_graph - INFO - ✅ Provider OpenRouter correctement initialisé avec le modèle deepseek/deepseek-chat-v3-0324:free
+2025-08-02 05:57:31 - archon.archon_graph - INFO - 🔍 REASONER - Envoi de la requête...
+2025-08-02 05:57:31 - archon.archon_graph - ERROR - Error in define_scope: status_code: 401, model_name: deepseek/deepseek-chat-v3-0324:free, body: {'message': 'No auth credentials found', 'code': 401}
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.10/site-packages/pydantic_ai/models/openai.py", line 332, in _completions_create
+    return await self.client.chat.completions.create(
+  File "/usr/local/lib/python3.10/site-packages/openai/resources/chat/completions/completions.py", line 2454, in create
+    return await self._post(
+  File "/usr/local/lib/python3.10/site-packages/openai/_base_client.py", line 1791, in post
+    return await self.request(cast_to, opts, stream=stream, stream_cls=stream_cls)
+  File "/usr/local/lib/python3.10/site-packages/openai/_base_client.py", line 1591, in request
+    raise self._make_status_error_from_response(err.response) from None
+openai.AuthenticationError: Error code: 401 - {'error': {'message': 'No auth credentials found', 'code': 401}}
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/app/archon/archon_graph.py", line 174, in define_scope_with_reasoner
+    result = reasoner_agent.run_sync(state['latest_user_message'])
+  File "/usr/local/lib/python3.10/site-packages/pydantic_ai/agent.py", line 987, in run_sync
+    return get_event_loop().run_until_complete(
+  File "/usr/local/lib/python3.10/asyncio/base_events.py", line 649, in run_until_complete
+    return future.result()
+  File "/usr/local/lib/python3.10/site-packages/pydantic_ai/agent.py", line 562, in run
+    async for _ in agent_run:
+  File "/usr/local/lib/python3.10/site-packages/pydantic_ai/agent.py", line 2173, in __anext__
+    next_node = await self._graph_run.__anext__()
+  File "/usr/local/lib/python3.10/site-packages/pydantic_graph/graph.py", line 809, in __anext__
+    return await self.next(self._next_node)
+  File "/usr/local/lib/python3.10/site-packages/pydantic_graph/graph.py", line 782, in next
+    self._next_node = await node.run(ctx)
+  File "/usr/local/lib/python3.10/site-packages/pydantic_ai/_agent_graph.py", line 299, in run
+    return await self._make_request(ctx)
+  File "/usr/local/lib/python3.10/site-packages/pydantic_ai/_agent_graph.py", line 359, in _make_request
+    model_response = await ctx.deps.model.request(message_history, model_settings, model_request_parameters)
+  File "/usr/local/lib/python3.10/site-packages/pydantic_ai/models/openai.py", line 244, in request
+    response = await self._completions_create(
+  File "/usr/local/lib/python3.10/site-packages/pydantic_ai/models/openai.py", line 361, in _completions_create
+    raise ModelHTTPError(status_code=status_code, model_name=self.model_name, body=e.body) from e
+pydantic_ai.exceptions.ModelHTTPError: status_code: 401, model_name: deepseek/deepseek-chat-v3-0324:free, body: {'message': 'No auth credentials found', 'code': 401}
+2025-08-02 05:57:31 - archon.archon_graph - INFO - ==================================================
+2025-08-02 05:57:31 - archon.archon_graph - INFO - 💡 ADVISOR STARTING
+2025-08-02 05:57:31 - archon.archon_graph - INFO - 💡 Modèle: moonshotai/kimi-k2:free
+2025-08-02 05:57:31 - archon.archon_graph - INFO - ==================================================
+2025-08-02 05:57:31 - archon.archon_graph - INFO - ==================================================
+2025-08-02 05:57:31 - archon.archon_graph - INFO - 💡 ADVISOR STARTING
+2025-08-02 05:57:31 - archon.archon_graph - INFO - 💡 Modèle: moonshotai/kimi-k2:free
+2025-08-02 05:57:31 - archon.archon_graph - INFO - ==================================================
+2025-08-02 05:57:31 - archon.archon_graph - INFO - ---STEP: Generating advice with advisor agent---
+2025-08-02 05:57:31 - archon.archon_graph - INFO - 💡 ADVISOR - Modèle: openrouter:moonshotai/kimi-k2:free
+2025-08-02 05:57:31 - archon.archon_graph - INFO - 🔧 Configuration d'OpenRouter via l'API compatible OpenAI
+2025-08-02 05:57:31 - archon.archon_graph - INFO - 🔑 Utilisation de la clé API OpenRouter: ${OPEN*****KEY}
+2025-08-02 05:57:31 - archon.archon_graph - INFO - ✅ Provider OpenRouter correctement initialisé avec le modèle moonshotai/kimi-k2:free
+2025-08-02 05:57:31 - archon.archon_graph - INFO - 💡 ADVISOR - Envoi de la requête...
+2025-08-02 05:57:31 - archon.archon_graph - ERROR - Error in advisor: status_code: 401, model_name: moonshotai/kimi-k2:free, body: {'message': 'No auth credentials found', 'code': 401}
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.10/site-packages/pydantic_ai/models/openai.py", line 332, in _completions_create
+    return await self.client.chat.completions.create(
+  File "/usr/local/lib/python3.10/site-packages/openai/resources/chat/completions/completions.py", line 2454, in create
+    return await self._post(
+  File "/usr/local/lib/python3.10/site-packages/openai/_base_client.py", line 1791, in post
+    return await self.request(cast_to, opts, stream=stream, stream_cls=stream_cls)
+  File "/usr/local/lib/python3.10/site-packages/openai/_base_client.py", line 1591, in request
+    raise self._make_status_error_from_response(err.response) from None
+openai.AuthenticationError: Error code: 401 - {'error': {'message': 'No auth credentials found', 'code': 401}}
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/app/archon/archon_graph.py", line 218, in advisor_with_examples
+    result = advisor.run_sync("Generate advice based on the following scope",
+  File "/usr/local/lib/python3.10/site-packages/pydantic_ai/agent.py", line 987, in run_sync
+    return get_event_loop().run_until_complete(
+  File "/usr/local/lib/python3.10/asyncio/base_events.py", line 649, in run_until_complete
+    return future.result()
+  File "/usr/local/lib/python3.10/site-packages/pydantic_ai/agent.py", line 562, in run
+    async for _ in agent_run:
+  File "/usr/local/lib/python3.10/site-packages/pydantic_ai/agent.py", line 2173, in __anext__
+    next_node = await self._graph_run.__anext__()
+  File "/usr/local/lib/python3.10/site-packages/pydantic_graph/graph.py", line 809, in __anext__
+    return await self.next(self._next_node)
+  File "/usr/local/lib/python3.10/site-packages/pydantic_graph/graph.py", line 782, in next
+    self._next_node = await node.run(ctx)
+  File "/usr/local/lib/python3.10/site-packages/pydantic_ai/_agent_graph.py", line 299, in run
+    return await self._make_request(ctx)
+  File "/usr/local/lib/python3.10/site-packages/pydantic_ai/_agent_graph.py", line 359, in _make_request
+    model_response = await ctx.deps.model.request(message_history, model_settings, model_request_parameters)
+  File "/usr/local/lib/python3.10/site-packages/pydantic_ai/models/openai.py", line 244, in request
+    response = await self._completions_create(
+  File "/usr/local/lib/python3.10/site-packages/pydantic_ai/models/openai.py", line 361, in _completions_create
+    raise ModelHTTPError(status_code=status_code, model_name=self.model_name, body=e.body) from e
+pydantic_ai.exceptions.ModelHTTPError: status_code: 401, model_name: moonshotai/kimi-k2:free, body: {'message': 'No auth credentials found', 'code': 401}
+2025-08-02 05:57:31 - archon.archon_graph - INFO - ==================================================
+2025-08-02 05:57:31 - archon.archon_graph - INFO - ⚡ CODER STARTING
+2025-08-02 05:57:31 - archon.archon_graph - INFO - ⚡ Modèle: moonshotai/kimi-k2:free
+2025-08-02 05:57:31 - archon.archon_graph - INFO - ==================================================
+2025-08-02 05:57:31 - archon.archon_graph - INFO - ==================================================
+2025-08-02 05:57:31 - archon.archon_graph - INFO - ⚡ CODER STARTING
+2025-08-02 05:57:31 - archon.archon_graph - INFO - ⚡ Modèle: moonshotai/kimi-k2:free
+2025-08-02 05:57:31 - archon.archon_graph - INFO - ==================================================
+2025-08-02 05:57:31 - archon.archon_graph - INFO - ---STEP: Generating code with coder agent---
+2025-08-02 05:57:31 - archon.archon_graph - INFO - ⚡ CODER - Modèle: openrouter:moonshotai/kimi-k2:free
+2025-08-02 05:57:31 - archon.archon_graph - WARNING - ⚡ CODER - Attention: La clé 'scope' est vide ou manquante
+2025-08-02 05:57:31 - archon.archon_graph - WARNING - ⚡ CODER - Attention: La clé 'advisor_output' est vide ou manquante
+2025-08-02 05:57:31 - archon.archon_graph - INFO - ⚡ CODER - Scope: Aucun scope défini. Veuillez fournir plus d'informations....
+2025-08-02 05:57:31 - archon.archon_graph - INFO - ⚡ CODER - Advisor Output: Aucune recommandation de l'advisor. Utilisez le scope pour générer le code....
+2025-08-02 05:57:31 - archon.archon_graph - INFO - 🔧 Configuration d'OpenRouter via l'API compatible OpenAI
+2025-08-02 05:57:31 - archon.archon_graph - INFO - 🔑 Utilisation de la clé API OpenRouter: ${OPEN*****KEY}
+2025-08-02 05:57:31 - archon.archon_graph - INFO - ✅ Provider OpenRouter correctement initialisé avec le modèle moonshotai/kimi-k2:free
+2025-08-02 05:57:31 - archon.archon_graph - INFO - ⚡ CODER - Envoi de la requête...
+2025-08-02 05:57:31 - archon.archon_graph - ERROR - Error in coder: status_code: 401, model_name: moonshotai/kimi-k2:free, body: {'message': 'No auth credentials found', 'code': 401}
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.10/site-packages/pydantic_ai/models/openai.py", line 332, in _completions_create
+    return await self.client.chat.completions.create(
+  File "/usr/local/lib/python3.10/site-packages/openai/resources/chat/completions/completions.py", line 2454, in create
+    return await self._post(
+  File "/usr/local/lib/python3.10/site-packages/openai/_base_client.py", line 1791, in post
+    return await self.request(cast_to, opts, stream=stream, stream_cls=stream_cls)
+  File "/usr/local/lib/python3.10/site-packages/openai/_base_client.py", line 1591, in request
+    raise self._make_status_error_from_response(err.response) from None
+openai.AuthenticationError: Error code: 401 - {'error': {'message': 'No auth credentials found', 'code': 401}}
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/app/archon/archon_graph.py", line 281, in coder_agent
+    result = coder.run_sync("Generate code based on scope and advisor output",
+  File "/usr/local/lib/python3.10/site-packages/pydantic_ai/agent.py", line 987, in run_sync
+    return get_event_loop().run_until_complete(
+  File "/usr/local/lib/python3.10/asyncio/base_events.py", line 649, in run_until_complete
+    return future.result()
+  File "/usr/local/lib/python3.10/site-packages/pydantic_ai/agent.py", line 562, in run
+    async for _ in agent_run:
+  File "/usr/local/lib/python3.10/site-packages/pydantic_ai/agent.py", line 2173, in __anext__
+    next_node = await self._graph_run.__anext__()
+  File "/usr/local/lib/python3.10/site-packages/pydantic_graph/graph.py", line 809, in __anext__
+    return await self.next(self._next_node)
+  File "/usr/local/lib/python3.10/site-packages/pydantic_graph/graph.py", line 782, in next
+    self._next_node = await node.run(ctx)
+  File "/usr/local/lib/python3.10/site-packages/pydantic_ai/_agent_graph.py", line 299, in run
+    return await self._make_request(ctx)
+  File "/usr/local/lib/python3.10/site-packages/pydantic_ai/_agent_graph.py", line 359, in _make_request
+    model_response = await ctx.deps.model.request(message_history, model_settings, model_request_parameters)
+  File "/usr/local/lib/python3.10/site-packages/pydantic_ai/models/openai.py", line 244, in request
+    response = await self._completions_create(
+  File "/usr/local/lib/python3.10/site-packages/pydantic_ai/models/openai.py", line 361, in _completions_create
+    raise ModelHTTPError(status_code=status_code, model_name=self.model_name, body=e.body) from e
+pydantic_ai.exceptions.ModelHTTPError: status_code: 401, model_name: moonshotai/kimi-k2:free, body: {'message': 'No auth credentials found', 'code': 401}
+2025-08-02 06:03:23 - archon.llm_provider - INFO - Configuration du profil chargée: openrouter
+2025-08-02 06:03:23 - archon.llm_provider - INFO - Configuration du profil chargée: openrouter
+2025-08-02 06:03:23 - archon.llm_provider - INFO - Configuration du profil chargée: openrouter
+2025-08-02 06:03:23 - archon.llm_provider - INFO - Configuration du profil chargée: openrouter
+2025-08-02 06:03:23 - archon.llm_provider - INFO - 🔧 Configuration pour OpenRouter...
+2025-08-02 06:03:23 - archon.llm_provider - INFO - Configuration du profil chargée: openrouter
+2025-08-02 06:03:23 - archon.llm_provider - INFO - 🔑 Clé API OpenRouter configurée: sk-or-*****
+2025-08-02 06:03:23 - archon.llm_provider - INFO - ✅ Configuration OpenRouter terminée.
+2025-08-02 06:03:24 - archon.archon_graph - INFO - LLM Provider: OpenRouter
+2025-08-02 06:03:24 - archon.archon_graph - INFO - Reasoner Model: deepseek/deepseek-chat-v3-0324:free
+2025-08-02 06:03:24 - archon.archon_graph - INFO - Primary Model: moonshotai/kimi-k2:free
+2025-08-02 06:03:36 - archon.archon_graph - INFO - ==================================================
+2025-08-02 06:03:36 - archon.archon_graph - INFO - 🔍 REASONER STARTING
+2025-08-02 06:03:36 - archon.archon_graph - INFO - 🔍 Modèle: deepseek/deepseek-chat-v3-0324:free
+2025-08-02 06:03:36 - archon.archon_graph - INFO - ==================================================
+2025-08-02 06:03:36 - archon.archon_graph - INFO - ==================================================
+2025-08-02 06:03:36 - archon.archon_graph - INFO - 🔍 REASONER STARTING
+2025-08-02 06:03:36 - archon.archon_graph - INFO - 🔍 Modèle: deepseek/deepseek-chat-v3-0324:free
+2025-08-02 06:03:36 - archon.archon_graph - INFO - ==================================================
+2025-08-02 06:03:36 - archon.archon_graph - INFO - ---STEP: Defining scope with reasoner agent---
+2025-08-02 06:03:36 - archon.archon_graph - INFO - 🧠 REASONER - Modèle: openrouter:deepseek/deepseek-chat-v3-0324:free
+2025-08-02 06:03:36 - archon.archon_graph - INFO - 🧠 REASONER - Message utilisateur: Hello, can you hear me?
+2025-08-02 06:03:36 - archon.archon_graph - INFO - 🔧 Configuration d'OpenRouter via l'API compatible OpenAI
+2025-08-02 06:03:36 - archon.archon_graph - INFO - 🔑 Utilisation de la clé API OpenRouter: sk-or-*****f651
+2025-08-02 06:03:36 - archon.archon_graph - INFO - ✅ Provider OpenRouter correctement initialisé avec le modèle deepseek/deepseek-chat-v3-0324:free
+2025-08-02 06:03:36 - archon.archon_graph - INFO - 🔍 REASONER - Envoi de la requête...
+2025-08-02 06:03:42 - archon.archon_graph - INFO - 🔍 REASONER - Réponse complète reçue: AgentRunResult(output='Certainly! Here’s a refined version of your prompt to make it more specific and actionable while preserving your intent:  \n\n---  \n**Refined Prompt:**  \n*"Hello! I’d like to ...
+2025-08-02 06:03:42 - archon.archon_graph - INFO - 🔍 Scope state: AgentRunResult(output='Certainly! Here’s a refined version of your prompt to make it more specific and actionable while preserving your intent:  \n\n---  \n**Refined Prompt:**  \n*"Hello! I’d like to confirm if you are actively processing my message. Could you acknowledge this with a clear response? For example, you could reply with ‘Yes, I’m here—how can I assist you?’ or provide another brief confirmation."*  \n\n**Why this improves clarity:**  \n- Explicitly states the request (confirmation of responsiveness).  \n- Offers an example of an ideal response.  \n- Encourages a concise but structured reply.  \n\nLet me know if you\'d like further refinements!')
+2025-08-02 06:03:42 - archon.archon_graph - INFO - ==================================================
+2025-08-02 06:03:42 - archon.archon_graph - INFO - 💡 ADVISOR STARTING
+2025-08-02 06:03:42 - archon.archon_graph - INFO - 💡 Modèle: moonshotai/kimi-k2:free
+2025-08-02 06:03:42 - archon.archon_graph - INFO - ==================================================
+2025-08-02 06:03:42 - archon.archon_graph - INFO - ==================================================
+2025-08-02 06:03:42 - archon.archon_graph - INFO - 💡 ADVISOR STARTING
+2025-08-02 06:03:42 - archon.archon_graph - INFO - 💡 Modèle: moonshotai/kimi-k2:free
+2025-08-02 06:03:42 - archon.archon_graph - INFO - ==================================================
+2025-08-02 06:03:42 - archon.archon_graph - INFO - ---STEP: Generating advice with advisor agent---
+2025-08-02 06:03:42 - archon.archon_graph - INFO - 💡 ADVISOR - Modèle: openrouter:moonshotai/kimi-k2:free
+2025-08-02 06:03:42 - archon.archon_graph - INFO - 🔧 Configuration d'OpenRouter via l'API compatible OpenAI
+2025-08-02 06:03:42 - archon.archon_graph - INFO - 🔑 Utilisation de la clé API OpenRouter: sk-or-*****f651
+2025-08-02 06:03:42 - archon.archon_graph - INFO - ✅ Provider OpenRouter correctement initialisé avec le modèle moonshotai/kimi-k2:free
+2025-08-02 06:03:42 - archon.archon_graph - INFO - 💡 ADVISOR - Envoi de la requête...
+2025-08-02 06:03:50 - archon.archon_graph - INFO - 💡 ADVISOR - Réponse complète reçue: AgentRunResult(output='I\'ll analyze the prompt to understand what type of agent should be built. The user wants to "Generate advice based on the following scope" - this suggests the agent needs to pr...
+2025-08-02 06:03:50 - archon.archon_graph - INFO - Advice generated.
+2025-08-02 06:03:50 - archon.archon_graph - INFO - ==================================================
+2025-08-02 06:03:50 - archon.archon_graph - INFO - ⚡ CODER STARTING
+2025-08-02 06:03:50 - archon.archon_graph - INFO - ⚡ Modèle: moonshotai/kimi-k2:free
+2025-08-02 06:03:50 - archon.archon_graph - INFO - ==================================================
+2025-08-02 06:03:50 - archon.archon_graph - INFO - ==================================================
+2025-08-02 06:03:50 - archon.archon_graph - INFO - ⚡ CODER STARTING
+2025-08-02 06:03:50 - archon.archon_graph - INFO - ⚡ Modèle: moonshotai/kimi-k2:free
+2025-08-02 06:03:50 - archon.archon_graph - INFO - ==================================================
+2025-08-02 06:03:50 - archon.archon_graph - INFO - ---STEP: Generating code with coder agent---
+2025-08-02 06:03:50 - archon.archon_graph - INFO - ⚡ CODER - Modèle: openrouter:moonshotai/kimi-k2:free
+2025-08-02 06:03:50 - archon.archon_graph - INFO - ⚡ CODER - Scope: AgentRunResult(output='Certainly! Here’s a refined version of your prompt to make it more specific and actionable while preserving your intent:  \n\n---  \n**Refined Prompt:**  \n*"Hello! I’d like to ...
+2025-08-02 06:03:50 - archon.archon_graph - INFO - ⚡ CODER - Advisor Output: AgentRunResult(output='I\'ll analyze the prompt to understand what type of agent should be built. The user wants to "Generate advice based on the following scope" - this suggests the agent needs to pr...
+2025-08-02 06:03:50 - archon.archon_graph - INFO - 🔧 Configuration d'OpenRouter via l'API compatible OpenAI
+2025-08-02 06:03:50 - archon.archon_graph - INFO - 🔑 Utilisation de la clé API OpenRouter: sk-or-*****f651
+2025-08-02 06:03:50 - archon.archon_graph - INFO - ✅ Provider OpenRouter correctement initialisé avec le modèle moonshotai/kimi-k2:free
+2025-08-02 06:03:50 - archon.archon_graph - INFO - ⚡ CODER - Envoi de la requête...
+2025-08-02 06:04:38 - archon.archon_graph - INFO - ⚡ CODER - Réponse complète reçue: AgentRunResult(output='```python\n"""\nAsync research/advisor agent that orchestrates a Web search, summarizes each\nsource, then produces a concise final report for the user.\n\nExample usage:\n    p...
+2025-08-02 06:04:38 - archon.archon_graph - INFO - Code generated.
+2025-08-02 06:04:48 - archon.llm_provider - INFO - Configuration du profil chargée: ollama
+2025-08-02 06:04:48 - archon.llm_provider - INFO - Configuration du profil chargée: ollama
+2025-08-02 06:04:48 - archon.llm_provider - INFO - Configuration du profil chargée: ollama
+2025-08-02 06:04:48 - archon.llm_provider - INFO - Configuration du profil chargée: ollama
+2025-08-02 06:04:48 - archon.llm_provider - INFO - Configuration pour Ollama...
+2025-08-02 06:04:48 - archon.llm_provider - INFO - Configuration du profil chargée: ollama
+2025-08-02 06:04:49 - archon.llm_provider - INFO - Configuration Ollama terminée. URL de base: ${OLLAMA_BASE_URL}
+2025-08-02 06:04:50 - archon.archon_graph - INFO - LLM Provider: Ollama
+2025-08-02 06:04:50 - archon.archon_graph - INFO - Reasoner Model: tinyllama
+2025-08-02 06:04:50 - archon.archon_graph - INFO - Primary Model: tinyllama
+2025-08-02 06:05:11 - archon.llm_provider - INFO - Configuration du profil chargée: openai
+2025-08-02 06:05:11 - archon.llm_provider - INFO - Configuration du profil chargée: openai
+2025-08-02 06:05:11 - archon.llm_provider - INFO - Configuration du profil chargée: openai
+2025-08-02 06:05:11 - archon.llm_provider - INFO - Configuration du profil chargée: openai
+2025-08-02 06:05:11 - archon.llm_provider - INFO - Configuration pour OpenAI...
+2025-08-02 06:05:11 - archon.llm_provider - INFO - Configuration du profil chargée: openai
+2025-08-02 06:05:11 - archon.llm_provider - INFO - Configuration du profil chargée: openai
+2025-08-02 06:05:11 - archon.llm_provider - INFO - Configuration OpenAI terminée.
+2025-08-02 06:05:12 - archon.archon_graph - INFO - LLM Provider: OpenAI
+2025-08-02 06:05:12 - archon.archon_graph - INFO - Reasoner Model: gpt-4.1-nano
+2025-08-02 06:05:12 - archon.archon_graph - INFO - Primary Model: gpt-4.1-nano
+2025-08-02 06:05:35 - archon.llm_provider - INFO - Configuration du profil chargée: openrouter
+2025-08-02 06:05:35 - archon.llm_provider - INFO - Configuration du profil chargée: openrouter
+2025-08-02 06:05:35 - archon.llm_provider - INFO - Configuration du profil chargée: openrouter
+2025-08-02 06:05:35 - archon.llm_provider - INFO - Configuration du profil chargée: openrouter
+2025-08-02 06:05:35 - archon.llm_provider - INFO - 🔧 Configuration pour OpenRouter...
+2025-08-02 06:05:35 - archon.llm_provider - INFO - Configuration du profil chargée: openrouter
+2025-08-02 06:05:35 - archon.llm_provider - INFO - 🔑 Clé API OpenRouter configurée: sk-or-*****
+2025-08-02 06:05:35 - archon.llm_provider - INFO - ✅ Configuration OpenRouter terminée.
+2025-08-02 06:05:36 - archon.archon_graph - INFO - LLM Provider: OpenRouter
+2025-08-02 06:05:36 - archon.archon_graph - INFO - Reasoner Model: deepseek/deepseek-chat-v3-0324:free
+2025-08-02 06:05:36 - archon.archon_graph - INFO - Primary Model: moonshotai/kimi-k2:free
+2025-08-02 06:08:37 - archon.llm_provider - INFO - Configuration du profil chargée: ollama
+2025-08-02 06:08:37 - archon.llm_provider - INFO - Configuration du profil chargée: ollama
+2025-08-02 06:08:37 - archon.llm_provider - INFO - Configuration du profil chargée: ollama
+2025-08-02 06:08:37 - archon.llm_provider - INFO - Configuration du profil chargée: ollama
+2025-08-02 06:08:37 - archon.llm_provider - INFO - Configuration pour Ollama...
+2025-08-02 06:08:37 - archon.llm_provider - INFO - Configuration du profil chargée: ollama
+2025-08-02 06:08:37 - archon.llm_provider - INFO - Configuration Ollama terminée. URL de base: ${OLLAMA_BASE_URL}
+2025-08-02 06:08:38 - archon.archon_graph - INFO - LLM Provider: Ollama
+2025-08-02 06:08:38 - archon.archon_graph - INFO - Reasoner Model: tinyllama
+2025-08-02 06:08:38 - archon.archon_graph - INFO - Primary Model: tinyllama
+2025-08-02 06:08:45 - archon.archon_graph - INFO - ==================================================
+2025-08-02 06:08:45 - archon.archon_graph - INFO - 🔍 REASONER STARTING
+2025-08-02 06:08:45 - archon.archon_graph - INFO - 🔍 Modèle: tinyllama
+2025-08-02 06:08:45 - archon.archon_graph - INFO - ==================================================
+2025-08-02 06:08:45 - archon.archon_graph - INFO - ==================================================
+2025-08-02 06:08:45 - archon.archon_graph - INFO - 🔍 REASONER STARTING
+2025-08-02 06:08:45 - archon.archon_graph - INFO - 🔍 Modèle: tinyllama
+2025-08-02 06:08:45 - archon.archon_graph - INFO - ==================================================
+2025-08-02 06:08:45 - archon.archon_graph - INFO - ---STEP: Defining scope with reasoner agent---
+2025-08-02 06:08:45 - archon.archon_graph - INFO - 🧠 REASONER - Modèle: ollama:tinyllama
+2025-08-02 06:08:45 - archon.archon_graph - INFO - 🧠 REASONER - Message utilisateur: Bonjour, peux-tu me dire bonjour?
+2025-08-02 06:08:45 - archon.archon_graph - INFO - Configuration d'Ollama via l'API compatible OpenAI: ${OLLAMA_BASE_URL}
+2025-08-02 06:08:45 - archon.archon_graph - INFO - 🔍 REASONER - Envoi de la requête...
+2025-08-02 06:08:47 - archon.archon_graph - ERROR - Error in define_scope: Connection error.
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.10/site-packages/httpx/_transports/default.py", line 101, in map_httpcore_exceptions
+    yield
+  File "/usr/local/lib/python3.10/site-packages/httpx/_transports/default.py", line 394, in handle_async_request
+    resp = await self._pool.handle_async_request(req)
+  File "/usr/local/lib/python3.10/site-packages/httpcore/_async/connection_pool.py", line 207, in handle_async_request
+    raise UnsupportedProtocol(
+httpcore.UnsupportedProtocol: Request URL is missing an 'http://' or 'https://' protocol.
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.10/site-packages/openai/_base_client.py", line 1526, in request
+    response = await self._client.send(
+  File "/usr/local/lib/python3.10/site-packages/httpx/_client.py", line 1629, in send
+    response = await self._send_handling_auth(
+  File "/usr/local/lib/python3.10/site-packages/httpx/_client.py", line 1657, in _send_handling_auth
+    response = await self._send_handling_redirects(
+  File "/usr/local/lib/python3.10/site-packages/httpx/_client.py", line 1694, in _send_handling_redirects
+    response = await self._send_single_request(request)
+  File "/usr/local/lib/python3.10/site-packages/httpx/_client.py", line 1730, in _send_single_request
+    response = await transport.handle_async_request(request)
+  File "/usr/local/lib/python3.10/site-packages/httpx/_transports/default.py", line 393, in handle_async_request
+    with map_httpcore_exceptions():
+  File "/usr/local/lib/python3.10/contextlib.py", line 153, in __exit__
+    self.gen.throw(typ, value, traceback)
+  File "/usr/local/lib/python3.10/site-packages/httpx/_transports/default.py", line 118, in map_httpcore_exceptions
+    raise mapped_exc(message) from exc
+httpx.UnsupportedProtocol: Request URL is missing an 'http://' or 'https://' protocol.
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/app/archon/archon_graph.py", line 174, in define_scope_with_reasoner
+    result = reasoner_agent.run_sync(state['latest_user_message'])
+  File "/usr/local/lib/python3.10/site-packages/pydantic_ai/agent.py", line 987, in run_sync
+    return get_event_loop().run_until_complete(
+  File "/usr/local/lib/python3.10/asyncio/base_events.py", line 649, in run_until_complete
+    return future.result()
+  File "/usr/local/lib/python3.10/site-packages/pydantic_ai/agent.py", line 562, in run
+    async for _ in agent_run:
+  File "/usr/local/lib/python3.10/site-packages/pydantic_ai/agent.py", line 2173, in __anext__
+    next_node = await self._graph_run.__anext__()
+  File "/usr/local/lib/python3.10/site-packages/pydantic_graph/graph.py", line 809, in __anext__
+    return await self.next(self._next_node)
+  File "/usr/local/lib/python3.10/site-packages/pydantic_graph/graph.py", line 782, in next
+    self._next_node = await node.run(ctx)
+  File "/usr/local/lib/python3.10/site-packages/pydantic_ai/_agent_graph.py", line 299, in run
+    return await self._make_request(ctx)
+  File "/usr/local/lib/python3.10/site-packages/pydantic_ai/_agent_graph.py", line 359, in _make_request
+    model_response = await ctx.deps.model.request(message_history, model_settings, model_request_parameters)
+  File "/usr/local/lib/python3.10/site-packages/pydantic_ai/models/openai.py", line 244, in request
+    response = await self._completions_create(
+  File "/usr/local/lib/python3.10/site-packages/pydantic_ai/models/openai.py", line 332, in _completions_create
+    return await self.client.chat.completions.create(
+  File "/usr/local/lib/python3.10/site-packages/openai/resources/chat/completions/completions.py", line 2454, in create
+    return await self._post(
+  File "/usr/local/lib/python3.10/site-packages/openai/_base_client.py", line 1791, in post
+    return await self.request(cast_to, opts, stream=stream, stream_cls=stream_cls)
+  File "/usr/local/lib/python3.10/site-packages/openai/_base_client.py", line 1558, in request
+    raise APIConnectionError(request=request) from err
+openai.APIConnectionError: Connection error.
+2025-08-02 06:08:47 - archon.archon_graph - INFO - ==================================================
+2025-08-02 06:08:47 - archon.archon_graph - INFO - 💡 ADVISOR STARTING
+2025-08-02 06:08:47 - archon.archon_graph - INFO - 💡 Modèle: tinyllama
+2025-08-02 06:08:47 - archon.archon_graph - INFO - ==================================================
+2025-08-02 06:08:47 - archon.archon_graph - INFO - ==================================================
+2025-08-02 06:08:47 - archon.archon_graph - INFO - 💡 ADVISOR STARTING
+2025-08-02 06:08:47 - archon.archon_graph - INFO - 💡 Modèle: tinyllama
+2025-08-02 06:08:47 - archon.archon_graph - INFO - ==================================================
+2025-08-02 06:08:47 - archon.archon_graph - INFO - ---STEP: Generating advice with advisor agent---
+2025-08-02 06:08:47 - archon.archon_graph - INFO - 💡 ADVISOR - Modèle: ollama:tinyllama
+2025-08-02 06:08:47 - archon.archon_graph - INFO - Configuration d'Ollama via l'API compatible OpenAI: ${OLLAMA_BASE_URL}
+2025-08-02 06:08:47 - archon.archon_graph - INFO - 💡 ADVISOR - Envoi de la requête...
+2025-08-02 06:08:48 - archon.archon_graph - ERROR - Error in advisor: Connection error.
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.10/site-packages/httpx/_transports/default.py", line 101, in map_httpcore_exceptions
+    yield
+  File "/usr/local/lib/python3.10/site-packages/httpx/_transports/default.py", line 394, in handle_async_request
+    resp = await self._pool.handle_async_request(req)
+  File "/usr/local/lib/python3.10/site-packages/httpcore/_async/connection_pool.py", line 207, in handle_async_request
+    raise UnsupportedProtocol(
+httpcore.UnsupportedProtocol: Request URL is missing an 'http://' or 'https://' protocol.
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.10/site-packages/openai/_base_client.py", line 1526, in request
+    response = await self._client.send(
+  File "/usr/local/lib/python3.10/site-packages/httpx/_client.py", line 1629, in send
+    response = await self._send_handling_auth(
+  File "/usr/local/lib/python3.10/site-packages/httpx/_client.py", line 1657, in _send_handling_auth
+    response = await self._send_handling_redirects(
+  File "/usr/local/lib/python3.10/site-packages/httpx/_client.py", line 1694, in _send_handling_redirects
+    response = await self._send_single_request(request)
+  File "/usr/local/lib/python3.10/site-packages/httpx/_client.py", line 1730, in _send_single_request
+    response = await transport.handle_async_request(request)
+  File "/usr/local/lib/python3.10/site-packages/httpx/_transports/default.py", line 393, in handle_async_request
+    with map_httpcore_exceptions():
+  File "/usr/local/lib/python3.10/contextlib.py", line 153, in __exit__
+    self.gen.throw(typ, value, traceback)
+  File "/usr/local/lib/python3.10/site-packages/httpx/_transports/default.py", line 118, in map_httpcore_exceptions
+    raise mapped_exc(message) from exc
+httpx.UnsupportedProtocol: Request URL is missing an 'http://' or 'https://' protocol.
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/app/archon/archon_graph.py", line 218, in advisor_with_examples
+    result = advisor.run_sync("Generate advice based on the following scope",
+  File "/usr/local/lib/python3.10/site-packages/pydantic_ai/agent.py", line 987, in run_sync
+    return get_event_loop().run_until_complete(
+  File "/usr/local/lib/python3.10/asyncio/base_events.py", line 649, in run_until_complete
+    return future.result()
+  File "/usr/local/lib/python3.10/site-packages/pydantic_ai/agent.py", line 562, in run
+    async for _ in agent_run:
+  File "/usr/local/lib/python3.10/site-packages/pydantic_ai/agent.py", line 2173, in __anext__
+    next_node = await self._graph_run.__anext__()
+  File "/usr/local/lib/python3.10/site-packages/pydantic_graph/graph.py", line 809, in __anext__
+    return await self.next(self._next_node)
+  File "/usr/local/lib/python3.10/site-packages/pydantic_graph/graph.py", line 782, in next
+    self._next_node = await node.run(ctx)
+  File "/usr/local/lib/python3.10/site-packages/pydantic_ai/_agent_graph.py", line 299, in run
+    return await self._make_request(ctx)
+  File "/usr/local/lib/python3.10/site-packages/pydantic_ai/_agent_graph.py", line 359, in _make_request
+    model_response = await ctx.deps.model.request(message_history, model_settings, model_request_parameters)
+  File "/usr/local/lib/python3.10/site-packages/pydantic_ai/models/openai.py", line 244, in request
+    response = await self._completions_create(
+  File "/usr/local/lib/python3.10/site-packages/pydantic_ai/models/openai.py", line 332, in _completions_create
+    return await self.client.chat.completions.create(
+  File "/usr/local/lib/python3.10/site-packages/openai/resources/chat/completions/completions.py", line 2454, in create
+    return await self._post(
+  File "/usr/local/lib/python3.10/site-packages/openai/_base_client.py", line 1791, in post
+    return await self.request(cast_to, opts, stream=stream, stream_cls=stream_cls)
+  File "/usr/local/lib/python3.10/site-packages/openai/_base_client.py", line 1558, in request
+    raise APIConnectionError(request=request) from err
+openai.APIConnectionError: Connection error.
+2025-08-02 06:08:48 - archon.archon_graph - INFO - ==================================================
+2025-08-02 06:08:48 - archon.archon_graph - INFO - ⚡ CODER STARTING
+2025-08-02 06:08:48 - archon.archon_graph - INFO - ⚡ Modèle: tinyllama
+2025-08-02 06:08:48 - archon.archon_graph - INFO - ==================================================
+2025-08-02 06:08:48 - archon.archon_graph - INFO - ==================================================
+2025-08-02 06:08:48 - archon.archon_graph - INFO - ⚡ CODER STARTING
+2025-08-02 06:08:48 - archon.archon_graph - INFO - ⚡ Modèle: tinyllama
+2025-08-02 06:08:48 - archon.archon_graph - INFO - ==================================================
+2025-08-02 06:08:48 - archon.archon_graph - INFO - ---STEP: Generating code with coder agent---
+2025-08-02 06:08:48 - archon.archon_graph - INFO - ⚡ CODER - Modèle: ollama:tinyllama
+2025-08-02 06:08:48 - archon.archon_graph - WARNING - ⚡ CODER - Attention: La clé 'scope' est vide ou manquante
+2025-08-02 06:08:48 - archon.archon_graph - WARNING - ⚡ CODER - Attention: La clé 'advisor_output' est vide ou manquante
+2025-08-02 06:08:48 - archon.archon_graph - INFO - ⚡ CODER - Scope: Aucun scope défini. Veuillez fournir plus d'informations....
+2025-08-02 06:08:48 - archon.archon_graph - INFO - ⚡ CODER - Advisor Output: Aucune recommandation de l'advisor. Utilisez le scope pour générer le code....
+2025-08-02 06:08:48 - archon.archon_graph - INFO - Configuration d'Ollama via l'API compatible OpenAI: ${OLLAMA_BASE_URL}
+2025-08-02 06:08:48 - archon.archon_graph - INFO - ⚡ CODER - Envoi de la requête...
+2025-08-02 06:08:50 - archon.archon_graph - ERROR - Error in coder: Connection error.
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.10/site-packages/httpx/_transports/default.py", line 101, in map_httpcore_exceptions
+    yield
+  File "/usr/local/lib/python3.10/site-packages/httpx/_transports/default.py", line 394, in handle_async_request
+    resp = await self._pool.handle_async_request(req)
+  File "/usr/local/lib/python3.10/site-packages/httpcore/_async/connection_pool.py", line 207, in handle_async_request
+    raise UnsupportedProtocol(
+httpcore.UnsupportedProtocol: Request URL is missing an 'http://' or 'https://' protocol.
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.10/site-packages/openai/_base_client.py", line 1526, in request
+    response = await self._client.send(
+  File "/usr/local/lib/python3.10/site-packages/httpx/_client.py", line 1629, in send
+    response = await self._send_handling_auth(
+  File "/usr/local/lib/python3.10/site-packages/httpx/_client.py", line 1657, in _send_handling_auth
+    response = await self._send_handling_redirects(
+  File "/usr/local/lib/python3.10/site-packages/httpx/_client.py", line 1694, in _send_handling_redirects
+    response = await self._send_single_request(request)
+  File "/usr/local/lib/python3.10/site-packages/httpx/_client.py", line 1730, in _send_single_request
+    response = await transport.handle_async_request(request)
+  File "/usr/local/lib/python3.10/site-packages/httpx/_transports/default.py", line 393, in handle_async_request
+    with map_httpcore_exceptions():
+  File "/usr/local/lib/python3.10/contextlib.py", line 153, in __exit__
+    self.gen.throw(typ, value, traceback)
+  File "/usr/local/lib/python3.10/site-packages/httpx/_transports/default.py", line 118, in map_httpcore_exceptions
+    raise mapped_exc(message) from exc
+httpx.UnsupportedProtocol: Request URL is missing an 'http://' or 'https://' protocol.
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/app/archon/archon_graph.py", line 281, in coder_agent
+    result = coder.run_sync("Generate code based on scope and advisor output",
+  File "/usr/local/lib/python3.10/site-packages/pydantic_ai/agent.py", line 987, in run_sync
+    return get_event_loop().run_until_complete(
+  File "/usr/local/lib/python3.10/asyncio/base_events.py", line 649, in run_until_complete
+    return future.result()
+  File "/usr/local/lib/python3.10/site-packages/pydantic_ai/agent.py", line 562, in run
+    async for _ in agent_run:
+  File "/usr/local/lib/python3.10/site-packages/pydantic_ai/agent.py", line 2173, in __anext__
+    next_node = await self._graph_run.__anext__()
+  File "/usr/local/lib/python3.10/site-packages/pydantic_graph/graph.py", line 809, in __anext__
+    return await self.next(self._next_node)
+  File "/usr/local/lib/python3.10/site-packages/pydantic_graph/graph.py", line 782, in next
+    self._next_node = await node.run(ctx)
+  File "/usr/local/lib/python3.10/site-packages/pydantic_ai/_agent_graph.py", line 299, in run
+    return await self._make_request(ctx)
+  File "/usr/local/lib/python3.10/site-packages/pydantic_ai/_agent_graph.py", line 359, in _make_request
+    model_response = await ctx.deps.model.request(message_history, model_settings, model_request_parameters)
+  File "/usr/local/lib/python3.10/site-packages/pydantic_ai/models/openai.py", line 244, in request
+    response = await self._completions_create(
+  File "/usr/local/lib/python3.10/site-packages/pydantic_ai/models/openai.py", line 332, in _completions_create
+    return await self.client.chat.completions.create(
+  File "/usr/local/lib/python3.10/site-packages/openai/resources/chat/completions/completions.py", line 2454, in create
+    return await self._post(
+  File "/usr/local/lib/python3.10/site-packages/openai/_base_client.py", line 1791, in post
+    return await self.request(cast_to, opts, stream=stream, stream_cls=stream_cls)
+  File "/usr/local/lib/python3.10/site-packages/openai/_base_client.py", line 1558, in request
+    raise APIConnectionError(request=request) from err
+openai.APIConnectionError: Connection error.
+2025-08-02 06:09:04 - archon.llm_provider - INFO - Configuration du profil chargée: openai
+2025-08-02 06:09:04 - archon.llm_provider - INFO - Configuration du profil chargée: openai
+2025-08-02 06:09:04 - archon.llm_provider - INFO - Configuration du profil chargée: openai
+2025-08-02 06:09:04 - archon.llm_provider - INFO - Configuration du profil chargée: openai
+2025-08-02 06:09:04 - archon.llm_provider - INFO - Configuration pour OpenAI...
+2025-08-02 06:09:04 - archon.llm_provider - INFO - Configuration du profil chargée: openai
+2025-08-02 06:09:04 - archon.llm_provider - INFO - Configuration du profil chargée: openai
+2025-08-02 06:09:04 - archon.llm_provider - INFO - Configuration OpenAI terminée.
+2025-08-02 06:09:05 - archon.archon_graph - INFO - LLM Provider: OpenAI
+2025-08-02 06:09:05 - archon.archon_graph - INFO - Reasoner Model: gpt-4.1-nano
+2025-08-02 06:09:05 - archon.archon_graph - INFO - Primary Model: gpt-4.1-nano
+2025-08-02 06:09:13 - archon.archon_graph - INFO - ==================================================
+2025-08-02 06:09:13 - archon.archon_graph - INFO - 🔍 REASONER STARTING
+2025-08-02 06:09:13 - archon.archon_graph - INFO - 🔍 Modèle: gpt-4.1-nano
+2025-08-02 06:09:13 - archon.archon_graph - INFO - ==================================================
+2025-08-02 06:09:13 - archon.archon_graph - INFO - ==================================================
+2025-08-02 06:09:13 - archon.archon_graph - INFO - 🔍 REASONER STARTING
+2025-08-02 06:09:13 - archon.archon_graph - INFO - 🔍 Modèle: gpt-4.1-nano
+2025-08-02 06:09:13 - archon.archon_graph - INFO - ==================================================
+2025-08-02 06:09:13 - archon.archon_graph - INFO - ---STEP: Defining scope with reasoner agent---
+2025-08-02 06:09:13 - archon.archon_graph - INFO - 🧠 REASONER - Modèle: openai:gpt-4.1-nano
+2025-08-02 06:09:13 - archon.archon_graph - INFO - 🧠 REASONER - Message utilisateur: Bonjour, peux-tu me dire bonjour?
+2025-08-02 06:09:13 - archon.archon_graph - ERROR - Error in define_scope: Fournisseur LLM non supporté pour pydantic-ai: openai
+Traceback (most recent call last):
+  File "/app/archon/archon_graph.py", line 169, in define_scope_with_reasoner
+    get_llm_instance(llm_model),
+  File "/app/archon/archon_graph.py", line 103, in get_llm_instance
+    raise ValueError(f"Fournisseur LLM non supporté pour pydantic-ai: {provider_name}")
+ValueError: Fournisseur LLM non supporté pour pydantic-ai: openai
+2025-08-02 06:09:13 - archon.archon_graph - INFO - ==================================================
+2025-08-02 06:09:13 - archon.archon_graph - INFO - 💡 ADVISOR STARTING
+2025-08-02 06:09:13 - archon.archon_graph - INFO - 💡 Modèle: gpt-4.1-nano
+2025-08-02 06:09:13 - archon.archon_graph - INFO - ==================================================
+2025-08-02 06:09:13 - archon.archon_graph - INFO - ==================================================
+2025-08-02 06:09:13 - archon.archon_graph - INFO - 💡 ADVISOR STARTING
+2025-08-02 06:09:13 - archon.archon_graph - INFO - 💡 Modèle: gpt-4.1-nano
+2025-08-02 06:09:13 - archon.archon_graph - INFO - ==================================================
+2025-08-02 06:09:13 - archon.archon_graph - INFO - ---STEP: Generating advice with advisor agent---
+2025-08-02 06:09:13 - archon.archon_graph - INFO - 💡 ADVISOR - Modèle: openai:gpt-4.1-nano
+2025-08-02 06:09:13 - archon.archon_graph - ERROR - Error in advisor: Fournisseur LLM non supporté pour pydantic-ai: openai
+Traceback (most recent call last):
+  File "/app/archon/archon_graph.py", line 213, in advisor_with_examples
+    get_llm_instance(llm_model),
+  File "/app/archon/archon_graph.py", line 103, in get_llm_instance
+    raise ValueError(f"Fournisseur LLM non supporté pour pydantic-ai: {provider_name}")
+ValueError: Fournisseur LLM non supporté pour pydantic-ai: openai
+2025-08-02 06:09:13 - archon.archon_graph - INFO - ==================================================
+2025-08-02 06:09:13 - archon.archon_graph - INFO - ⚡ CODER STARTING
+2025-08-02 06:09:13 - archon.archon_graph - INFO - ⚡ Modèle: gpt-4.1-nano
+2025-08-02 06:09:13 - archon.archon_graph - INFO - ==================================================
+2025-08-02 06:09:13 - archon.archon_graph - INFO - ==================================================
+2025-08-02 06:09:13 - archon.archon_graph - INFO - ⚡ CODER STARTING
+2025-08-02 06:09:13 - archon.archon_graph - INFO - ⚡ Modèle: gpt-4.1-nano
+2025-08-02 06:09:13 - archon.archon_graph - INFO - ==================================================
+2025-08-02 06:09:13 - archon.archon_graph - INFO - ---STEP: Generating code with coder agent---
+2025-08-02 06:09:13 - archon.archon_graph - INFO - ⚡ CODER - Modèle: openai:gpt-4.1-nano
+2025-08-02 06:09:13 - archon.archon_graph - WARNING - ⚡ CODER - Attention: La clé 'scope' est vide ou manquante
+2025-08-02 06:09:13 - archon.archon_graph - WARNING - ⚡ CODER - Attention: La clé 'advisor_output' est vide ou manquante
+2025-08-02 06:09:13 - archon.archon_graph - INFO - ⚡ CODER - Scope: Aucun scope défini. Veuillez fournir plus d'informations....
+2025-08-02 06:09:13 - archon.archon_graph - INFO - ⚡ CODER - Advisor Output: Aucune recommandation de l'advisor. Utilisez le scope pour générer le code....
+2025-08-02 06:09:13 - archon.archon_graph - ERROR - Error in coder: Fournisseur LLM non supporté pour pydantic-ai: openai
+Traceback (most recent call last):
+  File "/app/archon/archon_graph.py", line 276, in coder_agent
+    get_llm_instance(llm_model),
+  File "/app/archon/archon_graph.py", line 103, in get_llm_instance
+    raise ValueError(f"Fournisseur LLM non supporté pour pydantic-ai: {provider_name}")
+ValueError: Fournisseur LLM non supporté pour pydantic-ai: openai
+2025-08-02 06:09:27 - archon.llm_provider - INFO - Configuration du profil chargée: openrouter
+2025-08-02 06:09:27 - archon.llm_provider - INFO - Configuration du profil chargée: openrouter
+2025-08-02 06:09:27 - archon.llm_provider - INFO - Configuration du profil chargée: openrouter
+2025-08-02 06:09:27 - archon.llm_provider - INFO - Configuration du profil chargée: openrouter
+2025-08-02 06:09:27 - archon.llm_provider - INFO - 🔧 Configuration pour OpenRouter...
+2025-08-02 06:09:27 - archon.llm_provider - INFO - Configuration du profil chargée: openrouter
+2025-08-02 06:09:27 - archon.llm_provider - INFO - 🔑 Clé API OpenRouter configurée: sk-or-*****
+2025-08-02 06:09:28 - archon.llm_provider - INFO - ✅ Configuration OpenRouter terminée.
+2025-08-02 06:09:29 - archon.archon_graph - INFO - LLM Provider: OpenRouter
+2025-08-02 06:09:29 - archon.archon_graph - INFO - Reasoner Model: deepseek/deepseek-chat-v3-0324:free
+2025-08-02 06:09:29 - archon.archon_graph - INFO - Primary Model: moonshotai/kimi-k2:free
+2025-08-02 06:09:36 - archon.archon_graph - INFO - ==================================================
+2025-08-02 06:09:36 - archon.archon_graph - INFO - 🔍 REASONER STARTING
+2025-08-02 06:09:36 - archon.archon_graph - INFO - 🔍 Modèle: deepseek/deepseek-chat-v3-0324:free
+2025-08-02 06:09:36 - archon.archon_graph - INFO - ==================================================
+2025-08-02 06:09:36 - archon.archon_graph - INFO - ==================================================
+2025-08-02 06:09:36 - archon.archon_graph - INFO - 🔍 REASONER STARTING
+2025-08-02 06:09:36 - archon.archon_graph - INFO - 🔍 Modèle: deepseek/deepseek-chat-v3-0324:free
+2025-08-02 06:09:36 - archon.archon_graph - INFO - ==================================================
+2025-08-02 06:09:36 - archon.archon_graph - INFO - ---STEP: Defining scope with reasoner agent---
+2025-08-02 06:09:36 - archon.archon_graph - INFO - 🧠 REASONER - Modèle: openrouter:deepseek/deepseek-chat-v3-0324:free
+2025-08-02 06:09:36 - archon.archon_graph - INFO - 🧠 REASONER - Message utilisateur: Bonjour, peux-tu me dire bonjour?
+2025-08-02 06:09:36 - archon.archon_graph - INFO - 🔧 Configuration d'OpenRouter via l'API compatible OpenAI
+2025-08-02 06:09:36 - archon.archon_graph - INFO - 🔑 Utilisation de la clé API OpenRouter: sk-or-*****f651
+2025-08-02 06:09:36 - archon.archon_graph - INFO - ✅ Provider OpenRouter correctement initialisé avec le modèle deepseek/deepseek-chat-v3-0324:free
+2025-08-02 06:09:36 - archon.archon_graph - INFO - 🔍 REASONER - Envoi de la requête...
+2025-08-02 06:09:41 - archon.archon_graph - INFO - 🔍 REASONER - Réponse complète reçue: AgentRunResult(output='Voici une version plus claire et précise du prompt, tout en conservant l\'intention originale :\n\n**Prompt raffiné :**  \n"Crée une réponse chaleureuse et personnalisée en fran...
+2025-08-02 06:09:41 - archon.archon_graph - INFO - 🔍 Scope state: AgentRunResult(output='Voici une version plus claire et précise du prompt, tout en conservant l\'intention originale :\n\n**Prompt raffiné :**  \n"Crée une réponse chaleureuse et personnalisée en français pour saluer un utilisateur. Utilise un ton amical et inclusif, comme si tu accueillais un ami. Par exemple : \'Bonjour ! Comment puis-je t\'aider aujourd\'hui ?\' ou \'Salut ! Ravi de te rencontrer. Que puis-je faire pour toi ?\'"  \n\nPourquoi cette version ?  \n1. **Clarté** : L\'instruction est directe et inclut l\'objectif (une salutation).  \n2. **Spécificité** : Le ton (amical/inclusif) et la langue (français) sont précisés.  \n3. **Exemple** : Deux templates montrent le style attendu sans limiter la créativité.  \n\n*Vous cherchiez quelque chose de plus simple ? Par exemple :*  \n"Dis \'Bonjour\' de manière naturelle en français, comme un humain."')
+2025-08-02 06:09:41 - archon.archon_graph - INFO - ==================================================
+2025-08-02 06:09:41 - archon.archon_graph - INFO - 💡 ADVISOR STARTING
+2025-08-02 06:09:41 - archon.archon_graph - INFO - 💡 Modèle: moonshotai/kimi-k2:free
+2025-08-02 06:09:41 - archon.archon_graph - INFO - ==================================================
+2025-08-02 06:09:41 - archon.archon_graph - INFO - ==================================================
+2025-08-02 06:09:41 - archon.archon_graph - INFO - 💡 ADVISOR STARTING
+2025-08-02 06:09:41 - archon.archon_graph - INFO - 💡 Modèle: moonshotai/kimi-k2:free
+2025-08-02 06:09:41 - archon.archon_graph - INFO - ==================================================
+2025-08-02 06:09:41 - archon.archon_graph - INFO - ---STEP: Generating advice with advisor agent---
+2025-08-02 06:09:41 - archon.archon_graph - INFO - 💡 ADVISOR - Modèle: openrouter:moonshotai/kimi-k2:free
+2025-08-02 06:09:41 - archon.archon_graph - INFO - 🔧 Configuration d'OpenRouter via l'API compatible OpenAI
+2025-08-02 06:09:41 - archon.archon_graph - INFO - 🔑 Utilisation de la clé API OpenRouter: sk-or-*****f651
+2025-08-02 06:09:41 - archon.archon_graph - INFO - ✅ Provider OpenRouter correctement initialisé avec le modèle moonshotai/kimi-k2:free
+2025-08-02 06:09:41 - archon.archon_graph - INFO - 💡 ADVISOR - Envoi de la requête...
+2025-08-02 06:09:45 - archon.archon_graph - INFO - 💡 ADVISOR - Réponse complète reçue: AgentRunResult(output='To provide the most relevant recommendations and example code, please let me know what the **scope** of your requested agent is.  \nFor example, is the scope:\n\n- “Give financi...
+2025-08-02 06:09:45 - archon.archon_graph - INFO - Advice generated.
+2025-08-02 06:09:45 - archon.archon_graph - INFO - ==================================================
+2025-08-02 06:09:45 - archon.archon_graph - INFO - ⚡ CODER STARTING
+2025-08-02 06:09:45 - archon.archon_graph - INFO - ⚡ Modèle: moonshotai/kimi-k2:free
+2025-08-02 06:09:45 - archon.archon_graph - INFO - ==================================================
+2025-08-02 06:09:45 - archon.archon_graph - INFO - ==================================================
+2025-08-02 06:09:45 - archon.archon_graph - INFO - ⚡ CODER STARTING
+2025-08-02 06:09:45 - archon.archon_graph - INFO - ⚡ Modèle: moonshotai/kimi-k2:free
+2025-08-02 06:09:45 - archon.archon_graph - INFO - ==================================================
+2025-08-02 06:09:45 - archon.archon_graph - INFO - ---STEP: Generating code with coder agent---
+2025-08-02 06:09:45 - archon.archon_graph - INFO - ⚡ CODER - Modèle: openrouter:moonshotai/kimi-k2:free
+2025-08-02 06:09:45 - archon.archon_graph - INFO - ⚡ CODER - Scope: AgentRunResult(output='Voici une version plus claire et précise du prompt, tout en conservant l\'intention originale :\n\n**Prompt raffiné :**  \n"Crée une réponse chaleureuse et personnalisée en fran...
+2025-08-02 06:09:45 - archon.archon_graph - INFO - ⚡ CODER - Advisor Output: AgentRunResult(output='To provide the most relevant recommendations and example code, please let me know what the **scope** of your requested agent is.  \nFor example, is the scope:\n\n- “Give financi...
+2025-08-02 06:09:45 - archon.archon_graph - INFO - 🔧 Configuration d'OpenRouter via l'API compatible OpenAI
+2025-08-02 06:09:45 - archon.archon_graph - INFO - 🔑 Utilisation de la clé API OpenRouter: sk-or-*****f651
+2025-08-02 06:09:45 - archon.archon_graph - INFO - ✅ Provider OpenRouter correctement initialisé avec le modèle moonshotai/kimi-k2:free
+2025-08-02 06:09:45 - archon.archon_graph - INFO - ⚡ CODER - Envoi de la requête...
+2025-08-02 06:10:50 - archon.archon_graph - INFO - ⚡ CODER - Réponse complète reçue: AgentRunResult(output='```python\n"""\nScope & Advisor Code Generator\nTakes a project-brief and the output of the advisor-agent and produces a self-contained Python script that\nimplements the descri...
+2025-08-02 06:10:50 - archon.archon_graph - INFO - Code generated.
+2025-08-02 06:22:21 - archon.llm_provider - INFO - Configuration du profil chargée: openrouter
+2025-08-02 06:22:21 - archon.llm_provider - INFO - Configuration du profil chargée: openrouter
+2025-08-02 06:22:21 - archon.llm_provider - INFO - Configuration du profil chargée: openrouter
+2025-08-02 06:22:21 - archon.llm_provider - INFO - Configuration du profil chargée: openrouter
+2025-08-02 06:22:21 - archon.llm_provider - INFO - 🔧 Configuration pour OpenRouter...
+2025-08-02 06:22:21 - archon.llm_provider - INFO - Configuration du profil chargée: openrouter
+2025-08-02 06:22:21 - archon.llm_provider - INFO - 🔑 Clé API OpenRouter configurée: sk-or-*****
+2025-08-02 06:22:21 - archon.llm_provider - INFO - ✅ Configuration OpenRouter terminée.
+2025-08-02 06:22:22 - archon.archon_graph - INFO - LLM Provider: OpenRouter
+2025-08-02 06:22:22 - archon.archon_graph - INFO - Reasoner Model: deepseek/deepseek-chat-v3-0324:free
+2025-08-02 06:22:22 - archon.archon_graph - INFO - Primary Model: moonshotai/kimi-k2:free
+2025-08-02 06:29:39 - archon.llm_provider - INFO - Configuration du profil chargée: openrouter
+2025-08-02 06:29:39 - archon.llm_provider - INFO - Configuration du profil chargée: openrouter
+2025-08-02 06:29:39 - archon.llm_provider - INFO - Configuration du profil chargée: openrouter
+2025-08-02 06:29:39 - archon.llm_provider - INFO - Configuration du profil chargée: openrouter
+2025-08-02 06:29:39 - archon.llm_provider - INFO - 🔧 Configuration pour OpenRouter...
+2025-08-02 06:29:39 - archon.llm_provider - INFO - Configuration du profil chargée: openrouter
+2025-08-02 06:29:39 - archon.llm_provider - INFO - 🔑 Clé API OpenRouter configurée: sk-or-*****
+2025-08-02 06:29:39 - archon.llm_provider - INFO - ✅ Configuration OpenRouter terminée.
+2025-08-02 06:29:40 - archon.archon_graph - INFO - LLM Provider: OpenRouter
+2025-08-02 06:29:40 - archon.archon_graph - INFO - Reasoner Model: deepseek/deepseek-chat-v3-0324:free
+2025-08-02 06:29:40 - archon.archon_graph - INFO - Primary Model: moonshotai/kimi-k2:free
+2025-08-02 05:12:25 - archon.llm_provider - INFO - Configuration du profil chargée: openrouter
+2025-08-02 05:12:25 - archon.llm_provider - INFO - Configuration du profil chargée: openrouter
+2025-08-02 05:12:25 - archon.llm_provider - INFO - Configuration du profil chargée: openrouter
+2025-08-02 05:12:25 - archon.llm_provider - INFO - Configuration du profil chargée: openrouter
+2025-08-02 05:12:25 - archon.llm_provider - INFO - 🔧 Configuration pour OpenRouter...
+2025-08-02 05:12:25 - archon.llm_provider - INFO - Configuration du profil chargée: openrouter
+2025-08-02 05:12:25 - archon.llm_provider - INFO - 🔑 Clé API OpenRouter configurée: sk-or-*****
+2025-08-02 05:12:25 - archon.llm_provider - INFO - ✅ Configuration OpenRouter terminée.
+2025-08-02 05:12:28 - archon.llm_provider - INFO - Configuration du profil chargée: openrouter
+2025-08-02 05:12:28 - archon.llm_provider - INFO - Configuration du profil chargée: openrouter
+2025-08-02 05:12:28 - archon.llm_provider - INFO - Configuration du profil chargée: openrouter
+2025-08-02 05:12:28 - archon.llm_provider - INFO - Configuration du profil chargée: openrouter
+2025-08-02 05:12:28 - archon.llm_provider - INFO - 🔧 Configuration pour OpenRouter...
+2025-08-02 05:12:28 - archon.llm_provider - INFO - Configuration du profil chargée: openrouter
+2025-08-02 05:12:28 - archon.llm_provider - INFO - 🔑 Clé API OpenRouter configurée: sk-or-*****
+2025-08-02 05:12:28 - archon.llm_provider - INFO - ✅ Configuration OpenRouter terminée.
+2025-08-02 05:12:32 - archon.llm_provider - INFO - Configuration du profil chargée: openrouter
+2025-08-02 05:12:32 - archon.llm_provider - INFO - Configuration du profil chargée: openrouter
+2025-08-02 05:12:32 - archon.llm_provider - INFO - Configuration du profil chargée: openrouter
+2025-08-02 05:12:32 - archon.llm_provider - INFO - Configuration du profil chargée: openrouter
+2025-08-02 05:12:32 - archon.llm_provider - INFO - 🔧 Configuration pour OpenRouter...
+2025-08-02 05:12:32 - archon.llm_provider - INFO - Configuration du profil chargée: openrouter
+2025-08-02 05:12:32 - archon.llm_provider - INFO - 🔑 Clé API OpenRouter configurée: sk-or-*****
+2025-08-02 05:12:32 - archon.llm_provider - INFO - ✅ Configuration OpenRouter terminée.
+2025-08-02 05:12:35 - archon.llm_provider - INFO - Configuration du profil chargée: openrouter
+2025-08-02 05:12:35 - archon.llm_provider - INFO - Configuration du profil chargée: openrouter
+2025-08-02 05:12:35 - archon.llm_provider - INFO - Configuration du profil chargée: openrouter
+2025-08-02 05:12:35 - archon.llm_provider - INFO - Configuration du profil chargée: openrouter
+2025-08-02 05:12:35 - archon.llm_provider - INFO - 🔧 Configuration pour OpenRouter...
+2025-08-02 05:12:35 - archon.llm_provider - INFO - Configuration du profil chargée: openrouter
+2025-08-02 05:12:35 - archon.llm_provider - INFO - 🔑 Clé API OpenRouter configurée: sk-or-*****
+2025-08-02 05:12:35 - archon.llm_provider - INFO - ✅ Configuration OpenRouter terminée.
+2025-08-02 05:12:38 - archon.llm_provider - INFO - Configuration du profil chargée: openrouter
+2025-08-02 05:12:38 - archon.llm_provider - INFO - Configuration du profil chargée: openrouter
+2025-08-02 05:12:38 - archon.llm_provider - INFO - Configuration du profil chargée: openrouter
+2025-08-02 05:12:38 - archon.llm_provider - INFO - Configuration du profil chargée: openrouter
+2025-08-02 05:12:38 - archon.llm_provider - INFO - 🔧 Configuration pour OpenRouter...
+2025-08-02 05:12:38 - archon.llm_provider - INFO - Configuration du profil chargée: openrouter
+2025-08-02 05:12:38 - archon.llm_provider - INFO - 🔑 Clé API OpenRouter configurée: sk-or-*****
+2025-08-02 05:12:38 - archon.llm_provider - INFO - ✅ Configuration OpenRouter terminée.
+2025-08-02 05:12:42 - archon.llm_provider - INFO - Configuration du profil chargée: openrouter
+2025-08-02 05:12:42 - archon.llm_provider - INFO - Configuration du profil chargée: openrouter
+2025-08-02 05:12:42 - archon.llm_provider - INFO - Configuration du profil chargée: openrouter
+2025-08-02 05:12:42 - archon.llm_provider - INFO - Configuration du profil chargée: openrouter
+2025-08-02 05:12:42 - archon.llm_provider - INFO - 🔧 Configuration pour OpenRouter...
+2025-08-02 05:12:42 - archon.llm_provider - INFO - Configuration du profil chargée: openrouter
+2025-08-02 05:12:42 - archon.llm_provider - INFO - 🔑 Clé API OpenRouter configurée: sk-or-*****
+2025-08-02 05:12:42 - archon.llm_provider - INFO - ✅ Configuration OpenRouter terminée.
+2025-08-02 05:12:48 - archon.llm_provider - INFO - Configuration du profil chargée: openrouter
+2025-08-02 05:12:48 - archon.llm_provider - INFO - Configuration du profil chargée: openrouter
+2025-08-02 05:12:48 - archon.llm_provider - INFO - Configuration du profil chargée: openrouter
+2025-08-02 05:12:48 - archon.llm_provider - INFO - Configuration du profil chargée: openrouter
+2025-08-02 05:12:48 - archon.llm_provider - INFO - 🔧 Configuration pour OpenRouter...
+2025-08-02 05:12:48 - archon.llm_provider - INFO - Configuration du profil chargée: openrouter
+2025-08-02 05:12:48 - archon.llm_provider - INFO - 🔑 Clé API OpenRouter configurée: sk-or-*****
+2025-08-02 05:12:48 - archon.llm_provider - INFO - ✅ Configuration OpenRouter terminée.
+2025-08-02 05:12:57 - archon.llm_provider - INFO - Configuration du profil chargée: openrouter
+2025-08-02 05:12:57 - archon.llm_provider - INFO - Configuration du profil chargée: openrouter
+2025-08-02 05:12:57 - archon.llm_provider - INFO - Configuration du profil chargée: openrouter
+2025-08-02 05:12:57 - archon.llm_provider - INFO - Configuration du profil chargée: openrouter
+2025-08-02 05:12:57 - archon.llm_provider - INFO - 🔧 Configuration pour OpenRouter...
+2025-08-02 05:12:57 - archon.llm_provider - INFO - Configuration du profil chargée: openrouter
+2025-08-02 05:12:57 - archon.llm_provider - INFO - 🔑 Clé API OpenRouter configurée: sk-or-*****
+2025-08-02 05:12:57 - archon.llm_provider - INFO - ✅ Configuration OpenRouter terminée.
+2025-08-02 05:13:13 - archon.llm_provider - INFO - Configuration du profil chargée: openrouter
+2025-08-02 05:13:13 - archon.llm_provider - INFO - Configuration du profil chargée: openrouter
+2025-08-02 05:13:13 - archon.llm_provider - INFO - Configuration du profil chargée: openrouter
+2025-08-02 05:13:13 - archon.llm_provider - INFO - Configuration du profil chargée: openrouter
+2025-08-02 05:13:13 - archon.llm_provider - INFO - 🔧 Configuration pour OpenRouter...
+2025-08-02 05:13:13 - archon.llm_provider - INFO - Configuration du profil chargée: openrouter
+2025-08-02 05:13:13 - archon.llm_provider - INFO - 🔑 Clé API OpenRouter configurée: sk-or-*****
+2025-08-02 05:13:13 - archon.llm_provider - INFO - ✅ Configuration OpenRouter terminée.
+2025-08-02 05:13:41 - archon.llm_provider - INFO - Configuration du profil chargée: openrouter
+2025-08-02 05:13:41 - archon.llm_provider - INFO - Configuration du profil chargée: openrouter
+2025-08-02 05:13:41 - archon.llm_provider - INFO - Configuration du profil chargée: openrouter
+2025-08-02 05:13:41 - archon.llm_provider - INFO - Configuration du profil chargée: openrouter
+2025-08-02 05:13:41 - archon.llm_provider - INFO - 🔧 Configuration pour OpenRouter...
+2025-08-02 05:13:41 - archon.llm_provider - INFO - Configuration du profil chargée: openrouter
+2025-08-02 05:13:41 - archon.llm_provider - INFO - 🔑 Clé API OpenRouter configurée: sk-or-*****
+2025-08-02 05:13:41 - archon.llm_provider - INFO - ✅ Configuration OpenRouter terminée.
+2025-08-02 05:14:35 - archon.llm_provider - INFO - Configuration du profil chargée: openrouter
+2025-08-02 05:14:35 - archon.llm_provider - INFO - Configuration du profil chargée: openrouter
+2025-08-02 05:14:35 - archon.llm_provider - INFO - Configuration du profil chargée: openrouter
+2025-08-02 05:14:35 - archon.llm_provider - INFO - Configuration du profil chargée: openrouter
+2025-08-02 05:14:35 - archon.llm_provider - INFO - 🔧 Configuration pour OpenRouter...
+2025-08-02 05:14:35 - archon.llm_provider - INFO - Configuration du profil chargée: openrouter
+2025-08-02 05:14:35 - archon.llm_provider - INFO - 🔑 Clé API OpenRouter configurée: sk-or-*****
+2025-08-02 05:14:35 - archon.llm_provider - INFO - ✅ Configuration OpenRouter terminée.
+2025-08-02 05:15:38 - archon.llm_provider - INFO - Configuration du profil chargée: openrouter
+2025-08-02 05:15:38 - archon.llm_provider - INFO - Configuration du profil chargée: openrouter
+2025-08-02 05:15:38 - archon.llm_provider - INFO - Configuration du profil chargée: openrouter
+2025-08-02 05:15:38 - archon.llm_provider - INFO - Configuration du profil chargée: openrouter
+2025-08-02 05:15:38 - archon.llm_provider - INFO - 🔧 Configuration pour OpenRouter...
+2025-08-02 05:15:38 - archon.llm_provider - INFO - Configuration du profil chargée: openrouter
+2025-08-02 05:15:38 - archon.llm_provider - INFO - 🔑 Clé API OpenRouter configurée: sk-or-*****
+2025-08-02 05:15:38 - archon.llm_provider - INFO - ✅ Configuration OpenRouter terminée.
+2025-08-02 05:16:40 - archon.llm_provider - INFO - Configuration du profil chargée: openrouter
+2025-08-02 05:16:40 - archon.llm_provider - INFO - Configuration du profil chargée: openrouter
+2025-08-02 05:16:40 - archon.llm_provider - INFO - Configuration du profil chargée: openrouter
+2025-08-02 05:16:40 - archon.llm_provider - INFO - Configuration du profil chargée: openrouter
+2025-08-02 05:16:40 - archon.llm_provider - INFO - 🔧 Configuration pour OpenRouter...
+2025-08-02 05:16:40 - archon.llm_provider - INFO - Configuration du profil chargée: openrouter
+2025-08-02 05:16:40 - archon.llm_provider - INFO - 🔑 Clé API OpenRouter configurée: sk-or-*****
+2025-08-02 05:16:40 - archon.llm_provider - INFO - ✅ Configuration OpenRouter terminée.

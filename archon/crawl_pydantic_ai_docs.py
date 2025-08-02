@@ -20,7 +20,17 @@ import html2text
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from utils.utils import get_env_var, get_clients
 
-from crawl4ai import AsyncWebCrawler, BrowserConfig, CrawlerRunConfig, CacheMode
+# Optional import for crawl4ai - fallback to requests-only mode if not available
+try:
+    from crawl4ai import AsyncWebCrawler, BrowserConfig, CrawlerRunConfig, CacheMode
+    HAS_CRAWL4AI = True
+except ImportError:
+    # crawl4ai is not available, will use requests-only mode
+    HAS_CRAWL4AI = False
+    AsyncWebCrawler = None
+    BrowserConfig = None
+    CrawlerRunConfig = None
+    CacheMode = None
 
 load_dotenv()
 

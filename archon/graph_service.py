@@ -14,13 +14,24 @@ try:
 except ImportError:
     pass
 
-from fastapi import FastAPI, HTTPException, APIRouter
+from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
 from typing_extensions import TypedDict
 from typing import Optional, Dict, Any, List
 
 # Importer agentic_flow depuis le bon emplacement
-from .archon_graph import agentic_flow
+try:
+    from archon_graph import agentic_flow
+except ImportError as e:
+    # Essayer d'importer directement depuis le même répertoire
+    try:
+        from .archon.archon_graph import agentic_flow
+    except ImportError:
+        # Essayer d'importer depuis le même niveau
+        try:
+            from archon_graph import agentic_flow
+        except ImportError as e2:
+            raise ImportError(f"Impossible d'importer agentic_flow: {e}\nTentative alternative a échoué: {e2}")
 try:
     from langgraph.types import Command
 except ImportError:
@@ -31,86 +42,13 @@ except ImportError:
         
 from utils.utils import write_to_log
     
-# Création de l'application principale
 app = FastAPI()
-
-# Importer et inclure le routeur des profils
-from api.profiles import router as profiles_router
-app.include_router(profiles_router, prefix="/api")
 
 class InvokeRequest(BaseModel):
     message: str
     thread_id: str
     is_first_message: bool = False
     config: Optional[Dict[str, Any]] = None
-
-def extract_content_from_result(result_obj):
-    """Fonction utilitaire pour extraire le contenu d'un objet result de manière sûre."""
-    if result_obj is None:
-        return ""
-    
-    # Si c'est déjà une chaîne, la retourner
-    if isinstance(result_obj, str):
-        return result_obj
-    
-    # Essayer d'extraire l'attribut content
-    if hasattr(result_obj, 'content'):
-        content = result_obj.content
-        if isinstance(content, str):
-            return content
-        elif hasattr(content, 'content'):  # Parfois content est lui-même un objet
-            return str(content.content)
-        else:
-            return str(content)
-    
-    # Essayer d'extraire l'attribut data
-    if hasattr(result_obj, 'data'):
-        data = result_obj.data
-        if isinstance(data, str):
-            return data
-        else:
-            return str(data)
-    
-    # Essayer d'extraire l'attribut text
-    if hasattr(result_obj, 'text'):
-        return str(result_obj.text)
-    
-    # Essayer d'extraire l'attribut message
-    if hasattr(result_obj, 'message'):
-        message = result_obj.message
-        if isinstance(message, str):
-            return message
-        elif hasattr(message, 'content'):
-            return str(message.content)
-        else:
-            return str(message)
-    
-    # Si c'est un dictionnaire, essayer d'extraire les clés communes
-    if isinstance(result_obj, dict):
-        for key in ['content', 'text', 'message', 'response', 'output']:
-            if key in result_obj:
-                return str(result_obj[key])
-    
-    # Dernière tentative : convertir en chaîne
-    try:
-        return str(result_obj)
-    except Exception as e:
-        print(f"[WARNING] Impossible de convertir l'objet en chaîne: {e}")
-        return "Erreur lors de l'extraction du contenu"
-
-def safe_len(obj):
-    """Fonction utilitaire pour obtenir la longueur d'un objet de manière sûre."""
-    try:
-        if obj is None:
-            return 0
-        if isinstance(obj, (str, list, dict, tuple)):
-            return len(obj)
-        if hasattr(obj, '__len__'):
-            return len(obj)
-        # Pour les autres objets, retourner la longueur de leur représentation string
-        return len(str(obj))
-    except Exception:
-        return 0
 
 @app.get("/health")
 async def health_check():
@@ -139,14 +77,7 @@ async def invoke_agent(request: InvokeRequest):
         }
 
         print(f"[DEBUG] Starting invoke_agent for thread {request.thread_id}")
-        
-        # Utiliser safe_len pour éviter les erreurs
-        message_length = safe_len(request.message)
-        if message_length > 100:
-            print(f"[DEBUG] Request message: {request.message[:100]}...")
-        else:
-            print(f"[DEBUG] Request message: {request.message}")
-            
+        print(f"[DEBUG] Request message: {request.message[:100]}..." if len(request.message) > 100 else f"[DEBUG] Request message: {request.message}")
         print(f"[DEBUG] Is first message: {request.is_first_message}")
         
         response = ""
@@ -184,13 +115,7 @@ async def invoke_agent(request: InvokeRequest):
             print("[DEBUG] Initial state created, starting agentic flow...")
             print(f"[DEBUG] Initial state keys: {initial_state.keys()}")
             print("[DEBUG] Message bytes content:", message_bytes.decode('utf-8'))
-            
-            initial_state_str = json.dumps(initial_state, default=str)
-            state_length = safe_len(initial_state_str)
-            if state_length > 500:
-                print("[DEBUG] Initial state content:", initial_state_str[:500] + "...")
-            else:
-                print("[DEBUG] Initial state content:", initial_state_str)
+            print("[DEBUG] Initial state content:", json.dumps(initial_state, default=str)[:500] + "..." if len(json.dumps(initial_state, default=str)) > 500 else json.dumps(initial_state, default=str))
             
             # Ajouter un compteur pour suivre les itérations
             iteration = 0
@@ -224,25 +149,22 @@ async def invoke_agent(request: InvokeRequest):
                 
                 # Extraire la réponse finale de l'état
                 if final_state:
-                    print(f"[DEBUG] Final state keys: {list(final_state.keys())}")
-                    
                     # Priorité à generated_code, puis advisor_output, puis scope
                     if final_state.get('generated_code'):
                         result_obj = final_state['generated_code']
-                        print(f"[DEBUG] Generated code object type: {type(result_obj)}")
-                        response = extract_content_from_result(result_obj)
-                        response_length = safe_len(response)
-                        print(f"[DEBUG] Using generated_code as response: {response_length} characters")
+                        # Check if the result object has a 'content' attribute
+                        if hasattr(result_obj, 'content') and result_obj.content:
+                            response = result_obj.content
+                            print(f"[DEBUG] Using generated_code as response: {len(response)} characters")
+                        else:
+                            # Fallback if the object structure is different
+                            response = str(result_obj)
                     elif final_state.get('advisor_output'):
-                        result_obj = final_state['advisor_output']
-                        response = extract_content_from_result(result_obj)
-                        response_length = safe_len(response)
-                        print(f"[DEBUG] Using advisor_output as response: {response_length} characters")
+                        response = final_state['advisor_output']
+                        print(f"[DEBUG] Using advisor_output as response: {len(response)} characters")
                     elif final_state.get('scope'):
-                        result_obj = final_state['scope']
-                        response = extract_content_from_result(result_obj)
-                        response_length = safe_len(response)
-                        print(f"[DEBUG] Using scope as response: {response_length} characters")
+                        response = final_state['scope']
+                        print(f"[DEBUG] Using scope as response: {len(response)} characters")
                     else:
                         print("[WARNING] No generated content found in final state")
                         print(f"[DEBUG] Final state keys: {list(final_state.keys()) if final_state else 'None'}")
@@ -285,27 +207,18 @@ async def invoke_agent(request: InvokeRequest):
                 if final_state:
                     # Priorité à generated_code, puis advisor_output, puis scope
                     if final_state.get('generated_code'):
-                        response = extract_content_from_result(final_state['generated_code'])
+                        response = final_state['generated_code']
                     elif final_state.get('advisor_output'):
-                        response = extract_content_from_result(final_state['advisor_output'])
+                        response = final_state['advisor_output']
                     elif final_state.get('scope'):
-                        response = extract_content_from_result(final_state['scope'])
+                        response = final_state['scope']
             except Exception as e:
                 print(f"[ERROR] Exception in continuation flow: {str(e)}")
                 print("[ERROR] Traceback:", traceback.format_exc())
                 raise
 
-        response_length = safe_len(response)
-        print(f"[DEBUG] Final response length: {response_length} characters")
-        
-        # Créer un aperçu sécurisé de la réponse pour les logs
-        response_str = str(response)
-        if response_length > 200:
-            response_preview = response_str[:200] + "..."
-        else:
-            response_preview = response_str
-            
-        write_to_log(f"Final response for thread {request.thread_id}: {response_preview}")
+        print(f"[DEBUG] Final response length: {len(str(response))} characters")
+        write_to_log(f"Final response for thread {request.thread_id}: {str(response)[:200]}...")
         
         # Vérifier que la réponse n'est pas vide et la formater correctement
         if not response:
@@ -348,7 +261,7 @@ async def invoke_agent(request: InvokeRequest):
             "type": type(e).__name__,
             "thread_id": request.thread_id,
             "is_first_message": request.is_first_message if hasattr(request, 'is_first_message') else None,
-            "message_length": safe_len(request.message) if hasattr(request, 'message') else 0
+            "message_length": len(request.message) if hasattr(request, 'message') else 0
         }
         
         # Si c'est une erreur de validation, ajouter les détails de validation

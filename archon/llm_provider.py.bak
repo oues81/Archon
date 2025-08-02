@@ -22,18 +22,7 @@ except ImportError:
         return os.environ.get(var_name)
     
     def get_current_profile() -> str:
-        # CORRECTION: Lire depuis env_vars.json au bon emplacement
-        try:
-            workbench_dir = "/app/src/archon/workbench"
-            env_file_path = os.path.join(workbench_dir, "env_vars.json")
-            if os.path.exists(env_file_path):
-                import json
-                with open(env_file_path, "r") as f:
-                    env_vars = json.load(f)
-                    return env_vars.get("current_profile", "ollama_default")
-        except Exception as e:
-            print(f"[FALLBACK ERROR] Failed to read profile: {e}")
-        return "ollama_default"
+        return "openrouter"
     
     def write_to_log(message: str):
         print(f"[LOG] {message}")
@@ -102,9 +91,9 @@ class LLMProvider:
     
     def _initialize_ollama(self):
         """Initialize Ollama configuration"""
-        base_url = get_env_var("OLLAMA_BASE_URL") or "http://ollama:11434"
-        reasoner_model = get_env_var("REASONER_MODEL") or "phi3:latest"
-        primary_model = get_env_var("PRIMARY_MODEL") or "phi3:latest"
+        base_url = get_env_var("OLLAMA_BASE_URL") or "http://localhost:11434"
+        reasoner_model = get_env_var("REASONER_MODEL") or "tinyllama:1.1b"
+        primary_model = get_env_var("PRIMARY_MODEL") or "tinyllama:1.1b"
         
         self.config = LLMConfig(
             provider="ollama",

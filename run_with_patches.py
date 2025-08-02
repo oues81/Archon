@@ -19,4 +19,28 @@ from graph_service import app as application
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run("graph_service:app", host="0.0.0.0", port=8110, reload=True, log_level="debug")
+    import logging
+    import asyncio
+    import os
+    import sys
+
+    # Désactiver complètement les logs de watchfiles.main
+    logging.getLogger('watchfiles.main').setLevel(logging.ERROR)
+    logging.getLogger('watchfiles').setLevel(logging.ERROR)
+
+    # Configuration complète de Uvicorn pour éviter la pollution des logs
+    log_config = uvicorn.config.LOGGING_CONFIG
+    log_config["loggers"]["watchfiles"] = {"level": "ERROR", "handlers": ["default"], "propagate": False}
+    log_config["loggers"]["watchfiles.main"] = {"level": "ERROR", "handlers": ["default"], "propagate": False}
+
+    # Configuration Uvicorn avec paramètres optimisés pour réduire les messages watchfiles
+    uvicorn.run(
+        "graph_service:app", 
+        host="0.0.0.0", 
+        port=8110, 
+        reload=True,
+        reload_delay=5.0,  
+        reload_excludes=["*.log", "__pycache__/*", "*.pyc", ".git/*", "*.md"],
+        log_level="warning",  
+        log_config=log_config,
+    )

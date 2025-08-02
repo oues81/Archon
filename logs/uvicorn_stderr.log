@@ -1,0 +1,1 @@
+/app/start_services.sh: line 104: /app/.venv/bin/uvicorn: cannot execute: required file not found

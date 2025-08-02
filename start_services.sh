@@ -80,9 +80,6 @@ check_mcp_server_connectivity() {
     # Ne pas quitter, car le service principal peut fonctionner sans MCP.
 }
 
-# Vérifier la connectivité au serveur MCP
-check_mcp_server_connectivity
-
 # Copier les fichiers de configuration si nécessaire
 if [ ! -f "$WORKSPACE_DIR/env_vars.json" ] && [ -f "$WORKSPACE_DIR/env_vars.json.example" ]; then
     echo "Création du fichier de configuration par défaut..."
@@ -101,12 +98,20 @@ fi
 
 # Démarrer le service principal avec la configuration de journalisation
 echo "Démarrage du service backend Archon..."
-uvicorn archon.graph_service:app \
-    --host 0.0.0.0 \
-    --port 8110 \
-    --log-config /app/uvicorn_logging.ini \
-    --log-level "$UVICORN_LOG_LEVEL" \
-    > "$LOG_DIR/uvicorn_stdout.log" 2> "$LOG_DIR/uvicorn_stderr.log" &
+
+# Afficher les modules Python disponibles pour le débogage
+echo "=== Modules Python disponibles ==="
+python -c "import sys; print('\n'.join(sys.path))" 
+
+# Utiliser le chemin correct pour graph_service
+uvicorn archon.archon.graph_service:app \
+        --reload-dir /app/src/archon \
+        --host 0.0.0.0 \
+        --port 8110 \
+        --reload \
+        --log-level info \
+        --log-config uvicorn_logging_no_watchfiles.ini \
+        > "$LOG_DIR/uvicorn_stdout.log" 2> "$LOG_DIR/uvicorn_stderr.log" &
 UVICORN_PID=$!
 
 echo "Service backend démarré avec le PID: $UVICORN_PID"
@@ -146,9 +151,12 @@ if [ $SERVICE_STARTED -eq 0 ]; then
     exit 1
 fi
 
+# Maintenant que le service principal est démarré, vérifier la connectivité au serveur MCP
+check_mcp_server_connectivity
+
 # Démarrer l'interface utilisateur Streamlit avec journalisation configurée
 echo "Démarrage de l'interface utilisateur Streamlit..."
-cd /app
+cd /app/src/archon
 python -m streamlit run streamlit_ui.py \
     --server.port=8501 \
     --server.address=0.0.0.0 \

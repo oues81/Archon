@@ -85,10 +85,11 @@ async def chat_tab():
                             final_code = state["generated_code"]
 
                     if final_code:
-                        full_response = f"```python\n{final_code}\n```"
+                        # Ajout d'un retour à la ligne avant et après le bloc de code
+                        full_response = f"\n```python\n{final_code}\n```\n"
                         response_placeholder.markdown(full_response)
                     else:
-                        full_response = "Sorry, I couldn't generate the code. Please try again."
+                        full_response = "\nSorry, I couldn't generate the code. Please try again.\n"
                         response_placeholder.markdown(full_response)
 
                 except Exception as e:

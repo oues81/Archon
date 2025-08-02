@@ -8863,3 +8863,406 @@ fastapi.exceptions.ResponseValidationError: 1 validation errors:
 2025-08-01 22:40:29 - uvicorn.error - INFO - Waiting for application startup.
 2025-08-01 22:40:29 - uvicorn.error - INFO - Application startup complete.
 2025-08-01 22:40:29 - uvicorn.error - INFO - Uvicorn running on http://0.0.0.0:8110 (Press CTRL+C to quit)
+2025-08-01 22:57:08 - root - INFO - 🔧 Configuration OpenRouter simplifiée
+2025-08-01 22:57:09 - uvicorn.error - INFO - Started server process [11]
+2025-08-01 22:57:09 - uvicorn.error - INFO - Waiting for application startup.
+2025-08-01 22:57:09 - uvicorn.error - INFO - Application startup complete.
+2025-08-01 22:57:09 - uvicorn.error - INFO - Uvicorn running on http://0.0.0.0:8110 (Press CTRL+C to quit)
+2025-08-01 22:57:31 - root - INFO - 🔧 Configuration OpenRouter simplifiée
+2025-08-01 22:57:32 - uvicorn.error - INFO - Started server process [11]
+2025-08-01 22:57:32 - uvicorn.error - INFO - Waiting for application startup.
+2025-08-01 22:57:32 - uvicorn.error - INFO - Application startup complete.
+2025-08-01 22:57:32 - uvicorn.error - INFO - Uvicorn running on http://0.0.0.0:8110 (Press CTRL+C to quit)
+2025-08-01 22:57:54 - root - INFO - 🔧 Configuration OpenRouter simplifiée
+2025-08-01 22:57:55 - uvicorn.error - INFO - Started server process [11]
+2025-08-01 22:57:55 - uvicorn.error - INFO - Waiting for application startup.
+2025-08-01 22:57:55 - uvicorn.error - INFO - Application startup complete.
+2025-08-01 22:57:55 - uvicorn.error - INFO - Uvicorn running on http://0.0.0.0:8110 (Press CTRL+C to quit)
+2025-08-01 23:01:02 - root - INFO - 🔧 Configuration OpenRouter simplifiée
+2025-08-01 23:01:04 - uvicorn.error - INFO - Started server process [11]
+2025-08-01 23:01:04 - uvicorn.error - INFO - Waiting for application startup.
+2025-08-01 23:01:04 - uvicorn.error - INFO - Application startup complete.
+2025-08-01 23:01:04 - uvicorn.error - INFO - Uvicorn running on http://0.0.0.0:8110 (Press CTRL+C to quit)
+2025-08-01 23:01:25 - root - INFO - 🔧 Configuration OpenRouter simplifiée
+2025-08-01 23:01:27 - uvicorn.error - INFO - Started server process [11]
+2025-08-01 23:01:27 - uvicorn.error - INFO - Waiting for application startup.
+2025-08-01 23:01:27 - uvicorn.error - INFO - Application startup complete.
+2025-08-01 23:01:27 - uvicorn.error - INFO - Uvicorn running on http://0.0.0.0:8110 (Press CTRL+C to quit)
+2025-08-01 23:01:49 - root - INFO - 🔧 Configuration OpenRouter simplifiée
+2025-08-01 23:01:50 - uvicorn.error - INFO - Started server process [11]
+2025-08-01 23:01:50 - uvicorn.error - INFO - Waiting for application startup.
+2025-08-01 23:01:50 - uvicorn.error - INFO - Application startup complete.
+2025-08-01 23:01:50 - uvicorn.error - INFO - Uvicorn running on http://0.0.0.0:8110 (Press CTRL+C to quit)
+2025-08-01 23:22:29 - httpx - INFO - HTTP Request: POST https://openrouter.ai/api/v1/chat/completions "HTTP/1.1 200 OK"
+2025-08-01 23:22:34 - httpx - INFO - HTTP Request: POST https://openrouter.ai/api/v1/chat/completions "HTTP/1.1 400 Bad Request"
+2025-08-01 23:22:34 - httpx - INFO - HTTP Request: POST https://openrouter.ai/api/v1/chat/completions "HTTP/1.1 400 Bad Request"
+2025-08-01 23:23:20 - httpx - INFO - HTTP Request: POST https://openrouter.ai/api/v1/chat/completions "HTTP/1.1 200 OK"
+2025-08-01 23:23:25 - httpx - INFO - HTTP Request: POST https://openrouter.ai/api/v1/chat/completions "HTTP/1.1 400 Bad Request"
+2025-08-01 23:23:26 - httpx - INFO - HTTP Request: POST https://openrouter.ai/api/v1/chat/completions "HTTP/1.1 400 Bad Request"
+2025-08-01 23:23:59 - httpx - INFO - HTTP Request: POST https://openrouter.ai/api/v1/chat/completions "HTTP/1.1 200 OK"
+2025-08-01 23:24:12 - httpx - INFO - HTTP Request: POST https://openrouter.ai/api/v1/chat/completions "HTTP/1.1 400 Bad Request"
+2025-08-01 23:24:12 - httpx - INFO - HTTP Request: POST https://openrouter.ai/api/v1/chat/completions "HTTP/1.1 400 Bad Request"
+2025-08-01 23:24:25 - httpx - INFO - HTTP Request: POST https://openrouter.ai/api/v1/chat/completions "HTTP/1.1 200 OK"
+2025-08-01 23:24:32 - httpx - INFO - HTTP Request: POST https://openrouter.ai/api/v1/chat/completions "HTTP/1.1 400 Bad Request"
+2025-08-01 23:24:32 - httpx - INFO - HTTP Request: POST https://openrouter.ai/api/v1/chat/completions "HTTP/1.1 400 Bad Request"
+2025-08-01 23:25:54 - root - INFO - 🔧 Configuration OpenRouter simplifiée
+2025-08-01 23:25:56 - uvicorn.error - INFO - Started server process [11]
+2025-08-01 23:25:56 - uvicorn.error - INFO - Waiting for application startup.
+2025-08-01 23:25:56 - uvicorn.error - INFO - Application startup complete.
+2025-08-01 23:25:56 - uvicorn.error - INFO - Uvicorn running on http://0.0.0.0:8110 (Press CTRL+C to quit)
+2025-08-01 23:58:08 - root - INFO - 🔧 Configuration OpenRouter simplifiée
+2025-08-01 23:58:10 - uvicorn.error - INFO - Started server process [11]
+2025-08-01 23:58:10 - uvicorn.error - INFO - Waiting for application startup.
+2025-08-01 23:58:10 - uvicorn.error - INFO - Application startup complete.
+2025-08-01 23:58:10 - uvicorn.error - INFO - Uvicorn running on http://0.0.0.0:8110 (Press CTRL+C to quit)
+2025-08-02 00:00:04 - root - INFO - 🔧 Configuration OpenRouter simplifiée
+2025-08-02 00:00:05 - uvicorn.error - INFO - Started server process [14]
+2025-08-02 00:00:05 - uvicorn.error - INFO - Waiting for application startup.
+2025-08-02 00:00:05 - uvicorn.error - INFO - Application startup complete.
+2025-08-02 00:00:05 - uvicorn.error - INFO - Uvicorn running on http://0.0.0.0:8110 (Press CTRL+C to quit)
+2025-08-02 00:08:17 - root - INFO - 🔧 Configuration OpenRouter simplifiée
+2025-08-02 00:08:18 - uvicorn.error - INFO - Started server process [14]
+2025-08-02 00:08:18 - uvicorn.error - INFO - Waiting for application startup.
+2025-08-02 00:08:18 - uvicorn.error - INFO - Application startup complete.
+2025-08-02 00:08:18 - uvicorn.error - INFO - Uvicorn running on http://0.0.0.0:8110 (Press CTRL+C to quit)
+2025-08-02 00:16:56 - httpx - INFO - HTTP Request: POST https://openrouter.ai/api/v1/chat/completions "HTTP/1.1 200 OK"
+2025-08-02 00:17:02 - httpx - INFO - HTTP Request: POST https://openrouter.ai/api/v1/chat/completions "HTTP/1.1 200 OK"
+2025-08-02 00:17:04 - httpx - INFO - HTTP Request: POST https://openrouter.ai/api/v1/chat/completions "HTTP/1.1 200 OK"
+2025-08-02 00:19:27 - httpx - INFO - HTTP Request: POST https://openrouter.ai/api/v1/chat/completions "HTTP/1.1 200 OK"
+2025-08-02 00:19:40 - httpx - INFO - HTTP Request: POST https://openrouter.ai/api/v1/chat/completions "HTTP/1.1 200 OK"
+2025-08-02 00:19:46 - httpx - INFO - HTTP Request: POST https://openrouter.ai/api/v1/chat/completions "HTTP/1.1 200 OK"
+2025-08-02 00:58:25 - uvicorn.error - ERROR - Exception in ASGI application
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.10/site-packages/uvicorn/protocols/http/h11_impl.py", line 407, in run_asgi
+    result = await app(  # type: ignore[func-returns-value]
+  File "/usr/local/lib/python3.10/site-packages/uvicorn/middleware/proxy_headers.py", line 69, in __call__
+    return await self.app(scope, receive, send)
+  File "/usr/local/lib/python3.10/site-packages/fastapi/applications.py", line 1054, in __call__
+    await super().__call__(scope, receive, send)
+  File "/usr/local/lib/python3.10/site-packages/starlette/applications.py", line 113, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "/usr/local/lib/python3.10/site-packages/starlette/middleware/errors.py", line 186, in __call__
+    raise exc
+  File "/usr/local/lib/python3.10/site-packages/starlette/middleware/errors.py", line 164, in __call__
+    await self.app(scope, receive, _send)
+  File "/usr/local/lib/python3.10/site-packages/starlette/middleware/exceptions.py", line 63, in __call__
+    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+  File "/usr/local/lib/python3.10/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "/usr/local/lib/python3.10/site-packages/starlette/_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "/usr/local/lib/python3.10/site-packages/starlette/routing.py", line 716, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "/usr/local/lib/python3.10/site-packages/starlette/routing.py", line 736, in app
+    await route.handle(scope, receive, send)
+  File "/usr/local/lib/python3.10/site-packages/starlette/routing.py", line 290, in handle
+    await self.app(scope, receive, send)
+  File "/usr/local/lib/python3.10/site-packages/starlette/routing.py", line 78, in app
+    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+  File "/usr/local/lib/python3.10/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "/usr/local/lib/python3.10/site-packages/starlette/_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "/usr/local/lib/python3.10/site-packages/starlette/routing.py", line 75, in app
+    response = await f(request)
+  File "/usr/local/lib/python3.10/site-packages/fastapi/routing.py", line 328, in app
+    content = await serialize_response(
+  File "/usr/local/lib/python3.10/site-packages/fastapi/routing.py", line 177, in serialize_response
+    raise ResponseValidationError(
+fastapi.exceptions.ResponseValidationError: 1 validation errors:
+  {'type': 'list_type', 'loc': ('response', 'current'), 'msg': 'Input should be a valid list', 'input': 'openrouter'}
+
+2025-08-02 00:58:25 - uvicorn.error - ERROR - Exception in ASGI application
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.10/site-packages/uvicorn/protocols/http/h11_impl.py", line 407, in run_asgi
+    result = await app(  # type: ignore[func-returns-value]
+  File "/usr/local/lib/python3.10/site-packages/uvicorn/middleware/proxy_headers.py", line 69, in __call__
+    return await self.app(scope, receive, send)
+  File "/usr/local/lib/python3.10/site-packages/fastapi/applications.py", line 1054, in __call__
+    await super().__call__(scope, receive, send)
+  File "/usr/local/lib/python3.10/site-packages/starlette/applications.py", line 113, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "/usr/local/lib/python3.10/site-packages/starlette/middleware/errors.py", line 186, in __call__
+    raise exc
+  File "/usr/local/lib/python3.10/site-packages/starlette/middleware/errors.py", line 164, in __call__
+    await self.app(scope, receive, _send)
+  File "/usr/local/lib/python3.10/site-packages/starlette/middleware/exceptions.py", line 63, in __call__
+    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+  File "/usr/local/lib/python3.10/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "/usr/local/lib/python3.10/site-packages/starlette/_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "/usr/local/lib/python3.10/site-packages/starlette/routing.py", line 716, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "/usr/local/lib/python3.10/site-packages/starlette/routing.py", line 736, in app
+    await route.handle(scope, receive, send)
+  File "/usr/local/lib/python3.10/site-packages/starlette/routing.py", line 290, in handle
+    await self.app(scope, receive, send)
+  File "/usr/local/lib/python3.10/site-packages/starlette/routing.py", line 78, in app
+    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+  File "/usr/local/lib/python3.10/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "/usr/local/lib/python3.10/site-packages/starlette/_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "/usr/local/lib/python3.10/site-packages/starlette/routing.py", line 75, in app
+    response = await f(request)
+  File "/usr/local/lib/python3.10/site-packages/fastapi/routing.py", line 328, in app
+    content = await serialize_response(
+  File "/usr/local/lib/python3.10/site-packages/fastapi/routing.py", line 177, in serialize_response
+    raise ResponseValidationError(
+fastapi.exceptions.ResponseValidationError: 1 validation errors:
+  {'type': 'list_type', 'loc': ('response', 'current'), 'msg': 'Input should be a valid list', 'input': 'openrouter'}
+
+2025-08-02 01:00:18 - uvicorn.error - ERROR - Exception in ASGI application
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.10/site-packages/uvicorn/protocols/http/h11_impl.py", line 407, in run_asgi
+    result = await app(  # type: ignore[func-returns-value]
+  File "/usr/local/lib/python3.10/site-packages/uvicorn/middleware/proxy_headers.py", line 69, in __call__
+    return await self.app(scope, receive, send)
+  File "/usr/local/lib/python3.10/site-packages/fastapi/applications.py", line 1054, in __call__
+    await super().__call__(scope, receive, send)
+  File "/usr/local/lib/python3.10/site-packages/starlette/applications.py", line 113, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "/usr/local/lib/python3.10/site-packages/starlette/middleware/errors.py", line 186, in __call__
+    raise exc
+  File "/usr/local/lib/python3.10/site-packages/starlette/middleware/errors.py", line 164, in __call__
+    await self.app(scope, receive, _send)
+  File "/usr/local/lib/python3.10/site-packages/starlette/middleware/exceptions.py", line 63, in __call__
+    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+  File "/usr/local/lib/python3.10/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "/usr/local/lib/python3.10/site-packages/starlette/_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "/usr/local/lib/python3.10/site-packages/starlette/routing.py", line 716, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "/usr/local/lib/python3.10/site-packages/starlette/routing.py", line 736, in app
+    await route.handle(scope, receive, send)
+  File "/usr/local/lib/python3.10/site-packages/starlette/routing.py", line 290, in handle
+    await self.app(scope, receive, send)
+  File "/usr/local/lib/python3.10/site-packages/starlette/routing.py", line 78, in app
+    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+  File "/usr/local/lib/python3.10/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "/usr/local/lib/python3.10/site-packages/starlette/_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "/usr/local/lib/python3.10/site-packages/starlette/routing.py", line 75, in app
+    response = await f(request)
+  File "/usr/local/lib/python3.10/site-packages/fastapi/routing.py", line 328, in app
+    content = await serialize_response(
+  File "/usr/local/lib/python3.10/site-packages/fastapi/routing.py", line 177, in serialize_response
+    raise ResponseValidationError(
+fastapi.exceptions.ResponseValidationError: 1 validation errors:
+  {'type': 'list_type', 'loc': ('response', 'current'), 'msg': 'Input should be a valid list', 'input': 'openrouter'}
+
+2025-08-02 01:00:18 - uvicorn.error - ERROR - Exception in ASGI application
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.10/site-packages/uvicorn/protocols/http/h11_impl.py", line 407, in run_asgi
+    result = await app(  # type: ignore[func-returns-value]
+  File "/usr/local/lib/python3.10/site-packages/uvicorn/middleware/proxy_headers.py", line 69, in __call__
+    return await self.app(scope, receive, send)
+  File "/usr/local/lib/python3.10/site-packages/fastapi/applications.py", line 1054, in __call__
+    await super().__call__(scope, receive, send)
+  File "/usr/local/lib/python3.10/site-packages/starlette/applications.py", line 113, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "/usr/local/lib/python3.10/site-packages/starlette/middleware/errors.py", line 186, in __call__
+    raise exc
+  File "/usr/local/lib/python3.10/site-packages/starlette/middleware/errors.py", line 164, in __call__
+    await self.app(scope, receive, _send)
+  File "/usr/local/lib/python3.10/site-packages/starlette/middleware/exceptions.py", line 63, in __call__
+    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+  File "/usr/local/lib/python3.10/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "/usr/local/lib/python3.10/site-packages/starlette/_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "/usr/local/lib/python3.10/site-packages/starlette/routing.py", line 716, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "/usr/local/lib/python3.10/site-packages/starlette/routing.py", line 736, in app
+    await route.handle(scope, receive, send)
+  File "/usr/local/lib/python3.10/site-packages/starlette/routing.py", line 290, in handle
+    await self.app(scope, receive, send)
+  File "/usr/local/lib/python3.10/site-packages/starlette/routing.py", line 78, in app
+    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+  File "/usr/local/lib/python3.10/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "/usr/local/lib/python3.10/site-packages/starlette/_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "/usr/local/lib/python3.10/site-packages/starlette/routing.py", line 75, in app
+    response = await f(request)
+  File "/usr/local/lib/python3.10/site-packages/fastapi/routing.py", line 328, in app
+    content = await serialize_response(
+  File "/usr/local/lib/python3.10/site-packages/fastapi/routing.py", line 177, in serialize_response
+    raise ResponseValidationError(
+fastapi.exceptions.ResponseValidationError: 1 validation errors:
+  {'type': 'list_type', 'loc': ('response', 'current'), 'msg': 'Input should be a valid list', 'input': 'openrouter'}
+
+2025-08-02 01:01:44 - uvicorn.error - ERROR - Exception in ASGI application
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.10/site-packages/uvicorn/protocols/http/h11_impl.py", line 407, in run_asgi
+    result = await app(  # type: ignore[func-returns-value]
+  File "/usr/local/lib/python3.10/site-packages/uvicorn/middleware/proxy_headers.py", line 69, in __call__
+    return await self.app(scope, receive, send)
+  File "/usr/local/lib/python3.10/site-packages/fastapi/applications.py", line 1054, in __call__
+    await super().__call__(scope, receive, send)
+  File "/usr/local/lib/python3.10/site-packages/starlette/applications.py", line 113, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "/usr/local/lib/python3.10/site-packages/starlette/middleware/errors.py", line 186, in __call__
+    raise exc
+  File "/usr/local/lib/python3.10/site-packages/starlette/middleware/errors.py", line 164, in __call__
+    await self.app(scope, receive, _send)
+  File "/usr/local/lib/python3.10/site-packages/starlette/middleware/exceptions.py", line 63, in __call__
+    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+  File "/usr/local/lib/python3.10/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "/usr/local/lib/python3.10/site-packages/starlette/_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "/usr/local/lib/python3.10/site-packages/starlette/routing.py", line 716, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "/usr/local/lib/python3.10/site-packages/starlette/routing.py", line 736, in app
+    await route.handle(scope, receive, send)
+  File "/usr/local/lib/python3.10/site-packages/starlette/routing.py", line 290, in handle
+    await self.app(scope, receive, send)
+  File "/usr/local/lib/python3.10/site-packages/starlette/routing.py", line 78, in app
+    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+  File "/usr/local/lib/python3.10/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "/usr/local/lib/python3.10/site-packages/starlette/_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "/usr/local/lib/python3.10/site-packages/starlette/routing.py", line 75, in app
+    response = await f(request)
+  File "/usr/local/lib/python3.10/site-packages/fastapi/routing.py", line 328, in app
+    content = await serialize_response(
+  File "/usr/local/lib/python3.10/site-packages/fastapi/routing.py", line 177, in serialize_response
+    raise ResponseValidationError(
+fastapi.exceptions.ResponseValidationError: 1 validation errors:
+  {'type': 'list_type', 'loc': ('response', 'current'), 'msg': 'Input should be a valid list', 'input': 'openrouter'}
+
+2025-08-02 01:01:44 - uvicorn.error - ERROR - Exception in ASGI application
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.10/site-packages/uvicorn/protocols/http/h11_impl.py", line 407, in run_asgi
+    result = await app(  # type: ignore[func-returns-value]
+  File "/usr/local/lib/python3.10/site-packages/uvicorn/middleware/proxy_headers.py", line 69, in __call__
+    return await self.app(scope, receive, send)
+  File "/usr/local/lib/python3.10/site-packages/fastapi/applications.py", line 1054, in __call__
+    await super().__call__(scope, receive, send)
+  File "/usr/local/lib/python3.10/site-packages/starlette/applications.py", line 113, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "/usr/local/lib/python3.10/site-packages/starlette/middleware/errors.py", line 186, in __call__
+    raise exc
+  File "/usr/local/lib/python3.10/site-packages/starlette/middleware/errors.py", line 164, in __call__
+    await self.app(scope, receive, _send)
+  File "/usr/local/lib/python3.10/site-packages/starlette/middleware/exceptions.py", line 63, in __call__
+    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+  File "/usr/local/lib/python3.10/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "/usr/local/lib/python3.10/site-packages/starlette/_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "/usr/local/lib/python3.10/site-packages/starlette/routing.py", line 716, in __call__
+    await self.middleware_stack(scope, receive, send)
+  File "/usr/local/lib/python3.10/site-packages/starlette/routing.py", line 736, in app
+    await route.handle(scope, receive, send)
+  File "/usr/local/lib/python3.10/site-packages/starlette/routing.py", line 290, in handle
+    await self.app(scope, receive, send)
+  File "/usr/local/lib/python3.10/site-packages/starlette/routing.py", line 78, in app
+    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+  File "/usr/local/lib/python3.10/site-packages/starlette/_exception_handler.py", line 53, in wrapped_app
+    raise exc
+  File "/usr/local/lib/python3.10/site-packages/starlette/_exception_handler.py", line 42, in wrapped_app
+    await app(scope, receive, sender)
+  File "/usr/local/lib/python3.10/site-packages/starlette/routing.py", line 75, in app
+    response = await f(request)
+  File "/usr/local/lib/python3.10/site-packages/fastapi/routing.py", line 328, in app
+    content = await serialize_response(
+  File "/usr/local/lib/python3.10/site-packages/fastapi/routing.py", line 177, in serialize_response
+    raise ResponseValidationError(
+fastapi.exceptions.ResponseValidationError: 1 validation errors:
+  {'type': 'list_type', 'loc': ('response', 'current'), 'msg': 'Input should be a valid list', 'input': 'openrouter'}
+
+2025-08-02 01:03:33 - root - INFO - 🔧 Configuration OpenRouter simplifiée
+2025-08-02 01:03:35 - uvicorn.error - INFO - Started server process [11]
+2025-08-02 01:03:35 - uvicorn.error - INFO - Waiting for application startup.
+2025-08-02 01:03:35 - uvicorn.error - INFO - Application startup complete.
+2025-08-02 01:03:35 - uvicorn.error - INFO - Uvicorn running on http://0.0.0.0:8110 (Press CTRL+C to quit)
+2025-08-02 05:36:22 - root - INFO - 🔧 Configuration OpenRouter simplifiée
+2025-08-02 05:36:24 - uvicorn.error - INFO - Started server process [14]
+2025-08-02 05:36:24 - uvicorn.error - INFO - Waiting for application startup.
+2025-08-02 05:36:24 - uvicorn.error - INFO - Application startup complete.
+2025-08-02 05:36:24 - uvicorn.error - INFO - Uvicorn running on http://0.0.0.0:8110 (Press CTRL+C to quit)
+2025-08-02 05:55:40 - httpx - INFO - HTTP Request: POST https://openrouter.ai/api/v1/chat/completions "HTTP/1.1 401 Unauthorized"
+2025-08-02 05:55:41 - httpx - INFO - HTTP Request: POST https://openrouter.ai/api/v1/chat/completions "HTTP/1.1 401 Unauthorized"
+2025-08-02 05:55:41 - httpx - INFO - HTTP Request: POST https://openrouter.ai/api/v1/chat/completions "HTTP/1.1 401 Unauthorized"
+2025-08-02 05:57:24 - httpx - INFO - HTTP Request: POST https://openrouter.ai/api/v1/chat/completions "HTTP/1.1 401 Unauthorized"
+2025-08-02 05:57:24 - httpx - INFO - HTTP Request: POST https://openrouter.ai/api/v1/chat/completions "HTTP/1.1 401 Unauthorized"
+2025-08-02 05:57:24 - httpx - INFO - HTTP Request: POST https://openrouter.ai/api/v1/chat/completions "HTTP/1.1 401 Unauthorized"
+2025-08-02 05:57:31 - httpx - INFO - HTTP Request: POST https://openrouter.ai/api/v1/chat/completions "HTTP/1.1 401 Unauthorized"
+2025-08-02 05:57:31 - httpx - INFO - HTTP Request: POST https://openrouter.ai/api/v1/chat/completions "HTTP/1.1 401 Unauthorized"
+2025-08-02 05:57:31 - httpx - INFO - HTTP Request: POST https://openrouter.ai/api/v1/chat/completions "HTTP/1.1 401 Unauthorized"
+2025-08-02 06:03:23 - root - INFO - 🔧 Configuration OpenRouter simplifiée
+2025-08-02 06:03:24 - uvicorn.error - INFO - Started server process [14]
+2025-08-02 06:03:24 - uvicorn.error - INFO - Waiting for application startup.
+2025-08-02 06:03:24 - uvicorn.error - INFO - Application startup complete.
+2025-08-02 06:03:24 - uvicorn.error - INFO - Uvicorn running on http://0.0.0.0:8110 (Press CTRL+C to quit)
+2025-08-02 06:03:38 - httpx - INFO - HTTP Request: POST https://openrouter.ai/api/v1/chat/completions "HTTP/1.1 200 OK"
+2025-08-02 06:03:43 - httpx - INFO - HTTP Request: POST https://openrouter.ai/api/v1/chat/completions "HTTP/1.1 200 OK"
+2025-08-02 06:03:51 - httpx - INFO - HTTP Request: POST https://openrouter.ai/api/v1/chat/completions "HTTP/1.1 200 OK"
+2025-08-02 06:04:48 - root - INFO - 🔧 Configuration OpenRouter simplifiée
+2025-08-02 06:04:50 - uvicorn.error - INFO - Started server process [11]
+2025-08-02 06:04:50 - uvicorn.error - INFO - Waiting for application startup.
+2025-08-02 06:04:50 - uvicorn.error - INFO - Application startup complete.
+2025-08-02 06:04:50 - uvicorn.error - INFO - Uvicorn running on http://0.0.0.0:8110 (Press CTRL+C to quit)
+2025-08-02 06:05:11 - root - INFO - 🔧 Configuration OpenRouter simplifiée
+2025-08-02 06:05:13 - uvicorn.error - INFO - Started server process [11]
+2025-08-02 06:05:13 - uvicorn.error - INFO - Waiting for application startup.
+2025-08-02 06:05:13 - uvicorn.error - INFO - Application startup complete.
+2025-08-02 06:05:13 - uvicorn.error - INFO - Uvicorn running on http://0.0.0.0:8110 (Press CTRL+C to quit)
+2025-08-02 06:05:35 - root - INFO - 🔧 Configuration OpenRouter simplifiée
+2025-08-02 06:05:36 - uvicorn.error - INFO - Started server process [11]
+2025-08-02 06:05:36 - uvicorn.error - INFO - Waiting for application startup.
+2025-08-02 06:05:36 - uvicorn.error - INFO - Application startup complete.
+2025-08-02 06:05:36 - uvicorn.error - INFO - Uvicorn running on http://0.0.0.0:8110 (Press CTRL+C to quit)
+2025-08-02 06:08:37 - root - INFO - 🔧 Configuration OpenRouter simplifiée
+2025-08-02 06:08:39 - uvicorn.error - INFO - Started server process [11]
+2025-08-02 06:08:39 - uvicorn.error - INFO - Waiting for application startup.
+2025-08-02 06:08:39 - uvicorn.error - INFO - Application startup complete.
+2025-08-02 06:08:39 - uvicorn.error - INFO - Uvicorn running on http://0.0.0.0:8110 (Press CTRL+C to quit)
+2025-08-02 06:08:46 - openai._base_client - INFO - Retrying request to /chat/completions in 0.460038 seconds
+2025-08-02 06:08:46 - openai._base_client - INFO - Retrying request to /chat/completions in 0.773128 seconds
+2025-08-02 06:08:47 - openai._base_client - INFO - Retrying request to /chat/completions in 0.379504 seconds
+2025-08-02 06:08:47 - openai._base_client - INFO - Retrying request to /chat/completions in 0.999128 seconds
+2025-08-02 06:08:48 - openai._base_client - INFO - Retrying request to /chat/completions in 0.487366 seconds
+2025-08-02 06:08:49 - openai._base_client - INFO - Retrying request to /chat/completions in 0.820246 seconds
+2025-08-02 06:09:04 - root - INFO - 🔧 Configuration OpenRouter simplifiée
+2025-08-02 06:09:06 - uvicorn.error - INFO - Started server process [11]
+2025-08-02 06:09:06 - uvicorn.error - INFO - Waiting for application startup.
+2025-08-02 06:09:06 - uvicorn.error - INFO - Application startup complete.
+2025-08-02 06:09:06 - uvicorn.error - INFO - Uvicorn running on http://0.0.0.0:8110 (Press CTRL+C to quit)
+2025-08-02 06:09:27 - root - INFO - 🔧 Configuration OpenRouter simplifiée
+2025-08-02 06:09:29 - uvicorn.error - INFO - Started server process [11]
+2025-08-02 06:09:29 - uvicorn.error - INFO - Waiting for application startup.
+2025-08-02 06:09:29 - uvicorn.error - INFO - Application startup complete.
+2025-08-02 06:09:29 - uvicorn.error - INFO - Uvicorn running on http://0.0.0.0:8110 (Press CTRL+C to quit)
+2025-08-02 06:09:37 - httpx - INFO - HTTP Request: POST https://openrouter.ai/api/v1/chat/completions "HTTP/1.1 200 OK"
+2025-08-02 06:09:42 - httpx - INFO - HTTP Request: POST https://openrouter.ai/api/v1/chat/completions "HTTP/1.1 200 OK"
+2025-08-02 06:09:46 - httpx - INFO - HTTP Request: POST https://openrouter.ai/api/v1/chat/completions "HTTP/1.1 200 OK"
+2025-08-02 06:22:21 - root - INFO - 🔧 Configuration OpenRouter simplifiée
+2025-08-02 06:22:22 - uvicorn.error - INFO - Started server process [14]
+2025-08-02 06:22:22 - uvicorn.error - INFO - Waiting for application startup.
+2025-08-02 06:22:22 - uvicorn.error - INFO - Application startup complete.
+2025-08-02 06:22:22 - uvicorn.error - INFO - Uvicorn running on http://0.0.0.0:8110 (Press CTRL+C to quit)
+2025-08-02 06:29:39 - root - INFO - 🔧 Configuration OpenRouter simplifiée
+2025-08-02 06:29:41 - uvicorn.error - INFO - Started server process [14]
+2025-08-02 06:29:41 - uvicorn.error - INFO - Waiting for application startup.
+2025-08-02 06:29:41 - uvicorn.error - INFO - Application startup complete.
+2025-08-02 06:29:41 - uvicorn.error - INFO - Uvicorn running on http://0.0.0.0:8110 (Press CTRL+C to quit)
+2025-08-02 05:12:25 - root - INFO - 🔧 Configuration OpenRouter simplifiée
+2025-08-02 05:12:28 - root - INFO - 🔧 Configuration OpenRouter simplifiée
+2025-08-02 05:12:32 - root - INFO - 🔧 Configuration OpenRouter simplifiée
+2025-08-02 05:12:35 - root - INFO - 🔧 Configuration OpenRouter simplifiée
+2025-08-02 05:12:38 - root - INFO - 🔧 Configuration OpenRouter simplifiée
+2025-08-02 05:12:42 - root - INFO - 🔧 Configuration OpenRouter simplifiée
+2025-08-02 05:12:48 - root - INFO - 🔧 Configuration OpenRouter simplifiée
+2025-08-02 05:12:57 - root - INFO - 🔧 Configuration OpenRouter simplifiée
+2025-08-02 05:13:13 - root - INFO - 🔧 Configuration OpenRouter simplifiée
+2025-08-02 05:13:41 - root - INFO - 🔧 Configuration OpenRouter simplifiée
+2025-08-02 05:14:35 - root - INFO - 🔧 Configuration OpenRouter simplifiée
+2025-08-02 05:15:38 - root - INFO - 🔧 Configuration OpenRouter simplifiée
+2025-08-02 05:16:40 - root - INFO - 🔧 Configuration OpenRouter simplifiée

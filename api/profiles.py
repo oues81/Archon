@@ -4,7 +4,9 @@ Endpoints API pour la gestion des profils de configuration
 from fastapi import APIRouter, HTTPException
 from pathlib import Path
 import json
+import importlib
 import os
+import sys
 from typing import Dict, List, Optional
 
 router = APIRouter()
@@ -34,14 +36,15 @@ def save_config(config: Dict) -> None:
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Erreur lors de la sauvegarde: {e}")
 
-@router.get("/profiles", response_model=Dict[str, List[str]])
+@router.get("/profiles")
 async def list_profiles():
     """Liste tous les profils disponibles"""
     try:
         config = load_config()
         return {
             "profiles": list(config.get("profiles", {}).keys()),
-            "current": config.get("current_profile")
+            "current": config.get("current_profile"),
+            "status": "success"
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -72,6 +75,35 @@ async def switch_profile(profile_name: str):
         
         config['current_profile'] = profile_name
         save_config(config)
+        
+        # Réinitialiser le llm_provider pour prendre en compte le nouveau profil
+        try:
+            # Méthode 1: Recharger le module llm_provider
+            if 'archon.llm_provider' in sys.modules:
+                importlib.reload(sys.modules['archon.llm_provider'])
+                logger.info(f"✅ Module llm_provider rechargé avec succès pour le profil {profile_name}")
+            elif 'archon.archon.llm_provider' in sys.modules:
+                importlib.reload(sys.modules['archon.archon.llm_provider'])
+                logger.info(f"✅ Module archon.archon.llm_provider rechargé avec succès pour le profil {profile_name}")
+            else:
+                # Méthode 2: Réinitialisation directe du singleton
+                try:
+                    from archon.archon.llm_provider import llm_provider, LLMProvider
+                    # Créer une nouvelle instance avec la configuration à jour
+                    new_provider = LLMProvider()
+                    # Remplacer l'instance existante
+                    llm_provider.__dict__.update(new_provider.__dict__)
+                    logger.info(f"✅ llm_provider réinitialisé avec succès pour le profil {profile_name}")
+                except ImportError:
+                    try:
+                        from archon.llm_provider import llm_provider, LLMProvider
+                        new_provider = LLMProvider()
+                        llm_provider.__dict__.update(new_provider.__dict__)
+                        logger.info(f"✅ llm_provider réinitialisé avec succès pour le profil {profile_name}")
+                    except ImportError:
+                        logger.error("❌ Impossible d'importer le module llm_provider pour le réinitialiser")
+        except Exception as e:
+            logger.error(f"❌ Erreur lors de la réinitialisation du llm_provider: {str(e)}")
         
         return {
             "status": "success",
