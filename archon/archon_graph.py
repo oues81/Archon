@@ -322,17 +322,17 @@ def coder_agent(state: AgentState) -> AgentState:
             state['error'] = f"Erreur d'initialisation LLM Provider: {e}"
             return state
     
-    print("⚡ CODER - Starting with model:", llm_provider.config.primary_model)
+    print("⚡ CODER - Starting with model:", llm_provider.config.coder_model)
     logger.info("="*50)
     logger.info("⚡ CODER STARTING")
-    logger.info(f"⚡ Modèle: {llm_provider.config.primary_model}")
+    logger.info(f"⚡ Modèle: {llm_provider.config.coder_model}")
     logger.info("="*50)
     """Generates the final code using the coder agent"""
     try:
         logger.info("---STEP: Generating code with coder agent---")
         
         # Log détaillé pour le coder
-        llm_model = llm_provider.config.primary_model
+        llm_model = llm_provider.config.coder_model  # Utilisation du modèle de codeur spécifique
         llm_provider_name = llm_provider.config.provider.lower()
         logger.info(f"⚡ CODER - Modèle: {llm_provider_name}:{llm_model}")
         

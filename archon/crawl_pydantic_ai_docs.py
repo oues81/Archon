@@ -35,7 +35,7 @@ except ImportError:
 load_dotenv()
 
 # Initialize embedding and Supabase clients
-embedding_client, supabase = get_clients()
+embedding_client, supabase, _ = get_clients()  # On ignore le client Neo4j qui n'est pas nécessaire ici
 
 # Define the embedding model for embedding the documentation for RAG
 embedding_model = get_env_var('EMBEDDING_MODEL') or 'text-embedding-3-small'

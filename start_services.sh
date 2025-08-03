@@ -3,6 +3,12 @@
 # Ce script démarre les services nécessaires pour Archon
 # Note: La configuration du réseau Docker doit être gérée au niveau de l'hôte
 
+# Exécuter le script de correction des imports en premier
+if [ -f "/app/fix_imports.py" ]; then
+    echo "Application des corrections d'importation Python..."
+    python /app/fix_imports.py
+fi
+
 # Définir le répertoire de base
 BASE_DIR="/app"
 WORKSPACE_DIR="/app/workbench"
@@ -86,8 +92,16 @@ if [ ! -f "$WORKSPACE_DIR/env_vars.json" ] && [ -f "$WORKSPACE_DIR/env_vars.json
     cp "$WORKSPACE_DIR/env_vars.json.example" "$WORKSPACE_DIR/env_vars.json"
 fi
 
-# Configurer le PYTHONPATH
-export PYTHONPATH="/app:/app/archon:${PYTHONPATH:-}"
+# Configurer le PYTHONPATH et initialiser l'environnement Python
+echo "Initialisation de l'environnement Python..."
+
+# Exécuter notre script d'initialisation spécial
+if [ -f "/app/src/archon/init_python_env.sh" ]; then
+    source /app/src/archon/init_python_env.sh
+fi
+
+# Configurer le PYTHONPATH de façon exhaustive
+export PYTHONPATH="/app:/app/src:/app/src/archon:/app/archon:${PYTHONPATH:-}"
 
 # Installer uvicorn s'il n'est pas déjà installé
 echo "Vérification des dépendances..."

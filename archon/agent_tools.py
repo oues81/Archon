@@ -7,7 +7,30 @@ import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from utils.utils import get_env_var
 
-embedding_model = get_env_var('EMBEDDING_MODEL') or 'text-embedding-3-small'
+# Définition du modèle d'embedding et de ses dimensions
+# Les modèles OpenAI ont des dimensions différentes:
+# - text-embedding-3-small: 1536 dimensions
+# - text-embedding-ada-002: 1536 dimensions
+# - text-embedding-3-large: 3072 dimensions
+# Les modèles Ollama ont généralement 768 dimensions (nomic-embed-text)
+embedding_model = get_env_var('EMBEDDING_MODEL') or 'text-embedding-ada-002'  # Utiliser ada-002 par défaut
+embedding_dimensions = int(get_env_var('EMBEDDING_DIMENSIONS') or 1536)  # Lire depuis les variables d'environnement
+
+# Dimensions de vecteur par défaut (selon le modèle)
+EMBEDDING_DIMENSIONS = {
+    'text-embedding-3-small': 1536,
+    'text-embedding-3-large': 3072,
+    'text-embedding-ada-002': 1536,
+    'nomic-embed-text': 768,
+}
+
+# Obtenir les dimensions du vecteur selon le modèle
+def get_embedding_dimension(model: str) -> int:
+    """Retourne les dimensions du vecteur d'embedding pour un modèle donné."""
+    # Priorité à la valeur explicite de la variable d'environnement
+    if embedding_dimensions > 0:
+        return embedding_dimensions
+    return EMBEDDING_DIMENSIONS.get(model, 1536)  # Valeur par défaut: 1536
 
 async def get_embedding(text: str, embedding_client: AsyncOpenAI) -> List[float]:
     """Get embedding vector from OpenAI."""
@@ -19,12 +42,26 @@ async def get_embedding(text: str, embedding_client: AsyncOpenAI) -> List[float]
         return response.data[0].embedding
     except Exception as e:
         print(f"Error getting embedding: {e}")
-        return [0] * 1536  # Return zero vector on error
+        # Utiliser la dimension correcte pour le modèle actuel
+        dim = get_embedding_dimension(embedding_model)
+        return [0] * dim  # Return zero vector with correct dimension on error
 
 async def retrieve_relevant_documentation_tool(supabase: Client, embedding_client: AsyncOpenAI, user_query: str) -> str:
     try:
         # Get the embedding for the query
         query_embedding = await get_embedding(user_query, embedding_client)
+        
+        # Log pour debug - permet de voir la dimension de l'embedding généré
+        print(f"Dimension de l'embedding généré: {len(query_embedding)}")
+        
+        # Vérifier la dimension des embeddings dans la base de données
+        try:
+            # Tentative pour obtenir la dimension des vecteurs stockés
+            sample = supabase.table('site_pages').select('embedding[0:1]').limit(1).execute()
+            if sample.data and 'embedding' in sample.data[0]:
+                print(f"Dimension des embeddings dans Supabase: {len(sample.data[0]['embedding'])}")
+        except Exception as e:
+            print(f"Impossible de vérifier la dimension des embeddings stockés: {e}")
         
         # Query Supabase for relevant documents
         result = supabase.rpc(

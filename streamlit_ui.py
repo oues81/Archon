@@ -1,14 +1,47 @@
 from __future__ import annotations
+
+# Fix imports first
+import sys
+import os
+from pathlib import Path
+
+# Ajouter les chemins nécessaires au sys.path pour résoudre les problèmes d'importation
+sys.path.insert(0, '/app')
+sys.path.insert(0, '/app/src')
+sys.path.insert(0, '/app/src/archon')
+
+# Ajout d'une backup du dossier utils au niveau de /app/src
+utils_path = Path('/app/src/archon/utils')
+target_path = Path('/app/src/utils')
+
+if utils_path.exists() and not target_path.exists():
+    try:
+        # Créer le répertoire cible s'il n'existe pas
+        target_path.mkdir(parents=True, exist_ok=True)
+        
+        # Copier les fichiers nécessaires
+        for py_file in utils_path.glob('*.py'):
+            with open(py_file, 'r') as src_file:
+                content = src_file.read()
+            
+            with open(target_path / py_file.name, 'w') as dest_file:
+                dest_file.write(content)
+        
+        print(f"✅ Utils copiés vers {target_path}")
+    except Exception as e:
+        print(f"⚠️ Erreur lors de la copie des utils: {str(e)}")
+
 from dotenv import load_dotenv
 import streamlit as st
 import logfire
 import asyncio
+import json
 
-# Set page config - must be the first Streamlit command
+# Set page config - must be the first commande Streamlit
 st.set_page_config(
     page_title="Archon - Agent Builder",
     page_icon="🤖",
-    layout="wide",
+    layout="wide"
 )
 
 # Utilities and styles

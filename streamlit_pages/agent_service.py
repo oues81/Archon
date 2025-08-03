@@ -120,7 +120,13 @@ def agent_service_tab():
             try:
                 # Get the absolute path to the graph service script
                 base_path = os.path.abspath(os.path.dirname(os.path.dirname(__file__)))
-                graph_service_path = os.path.join(base_path, 'graph_service.py')
+                graph_service_path = os.path.join(base_path, 'archon', 'graph_service.py')
+                
+                # Vérifier si le fichier existe
+                if not os.path.exists(graph_service_path):
+                    st.session_state.output_queue.put(f"[{time.strftime('%H:%M:%S')}] Erreur: Le fichier {graph_service_path} n'existe pas\n")
+                    st.error(f"Le fichier graph_service.py n'a pas été trouvé à l'emplacement {graph_service_path}")
+                    return
                 
                 # Start the process with output redirection
                 process = subprocess.Popen(

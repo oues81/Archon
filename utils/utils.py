@@ -13,7 +13,7 @@ import sys
 import os
 
 # Import Neo4j client
-from archon.utils.neo4j_client import Neo4jClient
+from .neo4j_client import Neo4jClient
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
