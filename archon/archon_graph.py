@@ -9,6 +9,7 @@ import os
 import sys
 import traceback
 import threading
+import logfire
 try:
     from api.profiles import router as profiles_router
 except ImportError:
@@ -23,6 +24,17 @@ logging.info("🔧 Configuration OpenRouter simplifiée")
 
 # Logger Configuration
 logger = logging.getLogger(__name__)
+
+# Configure Logfire
+try:
+    # Configuration simplifiée de Logfire sans options non supportées
+    logfire.configure(service_name="archon")
+    logger.info("✅ Logfire configuré avec succès")
+except Exception as e:
+    # En cas d'erreur, on continue l'exécution sans Logfire
+    logger.warning(f"⚠️ Impossible de configurer Logfire: {e}")
+    # Si Logfire n'est pas configuré correctement, désactiver la journalisation pour éviter les warnings
+    os.environ.setdefault("LOGFIRE_DISABLE", "1")
 
 # Path Configuration
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -128,13 +140,14 @@ except ImportError as e:
 # Prompt Imports
 try:
     from archon.agent_prompts import (
-        prompt_refiner_agent_prompt, advisor_prompt, coder_prompt_with_examples
+        prompt_refiner_agent_prompt, advisor_prompt, coder_prompt_with_examples, reasoner_prompt
     )
 except ImportError:
     # Fallback si le module n'est pas disponible
     prompt_refiner_agent_prompt = ""
     advisor_prompt = ""
     coder_prompt_with_examples = ""
+    reasoner_prompt = ""
 
 # Log models on startup
 
@@ -204,15 +217,16 @@ def define_scope_with_reasoner(state: AgentState) -> AgentState:
         if 'scope' not in state:
             state['scope'] = ""
         
-        if not reasoner_agent:
-            logger.error("L'agent Reasoner n'est pas initialisé. Vérifiez la séquence de démarrage.")
-            # Vous pourriez vouloir retourner une erreur ou un état vide ici
-            return state
+        # Créer l'agent reasoner avec le modèle configuré (même méthode que les autres agents)
+        reasoner = PydanticAgent(
+            get_llm_instance(llm_model),
+            system_prompt=reasoner_prompt
+        )
 
         logger.info("🔍 REASONER - Envoi de la requête...")
         # Utilisation de la fonction helper pour garantir une boucle d'événements
         async def run_agent():
-            return await reasoner_agent.run(state['latest_user_message'])
+            return await reasoner.run(state['latest_user_message'])
         
         result = run_async_in_sync(run_agent())
         

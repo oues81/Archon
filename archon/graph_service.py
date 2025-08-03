@@ -2,6 +2,7 @@ import traceback
 import sys
 import os
 import json
+import logging
 from datetime import datetime
 
 # Ajouter le répertoire racine au PYTHONPATH
@@ -18,6 +19,15 @@ from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
 from typing_extensions import TypedDict
 from typing import Optional, Dict, Any, List
+
+# Import du router des profils
+try:
+    from api.profiles import router as profiles_router
+    profiles_available = True
+except ImportError:
+    profiles_router = None
+    profiles_available = False
+    logging.warning("Module api.profiles non disponible")
 
 # Importer agentic_flow depuis le bon emplacement
 try:
@@ -43,6 +53,13 @@ except ImportError:
 from utils.utils import write_to_log
     
 app = FastAPI()
+
+# Montage du router des profils s'il est disponible
+if profiles_available and profiles_router:
+    app.include_router(profiles_router, prefix="/api")
+    logging.info("✅ Router des profils monté avec succès")
+else:
+    logging.warning("⚠️ Router des profils non disponible")
 
 class InvokeRequest(BaseModel):
     message: str

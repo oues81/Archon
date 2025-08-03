@@ -24,12 +24,13 @@ from streamlit_pages.documentation import documentation_tab
 from streamlit_pages.agent_service import agent_service_tab
 from streamlit_pages.mcp import mcp_tab
 from streamlit_pages.future_enhancements import future_enhancements_tab
+from streamlit_pages.neo4j import neo4j_tab
 
 # Load environment variables from .env file
 load_dotenv()
 
 # Initialize clients
-openai_client, supabase = get_clients()
+openai_client, supabase, neo4j_client = get_clients()
 
 # Load custom CSS styles
 load_css()
@@ -42,7 +43,7 @@ async def main():
     query_params = st.query_params
     if "tab" in query_params:
         tab_name = query_params["tab"]
-        if tab_name in ["Intro", "Chat", "Environment", "Database", "Documentation", "Agent Service", "MCP", "Future Enhancements"]:
+        if tab_name in ["Intro", "Chat", "Environment", "Database", "Documentation", "Agent Service", "MCP", "Neo4j", "Future Enhancements"]:
             st.session_state.selected_tab = tab_name
 
     # Add sidebar navigation
@@ -64,6 +65,7 @@ async def main():
         docs_button = st.button("Documentation", use_container_width=True, key="docs_button")
         service_button = st.button("Agent Service", use_container_width=True, key="service_button")
         mcp_button = st.button("MCP", use_container_width=True, key="mcp_button")
+        neo4j_button = st.button("Neo4j", use_container_width=True, key="neo4j_button")
         future_enhancements_button = st.button("Future Enhancements", use_container_width=True, key="future_enhancements_button")
         
         # Update selected tab based on button clicks
@@ -81,6 +83,8 @@ async def main():
             st.session_state.selected_tab = "Database"
         elif docs_button:
             st.session_state.selected_tab = "Documentation"
+        elif neo4j_button:
+            st.session_state.selected_tab = "Neo4j"
         elif future_enhancements_button:
             st.session_state.selected_tab = "Future Enhancements"
     
@@ -106,6 +110,9 @@ async def main():
     elif st.session_state.selected_tab == "Documentation":
         st.title("Archon - Documentation")
         documentation_tab(supabase)
+    elif st.session_state.selected_tab == "Neo4j":
+        st.title("Archon - Neo4j Graph Database")
+        neo4j_tab(neo4j_client)
     elif st.session_state.selected_tab == "Future Enhancements":
         st.title("Archon - Future Enhancements")
         future_enhancements_tab()

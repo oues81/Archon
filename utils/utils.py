@@ -3,7 +3,7 @@ from openai import AsyncOpenAI
 from dotenv import load_dotenv
 from datetime import datetime
 from functools import wraps
-from typing import Optional
+from typing import Optional, Tuple, Union
 import streamlit as st
 import webbrowser
 import importlib
@@ -11,6 +11,9 @@ import inspect
 import json
 import sys
 import os
+
+# Import Neo4j client
+from archon.utils.neo4j_client import Neo4jClient
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -380,7 +383,16 @@ def reload_archon_graph(show_reload_success=True):
         st.error(f"Error reloading Archon modules: {str(e)}")
         return False        
 
-def get_clients():
+def get_clients() -> Tuple[AsyncOpenAI, Optional[Client], Optional[Neo4jClient]]:
+    """
+    Initialiser tous les clients nécessaires pour Archon:
+    - Client d'embedding (OpenAI ou autre)
+    - Client Supabase pour la base de données vectorielle
+    - Client Neo4j pour la base de données graphe
+    
+    Returns:
+        Tuple contenant (embedding_client, supabase_client, neo4j_client)
+    """
     # LLM client setup
     embedding_client = None
     provider = get_env_var('EMBEDDING_PROVIDER') or 'OpenAI'
@@ -405,5 +417,25 @@ def get_clients():
         except Exception as e:
             print(f"Failed to initialize Supabase: {e}")
             write_to_log(f"Failed to initialize Supabase: {e}")
+    
+    # Neo4j client setup
+    neo4j_client = None
+    neo4j_uri = get_env_var("NEO4J_URI")
+    neo4j_user = get_env_var("NEO4J_USER")
+    neo4j_password = get_env_var("NEO4J_PASSWORD")
+    neo4j_database = get_env_var("NEO4J_DATABASE") or "neo4j"
+    
+    if neo4j_uri and neo4j_user and neo4j_password:
+        try:
+            neo4j_client = Neo4jClient(
+                uri=neo4j_uri,
+                username=neo4j_user,
+                password=neo4j_password,
+                database=neo4j_database
+            )
+            write_to_log(f"Neo4j client initialized successfully at {neo4j_uri}")
+        except Exception as e:
+            print(f"Failed to initialize Neo4j: {e}")
+            write_to_log(f"Failed to initialize Neo4j: {e}")
 
-    return embedding_client, supabase      
+    return embedding_client, supabase, neo4j_client

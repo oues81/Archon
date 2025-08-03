@@ -19,7 +19,9 @@ mcp = FastMCP("archon", log_level="DEBUG", request_timeout=300)
 active_threads: Dict[str, List[str]] = {}
 
 # FastAPI service URL
-GRAPH_SERVICE_URL = os.getenv("GRAPH_SERVICE_URL", "http://localhost:8100")
+# La variable d'environnement GRAPH_SERVICE_URL est configurée pour 'http://archon:8110' dans docker-compose.yml
+# Utiliser cette URL pour la communication entre conteneurs
+GRAPH_SERVICE_URL = os.getenv("GRAPH_SERVICE_URL", "http://archon:8110")
 
 def write_to_log(message: str):
     """Write a message to the logs.txt file in the workbench directory and print to stderr.
