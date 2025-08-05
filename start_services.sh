@@ -3,11 +3,11 @@
 # Ce script démarre les services nécessaires pour Archon
 # Note: La configuration du réseau Docker doit être gérée au niveau de l'hôte
 
-# Exécuter le script de correction des imports en premier
-if [ -f "/app/fix_imports.py" ]; then
-    echo "Application des corrections d'importation Python..."
-    python /app/fix_imports.py
-fi
+# L'exécution du script de correction des imports est désactivée car il est défectueux.
+# if [ -f "/app/fix_imports.py" ]; then
+#     echo "Application des corrections d'importation Python..."
+#     python /app/fix_imports.py
+# fi
 
 # Définir le répertoire de base
 BASE_DIR="/app"
@@ -164,6 +164,7 @@ if [ $SERVICE_STARTED -eq 0 ]; then
     echo "========================================="
     exit 1
 fi
+
 
 # Maintenant que le service principal est démarré, vérifier la connectivité au serveur MCP
 check_mcp_server_connectivity

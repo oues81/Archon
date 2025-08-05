@@ -4,6 +4,13 @@ import logging
 import os
 import sys
 import traceback
+import json
+
+# Importer notre encodeur personnalisé
+from custom_json_encoder import ToolDefinitionEncoder
+
+# Configurer le sérialiseur JSON personnalisé
+json._default_encoder = ToolDefinitionEncoder()
 
 # Configuration du logger AVANT toute autre importation
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
@@ -21,8 +28,7 @@ import asyncio
 import httpx
 import json
 from pydantic import BaseModel
-from pydantic_ai import Agent
-from pydantic_ai.settings import ModelSettings
+from pydantic_ai import Agent as PydanticAgent, ModelRetry, RunContext
 from pydantic_ai.models.anthropic import AnthropicModel
 from pydantic_ai.models.openai import OpenAIModel
 from pydantic_ai.models import Model as BaseModel
@@ -40,6 +46,38 @@ llm = get_env_var('LLM_MODEL') or 'phi3:mini'  # Modèle par défaut mis à jour
 base_url = get_env_var('BASE_URL') or 'http://172.26.224.1:11434'  # IP de l'hôte WSL2 par défaut
 api_key = get_env_var('LLM_API_KEY') or 'no-llm-api-key-provided'
 
+# Fix for 'dict' object has no attribute 'usage' error
+class UsageTracker:
+    """Simple usage tracker that provides a consistent interface for the models."""
+    def __init__(self):
+        self.requests = 0
+        self.tokens = 0
+        
+    def incr(self, other=None, requests=0, tokens=0):
+        """Increment usage counters safely handling different types of input."""
+        if other is None:
+            self.requests += requests
+            self.tokens += tokens
+            return
+            
+        # Handle dict input
+        if isinstance(other, dict):
+            if 'requests' in other:
+                self.requests += other['requests']
+            if 'tokens' in other:
+                self.tokens += other['tokens']
+            return
+            
+        # Handle object with attributes
+        if hasattr(other, 'requests'):
+            self.requests += other.requests
+        if hasattr(other, 'tokens'):
+            self.tokens += other.tokens
+        
+        # If other doesn't have usage attribute, just use the provided values
+        self.requests += requests
+        self.tokens += tokens
+
 class OllamaModelWrapper:
     """Wrapper pour le modèle qui implémente l'interface attendue par Pydantic AI."""
     
@@ -48,19 +86,57 @@ class OllamaModelWrapper:
         self._client = OllamaClient(base_url=base_url if base_url else 'http://localhost:11434')
         # Ajout des attributs nécessaires pour la compatibilité avec pydantic-ai 0.0.22
         self.requests = self  # Pour la rétrocompatibilité
-        self.usage = type('Usage', (), {'requests': 0, 'tokens': 0})()
+        self.usage = UsageTracker()  # Fixed usage tracker
     
     def name(self) -> str:
         return self._model_name
     
     async def run(self, messages: List[Dict[str, str]], **kwargs) -> str:
         """Exécute le modèle avec les messages donnés et retourne la réponse."""
+        from dataclasses import dataclass
+        from types import SimpleNamespace
+        
+        @dataclass
+        class UsageInfo:
+            """Classe pour stocker les informations d'utilisation du modèle."""
+            prompt_tokens: int = 0
+            completion_tokens: int = 0
+            total_tokens: int = 0
+            
+            def incr(self, other=None, **kwargs):
+                """Incrémente les compteurs d'utilisation."""
+                if other is not None and hasattr(other, 'usage'):
+                    other = other.usage
+                if hasattr(other, 'prompt_tokens'):
+                    self.prompt_tokens += other.prompt_tokens
+                if hasattr(other, 'completion_tokens'):
+                    self.completion_tokens += other.completion_tokens
+                if hasattr(other, 'total_tokens'):
+                    self.total_tokens += other.total_tokens
+        
         try:
             print(f"[DEBUG] ModelWrapper.run called with messages: {messages}")
             response = await self._client.chat(messages, self._model_name, **kwargs)
             content = response.get("message", {}).get("content", "")
             print(f"[DEBUG] ModelWrapper.run response: {content[:200]}...")
-            return content
+            
+            # Créer un objet avec les attributs attendus
+            result = SimpleNamespace()
+            result.data = content
+            result.usage = UsageInfo()
+            
+            # Essayer d'extraire les informations d'utilisation de la réponse
+            if 'usage' in response:
+                usage = response['usage']
+                if 'prompt_tokens' in usage:
+                    result.usage.prompt_tokens = usage['prompt_tokens']
+                if 'completion_tokens' in usage:
+                    result.usage.completion_tokens = usage['completion_tokens']
+                if 'total_tokens' in usage:
+                    result.usage.total_tokens = usage['total_tokens']
+            
+            return result
+            
         except Exception as e:
             print(f"[ERROR] ModelWrapper.run error: {str(e)}")
             print("[ERROR] Traceback:", traceback.format_exc())
@@ -68,17 +144,65 @@ class OllamaModelWrapper:
     
     async def run_stream(self, messages: List[Dict[str, str]], **kwargs) -> AsyncIterator[str]:
         """Exécute le modèle en streaming avec les messages donnés."""
-        try:
-            print(f"[DEBUG] ModelWrapper.run_stream called with messages: {messages}")
-            async for chunk in self._client.chat_stream(messages, self._model_name, **kwargs):
-                content = chunk.get("message", {}).get("content", "")
-                if content:
-                    print(f"[DEBUG] Streaming chunk: {content[:100]}...")
-                    yield content
-        except Exception as e:
-            print(f"[ERROR] ModelWrapper.run_stream error: {str(e)}")
-            print("[ERROR] Traceback:", traceback.format_exc())
-            raise
+        from dataclasses import dataclass
+        from typing import Dict, Any, Optional
+        
+        @dataclass
+        class UsageInfo:
+            """Classe pour stocker les informations d'utilisation du modèle."""
+            prompt_tokens: int = 0
+            completion_tokens: int = 0
+            total_tokens: int = 0
+            
+            def incr(self, other=None, **kwargs):
+                """Incrémente les compteurs d'utilisation."""
+                if other is not None and hasattr(other, 'usage'):
+                    other = other.usage
+                if hasattr(other, 'prompt_tokens'):
+                    self.prompt_tokens += other.prompt_tokens
+                if hasattr(other, 'completion_tokens'):
+                    self.completion_tokens += other.completion_tokens
+                if hasattr(other, 'total_tokens'):
+                    self.total_tokens += other.total_tokens
+        
+        class StreamResult:
+            def __init__(self, client, messages, model_name, **kwargs):
+                self.client = client
+                self.messages = messages
+                self.model_name = model_name
+                self.kwargs = kwargs
+                self.usage = UsageInfo()
+                self._content = ""
+                
+            async def __aenter__(self):
+                return self
+                
+            async def __aexit__(self, exc_type, exc_val, exc_tb):
+                pass
+                
+            async def stream_text(self, delta=True):
+                try:
+                    print(f"[DEBUG] ModelWrapper.run_stream called with messages: {self.messages}")
+                    async for chunk in self.client.chat_stream(self.messages, self.model_name, **self.kwargs):
+                        content = chunk.get("message", {}).get("content", "")
+                        if content:
+                            self._content += content
+                            print(f"[DEBUG] Streaming chunk: {content[:100]}...")
+                            yield content
+                except Exception as e:
+                    print(f"[ERROR] ModelWrapper.run_stream error: {str(e)}")
+                    print("[ERROR] Traceback:", traceback.format_exc())
+                    raise
+                    
+            def get(self):
+                # Retourne un objet avec un attribut usage pour la compatibilité
+                from types import SimpleNamespace
+                result = SimpleNamespace()
+                result.usage = self.usage
+                result.content = self._content
+                return result
+                
+        return StreamResult(self._client, messages, self._model_name, **kwargs)
 
 # Initialize the appropriate model based on the provider
 if provider == 'Ollama':
@@ -101,15 +225,17 @@ if provider == 'Ollama':
     
     logger.info(f"Configuration du modèle Ollama - URL: {ollama_base_url}, Modèle: {model_name}")
 else:
-    # Pour les fournisseurs compatibles OpenAI, on utilise le 'provider' qui se charge de la configuration
+    # Pour OpenAI, on utilise directement le modèle OpenAI
     from pydantic_ai.models.openai import OpenAIModel
     model_name = llm
-    llm_provider = os.getenv("LLM_PROVIDER", "ollama")
-    # La bibliothèque pydantic-ai utilise le nom du fournisseur pour trouver les variables d'environnement
-    # (ex: OPENROUTER_API_KEY) et configurer le client automatiquement.
-    model = OpenAIModel(model_name, provider=llm_provider.lower())
-    model_settings = ModelSettings(temperature=0.0, top_p=1.0)
-
+    model = OpenAIModel(llm, base_url=base_url, api_key=api_key)
+    model_config = {
+        'model': model_name,
+        'model_kwargs': {
+            'base_url': base_url,
+            'api_key': api_key
+        }
+    }
 
 logfire.configure(send_to_logfire='if-token-present')
 
@@ -136,7 +262,7 @@ if provider == 'Ollama':
                 self._model_name = getattr(model, '_model_name', 'ollama-model')
                 # Ajouter les attributs nécessaires pour la compatibilité
                 self.requests = self
-                self.usage = type('Usage', (), {'requests': 0, 'tokens': 0})()
+                self.usage = UsageTracker()  # Fixed usage tracker with proper implementation
             
             @property
             def model_name(self) -> str:
@@ -153,7 +279,7 @@ if provider == 'Ollama':
             async def agent_model(self, function_tools=None, **kwargs):
                 return self
                 
-            async def request(self, messages, model_settings=None, **kwargs):
+            async def request(self, messages, model_settings=None, function_tools=None, **kwargs):
                 try:
                     # Convertir les messages si nécessaire
                     formatted_messages = []
@@ -187,17 +313,28 @@ if provider == 'Ollama':
                         'refined_prompt': '',
                         'refined_tools': '',
                         'refined_agent': '',
-                        'usage': self.usage  # Inclure l'utilisation dans l'état
+                        'next_user_message': ''  # Fix for next_user_message error
                     }
                     
-                    # Retourner la réponse et l'état mis à jour
-                    return state_update, {}
+                    # Fix: Return a properly formatted tuple with usage information
+                    response_obj = {
+                        'content': state_update.get('advisor_output', ''),
+                        'role': 'assistant',
+                        'usage': {
+                            'total_tokens': 0,  # Default value
+                            'prompt_tokens': 0, # Default value
+                            'completion_tokens': 0  # Default value
+                        }
+                    }
+                    
+                    # Retourner la réponse correctement structurée
+                    return response_obj
                 except Exception as e:
                     logger.error(f"Erreur dans ModelWrapper.request: {str(e)}", exc_info=True)
                     raise
         
         # Créer l'agent avec le modèle configuré
-        advisor_agent = Agent(
+        advisor_agent = PydanticAgent(
             model=CustomModelWrapper(model),
             system_prompt=advisor_prompt,
             deps_type=AdvisorDeps,
@@ -212,12 +349,12 @@ if provider == 'Ollama':
 else:
     # Pour les autres fournisseurs (OpenAI, etc.), utiliser la configuration standard
     try:
-        advisor_agent = Agent(
-            model=model,
+        advisor_agent = PydanticAgent(
+            model=model_name,
             system_prompt=advisor_prompt,
             deps_type=AdvisorDeps,
             retries=2,
-            model_settings=model_settings,
+            **model_config
         )
         logger.info(f"Agent conseiller initialisé avec le modèle: {model_name}")
     except Exception as e:

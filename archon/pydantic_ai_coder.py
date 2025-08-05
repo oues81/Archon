@@ -100,8 +100,8 @@ def create_pydantic_ai_coder():
     # Optionally, you can still add dynamic content by using the decorator
     @agent.system_prompt
     def append_dynamic_content(ctx: RunContext[Dict[str, Any]]) -> str:
-        reasoner_output = ctx.deps.get("reasoner_output", "No reasoner output provided.")
-        advisor_output = ctx.deps.get("advisor_output", "No advisor output provided.")
+        reasoner_output = getattr(ctx.deps, "reasoner_output", "No reasoner output provided.")
+        advisor_output = getattr(ctx.deps, "advisor_output", "No advisor output provided.")
         return f"""
         Additional thoughts/instructions from the reasoner LLM:
         This scope includes documentation pages for you to search as well:

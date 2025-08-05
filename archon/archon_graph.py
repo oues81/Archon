@@ -2,14 +2,83 @@
 Archon Graph - Agent Workflow Management
 Utilizes a unified LLM provider to support multiple backends (Ollama, OpenAI, OpenRouter)
 """
+# -*- coding: utf-8 -*-
+import os
+# Set UTF-8 encoding environment variables
+os.environ.setdefault('PYTHONIOENCODING', 'utf-8')
+os.environ.setdefault('LC_ALL', 'C.UTF-8')
+os.environ.setdefault('LANG', 'C.UTF-8')
+
 import asyncio
 import json
 import logging
 import os
 import sys
-import traceback
+import time
 import threading
+import atexit
+import httpx
 import logfire
+from typing import Dict, Any, Optional, Union, List, Tuple
+from contextlib import asynccontextmanager
+from dotenv import load_dotenv
+
+# Configure logger
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
+handler = logging.StreamHandler(sys.stderr)
+formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+handler.setFormatter(formatter)
+logger.addHandler(handler)
+
+class LoggingHTTPClient(httpx.AsyncClient):
+    """HTTP client with request/response logging"""
+    
+    async def send(self, request: httpx.Request, **kwargs) -> httpx.Response:
+        # Log request
+        start_time = time.time()
+        request_id = str(id(request))
+        
+        # Log request details (excluding sensitive headers)
+        headers = dict(request.headers)
+        safe_headers = {
+            k: (v if k.lower() not in ['authorization', 'api-key'] else '***REDACTED***')
+            for k, v in headers.items()
+        }
+        
+        try:
+            # Log request
+            logger.debug(
+                f"🔵 HTTP Request [{request_id}]: {request.method} {request.url}\n"
+                f"Headers: {json.dumps(safe_headers, indent=2)}\n"
+                f"Content type: {headers.get('content-type', 'N/A')}"
+            )
+            
+            # Send the request
+            response = await super().send(request, **kwargs)
+            
+            # Calculate duration
+            duration = (time.time() - start_time) * 1000  # in ms
+            
+            # Log response
+            logger.debug(
+                f"🟢 HTTP Response [{request_id}]: {response.status_code} in {duration:.2f}ms\n"
+                f"URL: {response.url}\n"
+                f"Headers: {json.dumps(dict(response.headers), indent=2)}"
+            )
+            
+            return response
+            
+        except Exception as e:
+            # Log error
+            duration = (time.time() - start_time) * 1000  # in ms
+            logger.error(
+                f"🔴 HTTP Error [{request_id}] after {duration:.2f}ms: {str(e)}\n"
+                f"URL: {getattr(request, 'url', 'N/A')}\n"
+                f"Method: {getattr(request, 'method', 'N/A')}"
+            )
+            raise
+
 try:
     from api.profiles import router as profiles_router
 except ImportError:
@@ -19,25 +88,22 @@ from datetime import datetime
 from typing import Annotated, List, Any, Optional, Dict, Union
 from typing_extensions import TypedDict
 
-# Configuration OpenRouter simplifiée
-logging.info("🔧 Configuration OpenRouter simplifiée")
+# Simple OpenRouter Configuration
+logging.info("🔧 Simple OpenRouter Configuration")
 
 # Logger Configuration
 logger = logging.getLogger(__name__)
 
 # Configure Logfire
 try:
-    # Configuration simplifiée de Logfire sans options non supportées
+    # Simplified Logfire configuration without unsupported options
     logfire.configure(service_name="archon")
-    logger.info("✅ Logfire configuré avec succès")
+    logger.info("✅ Logfire configured successfully")
 except Exception as e:
-    # En cas d'erreur, on continue l'exécution sans Logfire
-    logger.warning(f"⚠️ Impossible de configurer Logfire: {e}")
-    # Si Logfire n'est pas configuré correctement, désactiver la journalisation pour éviter les warnings
+    # In case of error, continue execution without Logfire
+    logger.warning(f"⚠️ Unable to configure Logfire: {e}")
+    # If Logfire is not configured correctly, disable logging to avoid warnings
     os.environ.setdefault("LOGFIRE_DISABLE", "1")
-
-# Path Configuration
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 # Agent Definitions
 # These are initialized later based on the loaded provider
@@ -46,11 +112,7 @@ advisor: Optional['AIAgent'] = None
 coder: Optional['AIAgent'] = None
 
 # Unified LLM Provider Import
-try:
-    from .llm_provider import llm_provider
-except ImportError:
-    # Fallback pour les tests
-    llm_provider = None
+from archon.archon.llm import LLMProvider, LLMConfig
 
 # Pydantic AI Compatibility Imports
 from pydantic_ai import RunContext, Agent as PydanticAgent, ModelRetry
@@ -69,59 +131,94 @@ from pydantic_ai.messages import (
 )
 
 
-def get_llm_instance(model_name: str):
-    """Crée et retourne une instance LLM configurée pour pydantic-ai."""
-    provider_name = llm_provider.config.provider.lower()
 
-    if provider_name == "ollama":
-        logger.info(f"Configuration d'Ollama via l'API compatible OpenAI: {llm_provider.config.base_url}")
-        return OpenAIModel(model_name=model_name, base_url=f"{llm_provider.config.base_url}/v1", api_key="ollama")
-    elif provider_name == "openrouter":
-        logger.info(f"🔧 Configuration d'OpenRouter via l'API compatible OpenAI")
-        if not llm_provider.config.api_key:
-            raise ValueError("❌ La clé API OpenRouter n'est pas configurée.")
-
-        # Journaliser la clé API (version masquée) pour le débogage
-        api_key = llm_provider.config.api_key
-        masked_key = api_key[:6] + "*****" + api_key[-4:] if len(api_key) > 10 else "***"
-        logger.info(f"🔑 Utilisation de la clé API OpenRouter: {masked_key}")
-
-        try:
-            # Utiliser directement la configuration de llm_provider.py
-            # Cette approche garantit que les en-têtes d'authentification sont correctement configurés
-            from openai import AsyncOpenAI
-            
-            # Créer un client OpenAI avec l'authentification correcte
-            openai_client = AsyncOpenAI(
-                api_key=api_key,
-                base_url="https://openrouter.ai/api/v1",
-                default_headers={
-                    "HTTP-Referer": "http://localhost",
-                    "X-Title": "Archon"
-                }
-            )
-            
-            logger.info(f"✅ Provider OpenRouter correctement initialisé avec le modèle {model_name}")
-            model = OpenAIModel(model_name=model_name, openai_client=openai_client)
-            
-            # Configurer les en-têtes supplémentaires pour OpenRouter
-            # Dans la version 0.4.7 de pydantic-ai, les en-têtes doivent être configurés différemment
-            # Nous passons directement les en-têtes au client HTTP du fournisseur
-            if hasattr(openai_client, "http_client") and hasattr(openai_client.http_client, "headers"):
-                openai_client.http_client.headers.update({
-                    "HTTP-Referer": "http://localhost",
-                    "X-Title": "Archon"
-                })
-                logger.info("✅ En-têtes supplémentaires configurés pour OpenRouter")
-            
-            return model
-        except Exception as e:
-            logger.error(f"❌ Erreur lors de l'initialisation du provider OpenRouter: {str(e)}")
-            import traceback
-            logger.error(traceback.format_exc())
-            raise
+def get_llm_instance(provider: str, model_name: str, config: Dict[str, Any]):
+    """Creates and returns an LLM instance based on the provided configuration."""
+    # Vérification que le provider n'est pas None avant d'appeler .lower()
+    if provider is None:
+        provider = "openrouter"  # Valeur par défaut si le provider est None
+        logger.warning(f"Provider est None, utilisation de la valeur par défaut: {provider}")
     else:
-        raise ValueError(f"Fournisseur LLM non supporté pour pydantic-ai: {provider_name}")
+        provider = provider.lower()
+    logger.info(f"Configuring LLM instance for provider: {provider} with model: {model_name}")
+
+    try:
+        from openai import AsyncOpenAI
+        from pydantic_ai.models.openai import OpenAIModel
+
+        http_client = LoggingHTTPClient(timeout=30.0, limits=httpx.Limits(max_connections=100, max_keepalive_connections=20))
+        client_kwargs = {"http_client": http_client}
+
+        if provider == "ollama":
+            client_kwargs.update({
+                "api_key": "ollama",
+                "base_url": config.get("OLLAMA_BASE_URL", "http://ollama:11434/v1"),
+            })
+        elif provider == "openrouter":
+            api_key = config.get("LLM_API_KEY") or config.get("OPENROUTER_API_KEY")
+            if not api_key:
+                raise ValueError("OPENROUTER_API_KEY or LLM_API_KEY not found in profile configuration")
+            client_kwargs.update({
+                "api_key": api_key,
+                "base_url": "https://openrouter.ai/api/v1",
+                "default_headers": {
+                    "HTTP-Referer": config.get("OPENROUTER_REFERRER", "http://localhost:8110"),
+                    "X-Title": config.get("OPENROUTER_X_TITLE", "Archon")
+                }
+            })
+        elif provider == "openai":
+            api_key = config.get("LLM_API_KEY") or config.get("OPENAI_API_KEY")
+            if not api_key:
+                raise ValueError("OPENAI_API_KEY or LLM_API_KEY not found in profile configuration")
+            client_kwargs.update({
+                "api_key": api_key,
+                "base_url": "https://api.openai.com/v1"
+            })
+        else:
+            raise ValueError(f"Unsupported LLM provider: {provider}")
+
+        openai_client = AsyncOpenAI(**client_kwargs)
+        model = OpenAIModel(model_name=model_name, openai_client=openai_client)
+        
+        logger.info(f"✅ Successfully initialized LLM for {provider} with model {model_name}")
+        return model
+
+    except Exception as e:
+        logger.error(f"❌ Failed to initialize LLM for {provider}: {str(e)}")
+        import traceback
+        logger.error(traceback.format_exc())
+        raise
+        openai_client = AsyncOpenAI(**client_kwargs)
+        
+        # Register the HTTP client for cleanup
+        if 'http_client' in client_kwargs and client_kwargs['http_client']:
+            http_clients.append(client_kwargs['http_client'])
+            logger.debug(f"✅ Registered HTTP client for cleanup: {client_kwargs['http_client']}")
+        
+        # Log client configuration (without sensitive data)
+        safe_config = {
+            'provider': provider_name,
+            'model': model_name,
+            'base_url': client_kwargs.get('base_url', 'default'),
+            'timeout': 'configured' if 'http_client' in client_kwargs else 'default',
+            'http2_enabled': True  # HTTP/2 is enabled by default in httpx
+        }
+        logger.info(f"🚀 Initialized {provider_name} client with config: {safe_config}")
+        
+        # Create the model instance
+        model = OpenAIModel(
+            model_name=model_name,
+            openai_client=openai_client
+        )
+        
+        logger.info(f"✅ Successfully initialized {provider_name} provider with model {model_name}")
+        return model
+        
+    except Exception as e:
+        logger.error(f"❌ Failed to initialize {provider_name} provider: {str(e)}")
+        import traceback
+        logger.error(traceback.format_exc())
+        raise
 
 
 # LangGraph Imports
@@ -167,232 +264,165 @@ class AgentState(TypedDict):
     error: Optional[str] = None
 
 def ensure_event_loop():
-    """Garantit qu'une boucle d'événements asyncio est disponible dans le thread actuel"""
+    """Ensures that an asyncio event loop is available in the current thread"""
     try:
         loop = asyncio.get_event_loop()
     except RuntimeError:
-        # Pas de boucle d'événements dans ce thread, on en crée une nouvelle
+        # No event loop in this thread, create a new one
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
     return loop
 
 def run_async_in_sync(coro):
-    """Exécute une coroutine de manière synchrone en garantissant l'existence d'une boucle"""
+    """Execute a coroutine synchronously while ensuring the existence of an event loop"""
     loop = ensure_event_loop()
     return loop.run_until_complete(coro)
 
-def define_scope_with_reasoner(state: AgentState) -> AgentState:
-    """Définit la portée avec l'agent reasoner"""
-    # Vérifier et réinitialiser llm_provider si nécessaire
-    global llm_provider
-    if llm_provider is None:
-        logger.warning("⚠️ llm_provider est None, tentative de réinitialisation...")
-        try:
-            from archon.archon.llm_provider import initialize_llm_provider
-            llm_provider = initialize_llm_provider()
-            if llm_provider is None:
-                logger.error("❌ Impossible de réinitialiser llm_provider")
-                state['error'] = "LLM Provider non initialisé"
-                return state
-        except Exception as e:
-            logger.error(f"❌ Erreur lors de la réinitialisation de llm_provider: {e}")
-            state['error'] = f"Erreur d'initialisation LLM Provider: {e}"
-            return state
-    
-    print("🔍 REASONER - Starting with model:", llm_provider.config.reasoner_model)
-    logger.info("="*50)
-    logger.info("🔍 REASONER STARTING")
-    logger.info(f"🔍 Modèle: {llm_provider.config.reasoner_model}")
-    logger.info("="*50)
-    """Defines the project scope using a reasoner agent"""
+def define_scope_with_reasoner(state: AgentState, config: dict) -> AgentState:
+    """Defines the project scope using a reasoner agent based on the active profile."""
+    logger.info("---STEP: Defining scope with reasoner agent---")
     try:
-        logger.info("---STEP: Defining scope with reasoner agent---")
-        
-        # Log du modèle utilisé pour le reasoner
-        llm_model = llm_provider.config.reasoner_model
-        llm_provider_name = llm_provider.config.provider.lower()
-        logger.info(f"🧠 REASONER - Modèle: {llm_provider_name}:{llm_model}")
-        logger.info(f"🧠 REASONER - Message utilisateur: {state['latest_user_message']}")
-        
-        if 'scope' not in state:
-            state['scope'] = ""
-        
-        # Créer l'agent reasoner avec le modèle configuré (même méthode que les autres agents)
+        llm_config = config["configurable"]["llm_config"]
+        model_name = llm_config.get("REASONER_MODEL")
+        provider = llm_config.get("LLM_PROVIDER")
+        logger.info(f"🧠 REASONER - Provider: {provider} | Model: {model_name}")
+        logger.info(f"🧠 REASONER - User message: {state['latest_user_message']}")
+
         reasoner = PydanticAgent(
-            get_llm_instance(llm_model),
+            get_llm_instance(provider, model_name, llm_config),
             system_prompt=reasoner_prompt
         )
 
-        logger.info("🔍 REASONER - Envoi de la requête...")
-        # Utilisation de la fonction helper pour garantir une boucle d'événements
-        async def run_agent():
-            return await reasoner.run(state['latest_user_message'])
-        
-        result = run_async_in_sync(run_agent())
-        
-        # Extraire le contenu du résultat
-        full_response = result.content if hasattr(result, 'content') else str(result)
+        logger.info("🔍 REASONER - Sending request...")
+        result = run_async_in_sync(reasoner.run(state['latest_user_message']))
+        scope_text = result.data if hasattr(result, 'data') else str(result)
 
-        logger.info(f"🔍 REASONER - Réponse complète reçue: {full_response[:200]}...")
-        state['scope'] = full_response
-
-        logger.info(f"🔍 Scope state: {state.get('scope', 'NOT SET')}")
+        logger.info(f"🔍 REASONER - Complete response received: {scope_text[:200]}...")
+        state['scope'] = scope_text
         return state
         
     except Exception as e:
-        error_msg = f"Error in define_scope: {str(e)}"
+        error_msg = f"Error in define_scope_with_reasoner: {str(e)}"
         logger.error(error_msg, exc_info=True)
         state['error'] = error_msg
+        state['scope'] = f"Error: {error_msg}"
         return state
 
-def advisor_with_examples(state: AgentState) -> AgentState:
-    """Génère des conseils avec l'agent advisor"""
-    # Vérifier et réinitialiser llm_provider si nécessaire
-    global llm_provider
-    if llm_provider is None:
-        logger.warning("⚠️ llm_provider est None dans advisor, tentative de réinitialisation...")
-        try:
-            from archon.archon.llm_provider import initialize_llm_provider
-            llm_provider = initialize_llm_provider()
-            if llm_provider is None:
-                logger.error("❌ Impossible de réinitialiser llm_provider dans advisor")
-                state['error'] = "LLM Provider non initialisé"
-                return state
-        except Exception as e:
-            logger.error(f"❌ Erreur lors de la réinitialisation de llm_provider dans advisor: {e}")
-            state['error'] = f"Erreur d'initialisation LLM Provider: {e}"
-            return state
-    
-    print("💡 ADVISOR - Starting with model:", llm_provider.config.primary_model)
-    logger.info("="*50)
-    logger.info("💡 ADVISOR STARTING")
-    logger.info(f"💡 Modèle: {llm_provider.config.primary_model}")
-    logger.info("="*50)
-    """Generates advice and examples using the advisor agent"""
+def advisor_with_examples(state: AgentState, config: dict) -> AgentState:
+    """Generates advice and examples using the advisor agent based on the active profile."""
+    logger.info("---STEP: Generating advice with advisor agent---")
     try:
-        logger.info("---STEP: Generating advice with advisor agent---")
-        
-        # Log détaillé pour l'advisor
-        llm_model = llm_provider.config.primary_model
-        llm_provider_name = llm_provider.config.provider.lower()
-        logger.info(f"💡 ADVISOR - Modèle: {llm_provider_name}:{llm_model}")
-        
+        llm_config = config["configurable"]["llm_config"]
+        model_name = llm_config.get("PRIMARY_MODEL")
+        provider = llm_config.get("LLM_PROVIDER")
+        logger.info(f"💡 ADVISOR - Provider: {provider} | Model: {model_name}")
+
         advisor = PydanticAgent(
-            get_llm_instance(llm_model),
+            get_llm_instance(provider, model_name, llm_config),
             system_prompt=advisor_prompt
         )
         
-        logger.info("💡 ADVISOR - Envoi de la requête...")
-        # Utilisation de la fonction helper pour garantir une boucle d'événements
-        async def run_agent():
-            return await advisor.run("Generate advice based on the following scope", 
-                                   deps={'scope': state['scope']})
-        
-        result = run_async_in_sync(run_agent())
-        
-        # Extraire le contenu du résultat
-        full_response = result.content if hasattr(result, 'content') else str(result)
+        logger.info("💡 ADVISOR - Sending request...")
+        result = run_async_in_sync(advisor.run(state['scope']))
+        advisor_text = result.data if hasattr(result, 'data') else str(result)
 
-        logger.info(f"💡 ADVISOR - Réponse complète reçue: {full_response[:200]}...")
-        state['advisor_output'] = full_response
-        logger.info("Advice generated.")
+        logger.info(f"💡 ADVISOR - Complete response received: {advisor_text[:200]}...")
+        state['advisor_output'] = advisor_text
         return state
 
     except Exception as e:
-        error_msg = f"Error in advisor: {str(e)}"
+        error_msg = f"Error in advisor_with_examples: {str(e)}"
         logger.error(error_msg, exc_info=True)
         state['error'] = error_msg
+        state['advisor_output'] = f"Error: {error_msg}"
         return state
 
-def coder_agent(state: AgentState) -> AgentState:
-    """Génère le code avec l'agent coder"""
-    # Vérifier et réinitialiser llm_provider si nécessaire
-    global llm_provider
-    if llm_provider is None:
-        logger.warning("⚠️ llm_provider est None dans coder, tentative de réinitialisation...")
-        try:
-            from archon.archon.llm_provider import initialize_llm_provider
-            llm_provider = initialize_llm_provider()
-            if llm_provider is None:
-                logger.error("❌ Impossible de réinitialiser llm_provider dans coder")
-                state['error'] = "LLM Provider non initialisé"
-                return state
-        except Exception as e:
-            logger.error(f"❌ Erreur lors de la réinitialisation de llm_provider dans coder: {e}")
-            state['error'] = f"Erreur d'initialisation LLM Provider: {e}"
-            return state
-    
-    print("⚡ CODER - Starting with model:", llm_provider.config.coder_model)
-    logger.info("="*50)
-    logger.info("⚡ CODER STARTING")
-    logger.info(f"⚡ Modèle: {llm_provider.config.coder_model}")
-    logger.info("="*50)
-    """Generates the final code using the coder agent"""
+def coder_agent(state: AgentState, config: dict) -> AgentState:
+    """Generates the final code using the coder agent based on the active profile."""
+    logger.info("---STEP: Generating code with coder agent---")
     try:
-        logger.info("---STEP: Generating code with coder agent---")
-        
-        # Log détaillé pour le coder
-        llm_model = llm_provider.config.coder_model  # Utilisation du modèle de codeur spécifique
-        llm_provider_name = llm_provider.config.provider.lower()
-        logger.info(f"⚡ CODER - Modèle: {llm_provider_name}:{llm_model}")
-        
-        # Vérification de l'existence des clés dans l'état
+        llm_config = config["configurable"]["llm_config"]
+        model_name = llm_config.get("CODER_MODEL")
+        provider = llm_config.get("LLM_PROVIDER")
+        logger.info(f"⚡ CODER - Provider: {provider} | Model: {model_name}")
+
         scope = state.get('scope', '')
         advisor_output = state.get('advisor_output', '')
-        
-        if not scope:
-            logger.warning("⚡ CODER - Attention: La clé 'scope' est vide ou manquante")
-            scope = "Aucun scope défini. Veuillez fournir plus d'informations."
-            
-        if not advisor_output:
-            logger.warning("⚡ CODER - Attention: La clé 'advisor_output' est vide ou manquante")
-            advisor_output = "Aucune recommandation de l'advisor. Utilisez le scope pour générer le code."
-            
-        # Mise à jour de l'état pour garantir que ces clés existent
-        state['scope'] = scope
-        state['advisor_output'] = advisor_output
-        
         logger.info(f"⚡ CODER - Scope: {scope[:200]}...")
         logger.info(f"⚡ CODER - Advisor Output: {advisor_output[:200]}...")
-        
+
         coder = PydanticAgent(
-            get_llm_instance(llm_model),
+            get_llm_instance(provider, model_name, llm_config),
             system_prompt=coder_prompt_with_examples
         )
         
-        logger.info("⚡ CODER - Envoi de la requête...")
-        # Utilisation de la fonction helper pour garantir une boucle d'événements
-        async def run_agent():
-            return await coder.run("Generate code based on scope and advisor output", 
-                                   deps={'scope': state['scope'], 'advisor_output': state['advisor_output']})
-                                   
-        result = run_async_in_sync(run_agent())
-        
-        # Extraire le contenu du résultat
-        full_response = result.content if hasattr(result, 'content') else str(result)
+        logger.info("⚡ CODER - Sending request...")
+        instruction = f"Scope: {scope}\n\nAdvisor Output: {advisor_output}"
+        result = run_async_in_sync(coder.run(instruction))
+        code_text = result.data if hasattr(result, 'data') else str(result)
 
-        logger.info(f"⚡ CODER - Réponse complète reçue: {full_response[:200]}...")
-        state['generated_code'] = full_response
-        logger.info("Code generated.")
+        logger.info(f"⚡ CODER - Complete response received: {code_text[:200]}...")
+        state['generated_code'] = code_text
         return state
         
     except Exception as e:
-        error_msg = f"Error in coder: {str(e)}"
+        error_msg = f"Error in coder_agent: {str(e)}"
         logger.error(error_msg, exc_info=True)
         state['error'] = error_msg
+        state['generated_code'] = f"Error: {error_msg}"
         return state
 
-# Initialize the StateGraph and build the workflow
-builder = StateGraph(AgentState)
-builder.add_node("define_scope_with_reasoner", define_scope_with_reasoner)
-builder.add_node("advisor_with_examples", advisor_with_examples)
-builder.add_node("coder_agent", coder_agent)
-builder.set_entry_point("define_scope_with_reasoner")
-builder.add_edge("define_scope_with_reasoner", "advisor_with_examples")
-builder.add_edge("advisor_with_examples", "coder_agent")
-builder.add_edge("coder_agent", END)
-memory = MemorySaver()
-agentic_flow = builder.compile(checkpointer=memory)
+# Global instances and state
+llm_instance = None
+http_clients = []
+
+async def cleanup_http_clients():
+    """Clean up all HTTP clients on application exit"""
+    if not http_clients:
+        return
+        
+    logger.info("🧹 Cleaning up HTTP clients...")
+    
+    for client in http_clients[:]:  # Create a copy of the list
+        try:
+            if client and not client.is_closed:
+                await client.aclose()
+                logger.debug(f"✅ Closed HTTP client: {client}")
+            http_clients.remove(client)  # Remove from the list after closing
+        except Exception as e:
+            logger.error(f"❌ Error closing HTTP client: {e}", exc_info=True)
+
+# Register cleanup on exit
+def cleanup():
+    """Synchronous cleanup wrapper"""
+    try:
+        loop = asyncio.get_event_loop()
+        if loop.is_running():
+            asyncio.create_task(cleanup_http_clients())
+        else:
+            loop.run_until_complete(cleanup_http_clients())
+    except Exception as e:
+        logger.error(f"Error during cleanup: {e}", exc_info=True)
+
+atexit.register(cleanup)
+
+agentic_flow = None
+
+def get_agentic_flow():
+    global agentic_flow
+    if agentic_flow is None:
+        # Initialize the StateGraph and build the workflow
+        builder = StateGraph(AgentState)
+        builder.add_node("define_scope_with_reasoner", define_scope_with_reasoner)
+        builder.add_node("advisor_with_examples", advisor_with_examples)
+        builder.add_node("coder_agent", coder_agent)
+        builder.set_entry_point("define_scope_with_reasoner")
+        builder.add_edge("define_scope_with_reasoner", "advisor_with_examples")
+        builder.add_edge("advisor_with_examples", "coder_agent")
+        builder.add_edge("coder_agent", END)
+        memory = MemorySaver()
+        agentic_flow = builder.compile(checkpointer=memory)
+    return agentic_flow
 
 if __name__ == '__main__':
     try:

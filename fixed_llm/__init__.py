@@ -5,24 +5,30 @@ Supports multiple LLM providers: Ollama, OpenRouter, and OpenAI
 import logging
 import os
 import sys
-from typing import Optional, Dict, Any
-from dataclasses import dataclass
+from typing import Optional, Dict, Any, List
+from dataclasses import dataclass, field
 
-# Ajouter le répertoire utils au path pour les imports
-current_dir = os.path.dirname(os.path.abspath(__file__))
-parent_dir = os.path.dirname(current_dir)
-utils_dir = os.path.join(parent_dir, "utils")
+# Initialize logger FIRST before any usage
+logger = logging.getLogger(__name__)
+
+# Add utils directory to path for imports
+current_dir = os.path.dirname(os.path.abspath(__file__))  # /app/src/archon/archon/llm
+archon_dir = os.path.dirname(current_dir)                  # /app/src/archon/archon
+src_archon_dir = os.path.dirname(archon_dir)              # /app/src/archon
+utils_dir = os.path.join(src_archon_dir, "utils")         # /app/src/archon/utils
 sys.path.insert(0, utils_dir)
 
 try:
     from utils import get_env_var, get_current_profile, write_to_log
-except ImportError:
-    # Fallback si l'import échoue
+    logger.info("✅ Successfully imported utils functions")
+except ImportError as e:
+    logger.error(f"❌ Failed to import utils functions: {e}")
+    # Fallback if import fails
     def get_env_var(var_name: str, profile: Optional[str] = None) -> Optional[str]:
         return os.environ.get(var_name)
     
     def get_current_profile() -> str:
-        # CORRECTION: Lire depuis env_vars.json au bon emplacement
+        # CORRECTION: Read from env_vars.json at correct location
         try:
             workbench_dir = "/app/src/archon/workbench"
             env_file_path = os.path.join(workbench_dir, "env_vars.json")
@@ -38,8 +44,6 @@ except ImportError:
     def write_to_log(message: str):
         print(f"[LOG] {message}")
 
-logger = logging.getLogger(__name__)
-
 @dataclass
 class LLMConfig:
     """Configuration for LLM provider"""
@@ -50,25 +54,30 @@ class LLMConfig:
     primary_model: str = "tinyllama:1.1b"
     coder_model: Optional[str] = None
     advisor_model: Optional[str] = None
+    http_headers: Dict[str, str] = field(default_factory=dict)
 
 class LLMProvider:
     """Unified LLM Provider that supports multiple backends"""
     
-    def __init__(self):
+    def __init__(self, profile_name: Optional[str] = None):
         self.config: Optional[LLMConfig] = None
-        self._initialize_from_profile()
+        self._initialize_from_profile(profile_name)
     
-    def _initialize_from_profile(self):
+    def _initialize_from_profile(self, profile_name: Optional[str] = None):
         """Initialize provider configuration from current profile"""
         try:
-            current_profile = get_current_profile()
-            write_to_log(f"🔧 Initializing LLM Provider with profile: {current_profile}")
+            logger.info(f"🔧 Starting LLM Provider initialization with profile_name: {profile_name}")
+            profile_to_use = profile_name or get_current_profile()
+            logger.info(f"🔧 Using profile: {profile_to_use}")
+            write_to_log(f"🔧 Initializing LLM Provider with profile: {profile_to_use}")
             
             # Get provider type
-            provider = get_env_var("LLM_PROVIDER", current_profile)
+            provider = get_env_var("LLM_PROVIDER", profile_to_use)
+            logger.info(f"🔍 Retrieved LLM_PROVIDER: {provider}")
             if not provider:
                 # Try alternative names
-                provider = get_env_var("PROVIDER", current_profile)
+                provider = get_env_var("PROVIDER", profile_to_use)
+                logger.info(f"🔍 Retrieved PROVIDER (fallback): {provider}")
             
             if not provider:
                 logger.warning("❌ No LLM provider specified, defaulting to OpenRouter")
@@ -117,6 +126,52 @@ class LLMProvider:
         logger.info(f"🧠 Reasoner model: {reasoner_model}")
         logger.info(f"⚡ Primary model: {primary_model}")
     
+    def _normalize_headers(self, headers: Dict[str, str]) -> Dict[str, str]:
+        """
+        Normalize HTTP headers by ensuring all header names and values are ASCII-only.
+        
+        Args:
+            headers: Dictionary of headers to normalize
+            
+        Returns:
+            Dictionary with normalized headers (ASCII-only)
+        """
+        if not headers:
+            return {}
+            
+        normalized = {}
+        for k, v in headers.items():
+            if not k or not isinstance(k, str) or not isinstance(v, (str, bytes, int, float)):
+                logger.warning(f"⚠️ Skipping invalid header: {k}={v}")
+                continue
+                
+            try:
+                # Ensure key is a string
+                k_str = str(k) if not isinstance(k, str) else k
+                
+                # Normalize key - convert to ASCII and replace non-ASCII with '_'
+                nk = k_str.encode('ascii', errors='replace').decode('ascii')
+                nk = ''.join(c if c.isascii() and c.isprintable() else '_' for c in nk)
+                
+                # Ensure value is a string
+                v_str = str(v) if not isinstance(v, str) else v
+                
+                # Normalize value - convert to ASCII and replace non-ASCII with '?'
+                nv = v_str.encode('ascii', errors='replace').decode('ascii')
+                nv = ''.join(c if c.isascii() and c.isprintable() else '?' for c in nv)
+                
+                # Log if normalization changed the values
+                if nk != k_str or nv != v_str:
+                    logger.debug(f"Normalized header: '{k_str}' -> '{nk}', '{v_str}' -> '{nv}'")
+                    
+                normalized[nk] = nv
+                
+            except Exception as e:
+                logger.error(f"❌ Failed to normalize header {k}={v}: {str(e)}", exc_info=True)
+                continue
+                
+        return normalized
+
     def _initialize_openrouter(self):
         """Initialize OpenRouter configuration"""
         api_key = get_env_var("OPENROUTER_API_KEY")
@@ -132,6 +187,13 @@ class LLMProvider:
         coder_model = get_env_var("CODER_MODEL") or "qwen/qwen3-coder:free"
         advisor_model = get_env_var("ADVISOR_MODEL") or "meta-llama/llama-3.1-8b-instruct:free"
         
+        # Create normalized headers
+        headers = self._normalize_headers({
+            "Authorization": f"Bearer {api_key}",
+            "HTTP-Referer": "http://localhost",
+            "X-Title": "Archon"
+        })
+        
         self.config = LLMConfig(
             provider="openrouter",
             api_key=api_key,
@@ -139,7 +201,8 @@ class LLMProvider:
             reasoner_model=reasoner_model,
             primary_model=primary_model,
             coder_model=coder_model,
-            advisor_model=advisor_model
+            advisor_model=advisor_model,
+            http_headers=headers
         )
         
         # Mask API key for logging
@@ -158,15 +221,26 @@ class LLMProvider:
         if not api_key:
             raise ValueError("❌ OpenAI API key is required but not found")
         
-        reasoner_model = get_env_var("REASONER_MODEL") or "gpt-4.1-nano"
-        primary_model = get_env_var("PRIMARY_MODEL") or "gpt-4.1-nano"
+        reasoner_model = get_env_var("REASONER_MODEL") or "gpt-4o-mini"
+        primary_model = get_env_var("PRIMARY_MODEL") or "gpt-4o-mini"
+        coder_model = get_env_var("CODER_MODEL") or "gpt-4o-mini"
+        advisor_model = get_env_var("ADVISOR_MODEL") or "gpt-4o-mini"
+        
+        # Create normalized headers
+        headers = self._normalize_headers({
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type": "application/json"
+        })
         
         self.config = LLMConfig(
             provider="openai",
             api_key=api_key,
             base_url="https://api.openai.com/v1",
             reasoner_model=reasoner_model,
-            primary_model=primary_model
+            primary_model=primary_model,
+            coder_model=coder_model,
+            advisor_model=advisor_model,
+            http_headers=headers
         )
         
         # Mask API key for logging

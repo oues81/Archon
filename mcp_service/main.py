@@ -1,7 +1,7 @@
 from .fastmcp import FastMCP
 from datetime import datetime
 from dotenv import load_dotenv
-from typing import Dict, List
+from typing import Dict, List, Optional
 import threading
 import requests
 import asyncio
@@ -67,7 +67,7 @@ async def create_thread() -> str:
     return thread_id
 
 
-def _make_request(thread_id: str, user_input: str, config: dict) -> str:
+def _make_request(thread_id: str, user_input: str, config: dict, profile_name: str = None) -> str:
     """Make synchronous request to graph service"""
     try:
         response = requests.post(
@@ -75,8 +75,9 @@ def _make_request(thread_id: str, user_input: str, config: dict) -> str:
             json={
                 "message": user_input,
                 "thread_id": thread_id,
-                "is_first_message": not active_threads[thread_id],
-                "config": config
+                "is_first_message": not active_threads.get(thread_id, []),
+                "config": config,
+                "profile_name": profile_name
             },
             timeout=300  # 5 minute timeout for long-running operations
         )
@@ -91,7 +92,7 @@ def _make_request(thread_id: str, user_input: str, config: dict) -> str:
 
 
 @mcp.tool()
-async def run_agent(thread_id: str, user_input: str) -> str:
+async def run_agent(thread_id: str, user_input: str, profile_name: Optional[str] = None) -> str:
     """Run the Archon agent with user input.
     Only use this tool after you have called create_thread in this conversation to get a unique thread ID.
     If you already created a thread ID in this conversation, do not create another one. Reuse the same ID.
@@ -105,6 +106,7 @@ async def run_agent(thread_id: str, user_input: str) -> str:
     Args:
         thread_id: The conversation thread ID
         user_input: The user's message to process
+        profile_name: (Optional) The specific profile to use for this request.
     
     Returns:
         str: The agent's response which generally includes the code for the agent
@@ -122,7 +124,7 @@ async def run_agent(thread_id: str, user_input: str) -> str:
     }
     
     try:
-        result = await asyncio.to_thread(_make_request, thread_id, user_input, config)
+        result = await asyncio.to_thread(_make_request, thread_id, user_input, config, profile_name)
         active_threads[thread_id].append(user_input)
         return result['response']
         

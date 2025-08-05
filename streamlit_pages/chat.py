@@ -14,7 +14,22 @@ import logging
 
 # Add project root to Python path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from archon.archon_graph import agentic_flow
+
+# Import with correct path
+try:
+    # First try direct import
+    from archon_graph import agentic_flow
+except ImportError:
+    try:
+        # Then try with namespace
+        from archon.archon_graph import agentic_flow
+    except ImportError:
+        # Finally try with full path as last resort
+        import sys
+        logger = logging.getLogger(__name__)
+        logger.warning("Fixing import paths for archon_graph")
+        sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+        from archon_graph import agentic_flow
 
 # Setup logger
 logging.basicConfig(level=logging.INFO)

@@ -3,11 +3,22 @@ import sys
 import os
 import json
 import logging
+import asyncio
+import dataclasses
 from datetime import datetime
+from pathlib import Path
 
-# Ajouter le répertoire racine au PYTHONPATH
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-sys.path.insert(0, os.path.abspath(os.path.dirname(__file__)))
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.StreamHandler(sys.stderr)
+    ]
+)
+logger = logging.getLogger(__name__)
+
+
 
 # Appliquer le correctif pour TypedDict
 try:
@@ -29,19 +40,10 @@ except ImportError:
     profiles_available = False
     logging.warning("Module api.profiles non disponible")
 
-# Importer agentic_flow depuis le bon emplacement
-try:
-    from archon_graph import agentic_flow
-except ImportError as e:
-    # Essayer d'importer directement depuis le même répertoire
-    try:
-        from .archon.archon_graph import agentic_flow
-    except ImportError:
-        # Essayer d'importer depuis le même niveau
-        try:
-            from archon_graph import agentic_flow
-        except ImportError as e2:
-            raise ImportError(f"Impossible d'importer agentic_flow: {e}\nTentative alternative a échoué: {e2}")
+from archon.archon_graph import get_agentic_flow
+from archon.utils.utils import write_to_log
+from archon.archon.llm import LLMProvider
+
 try:
     from langgraph.types import Command
 except ImportError:
@@ -49,15 +51,13 @@ except ImportError:
     class Command:
         """Dummy implementation of Command for compatibility"""
         pass
-        
-from utils.utils import write_to_log
     
 app = FastAPI()
 
 # Montage du router des profils s'il est disponible
 if profiles_available and profiles_router:
     app.include_router(profiles_router, prefix="/api")
-    logging.info("✅ Router des profils monté avec succès")
+    logging.info("✅ Router des profils monte avec succes")
 else:
     logging.warning("⚠️ Router des profils non disponible")
 
@@ -66,6 +66,7 @@ class InvokeRequest(BaseModel):
     thread_id: str
     is_first_message: bool = False
     config: Optional[Dict[str, Any]] = None
+    profile_name: Optional[str] = None  # Ajout du nom du profil
 
 @app.get("/health")
 async def health_check():
@@ -74,246 +75,104 @@ async def health_check():
 
 @app.post("/invoke")
 async def invoke_agent(request: InvokeRequest):
-    """Process a message through the agentic flow and return the complete response.
-
-    The agent streams the response but this API endpoint waits for the full output
-    before returning so it's a synchronous operation for MCP.
-    Another endpoint will be made later to fully stream the response from the API.
-    
-    Args:
-        request: The InvokeRequest containing message and thread info
-        
-    Returns:
-        dict: Contains the complete response from the agent
+    """
+    Process a message through the agentic flow. This endpoint can dynamically
+    apply a configuration profile for the duration of the request.
     """
     try:
-        config = request.config or {
-            "configurable": {
-                "thread_id": request.thread_id
-            }
+        # Initialize LLM provider with the requested profile or current profile
+        provider = LLMProvider(profile_name=request.profile_name)
+        if not provider.config:
+            # Get the actual profile name for error message
+            from archon.utils.utils import get_current_profile
+            actual_profile = request.profile_name or get_current_profile()
+            raise ValueError(f"Failed to load configuration for profile '{actual_profile}'")
+        # Utiliser dataclasses.asdict() au lieu de .dict() qui n'existe pas
+        llm_config_dict = dataclasses.asdict(provider.config)
+        
+        # Fix: Map the configuration keys to match what archon_graph.py expects (UPPERCASE)
+        llm_config = {
+            'LLM_PROVIDER': llm_config_dict.get('provider'),
+            'REASONER_MODEL': llm_config_dict.get('reasoner_model'),
+            'PRIMARY_MODEL': llm_config_dict.get('primary_model'),
+            'CODER_MODEL': llm_config_dict.get('coder_model'),
+            'ADVISOR_MODEL': llm_config_dict.get('advisor_model'),
+            'OLLAMA_BASE_URL': llm_config_dict.get('base_url') if llm_config_dict.get('provider') == 'ollama' else None
         }
-
-        print(f"[DEBUG] Starting invoke_agent for thread {request.thread_id}")
-        print(f"[DEBUG] Request message: {request.message[:100]}..." if len(request.message) > 100 else f"[DEBUG] Request message: {request.message}")
-        print(f"[DEBUG] Is first message: {request.is_first_message}")
         
-        response = ""
-        if request.is_first_message:
-            print("[DEBUG] Processing first message")
-            write_to_log(f"Processing first message for thread {request.thread_id}")
-            
-            # Initialiser l'état avec tous les champs requis par AgentState
-            # Créer un message utilisateur correctement formaté selon le schéma attendu
-            user_message = {
-                "kind": "request",  # Doit être 'request' ou 'response'
-                "parts": [{
-                    "part_kind": "user-prompt",
-                    "content": request.message,
-                    "timestamp": datetime.utcnow().isoformat()
-                }]
-            }
-            
-            # Convertir le message en bytes pour le stockage dans l'état
-            message_bytes = json.dumps([user_message]).encode('utf-8')
-            
-            initial_state = {
-                "latest_user_message": request.message,
-                "next_user_message": "",
-                "messages": [message_bytes],  # Stocker le message formaté
-                "scope": "",
-                "advisor_output": "",
-                "file_list": [],
-                "refined_prompt": "",
-                "refined_tools": "",
-                "refined_agent": "",
-                "config": config
-            }
-            
-            print("[DEBUG] Initial state created, starting agentic flow...")
-            print(f"[DEBUG] Initial state keys: {initial_state.keys()}")
-            print("[DEBUG] Message bytes content:", message_bytes.decode('utf-8'))
-            print("[DEBUG] Initial state content:", json.dumps(initial_state, default=str)[:500] + "..." if len(json.dumps(initial_state, default=str)) > 500 else json.dumps(initial_state, default=str))
-            
-            # Ajouter un compteur pour suivre les itérations
-            iteration = 0
-            
-            try:
-                final_state = None
-                async for msg in agentic_flow.astream(
-                    initial_state, 
-                    config,
-                    stream_mode="values"
-                ):
-                    iteration += 1
-                    print(f"[DEBUG] Received state update {iteration} from agentic flow")
-                    print(f"[DEBUG] Message type: {type(msg)}")
-                    
-                    # msg contient l'état complet à chaque étape
-                    if isinstance(msg, dict):
-                        final_state = msg
-                        # Extraire la réponse générée si disponible
-                        # if 'generated_code' in msg and msg.generated_code:
-                        #     print(f"[DEBUG] Generated code found: {msg.generated_code[:100]}...")
-                        # if 'scope' in msg and msg.scope:
-                        #     print(f"[DEBUG] Scope found: {msg.scope[:100]}...")
-                        # if 'advisor_output' in msg and msg.advisor_output:
-                        #     print(f"[DEBUG] Advisor output found: {msg.advisor_output[:100]}...")
-                    
-                    # Vérifier si nous sommes bloqués dans une boucle
-                    if iteration > 10:  # Limite arbitraire pour éviter les boucles infinies
-                        print("[WARNING] Possible infinite loop detected, breaking after 10 iterations")
-                        break
-                
-                # Extraire la réponse finale de l'état
-                if final_state:
-                    # Priorité à generated_code, puis advisor_output, puis scope
-                    if final_state.get('generated_code'):
-                        result_obj = final_state['generated_code']
-                        # Check if the result object has a 'content' attribute
-                        if hasattr(result_obj, 'content') and result_obj.content:
-                            response = result_obj.content
-                            print(f"[DEBUG] Using generated_code as response: {len(response)} characters")
-                        else:
-                            # Fallback if the object structure is different
-                            response = str(result_obj)
-                    elif final_state.get('advisor_output'):
-                        response = final_state['advisor_output']
-                        print(f"[DEBUG] Using advisor_output as response: {len(response)} characters")
-                    elif final_state.get('scope'):
-                        response = final_state['scope']
-                        print(f"[DEBUG] Using scope as response: {len(response)} characters")
-                    else:
-                        print("[WARNING] No generated content found in final state")
-                        print(f"[DEBUG] Final state keys: {list(final_state.keys()) if final_state else 'None'}")
-                        
-            except Exception as e:
-                print(f"[ERROR] Exception in agentic flow: {str(e)}")
-                print("[ERROR] Traceback:", traceback.format_exc())
-                raise
-                
-        else:
-            print("[DEBUG] Processing continuation message")
-            write_to_log(f"Processing continuation for thread {request.thread_id}")
-            
-            try:
-                # Créer un état initial avec le message de continuation
-                initial_state = {
-                    "next_user_message": request.message,
-                    "latest_user_message": "",
-                    "messages": [],
-                    "scope": "",
-                    "advisor_output": "",
-                    "file_list": [],
-                    "refined_prompt": "",
-                    "refined_tools": "",
-                    "refined_agent": "",
-                    "config": config
-                }
-                
-                final_state = None
-                async for msg in agentic_flow.astream(
-                    initial_state,
-                    config,
-                    stream_mode="values"
-                ):
-                    print(f"[DEBUG] Continuation: Received state update from agentic flow")
-                    if isinstance(msg, dict):
-                        final_state = msg
-                
-                # Extraire la réponse finale de l'état
-                if final_state:
-                    # Priorité à generated_code, puis advisor_output, puis scope
-                    if final_state.get('generated_code'):
-                        response = final_state['generated_code']
-                    elif final_state.get('advisor_output'):
-                        response = final_state['advisor_output']
-                    elif final_state.get('scope'):
-                        response = final_state['scope']
-            except Exception as e:
-                print(f"[ERROR] Exception in continuation flow: {str(e)}")
-                print("[ERROR] Traceback:", traceback.format_exc())
-                raise
-
-        print(f"[DEBUG] Final response length: {len(str(response))} characters")
-        write_to_log(f"Final response for thread {request.thread_id}: {str(response)[:200]}...")
-        
-        # Vérifier que la réponse n'est pas vide et la formater correctement
-        if not response:
-            print("[WARNING] Empty response from agentic flow")
-            response = "Désolé, je n'ai pas pu générer de réponse. Veuillez réessayer."
-        
-        # Si la réponse est un dictionnaire (comme une réponse Ollama brute), essayer d'extraire le contenu
-        if isinstance(response, dict):
-            print(f"[DEBUG] Raw response is a dictionary, extracting content. Keys: {list(response.keys())}")
-            # Essayer d'extraire le contenu de différentes manières selon le format de la réponse
-            if 'content' in response:
-                response = response['content']
-            elif 'response' in response:
-                response = response['response']
-            elif 'message' in response and isinstance(response['message'], dict) and 'content' in response['message']:
-                response = response['message']['content']
-            else:
-                # Si on ne peut pas extraire de contenu, convertir en JSON pour l'affichage
-                response = json.dumps(response, indent=2)
-        
-        # S'assurer que la réponse est une chaîne de caractères
-        if not isinstance(response, str):
-            try:
-                response = str(response)
-            except Exception as e:
-                print(f"[ERROR] Failed to convert response to string: {e}")
-                response = "Désolé, une erreur est survenue lors du formatage de la réponse."
-            
-        return {"response": response}
-        
+        # Fix: Add the API key with the expected name for compatibility with archon_graph.py
+        if provider.config.api_key:
+            llm_config['LLM_API_KEY'] = provider.config.api_key
+            if provider.config.provider == 'openrouter':
+                llm_config['OPENROUTER_API_KEY'] = provider.config.api_key
+            elif provider.config.provider == 'openai':
+                llm_config['OPENAI_API_KEY'] = provider.config.api_key
     except Exception as e:
-        error_msg = f"Exception invoking Archon for thread {request.thread_id}: {str(e)}"
-        print(f"[ERROR] {error_msg}")
-        print("[ERROR] Traceback:", traceback.format_exc())
-        write_to_log(f"Error processing message for thread {request.thread_id}: {str(e)}")
-        
-        # Ajouter plus de détails à l'erreur pour le débogage
-        error_detail = {
-            "error": str(e),
-            "type": type(e).__name__,
-            "thread_id": request.thread_id,
-            "is_first_message": request.is_first_message if hasattr(request, 'is_first_message') else None,
-            "message_length": len(request.message) if hasattr(request, 'message') else 0
-        }
-        
-        # Si c'est une erreur de validation, ajouter les détails de validation
-        if hasattr(e, 'errors') and callable(e.errors):
-            # Convertir les erreurs en un format sérialisable
-            validation_errors = []
-            for error in e.errors():
-                if isinstance(error, dict):
-                    validation_errors.append({
-                        'type': str(error.get('type', '')),
-                        'loc': [str(loc) for loc in error.get('loc', [])],
-                        'msg': str(error.get('msg', '')),
-                        'input': str(error.get('input', ''))[:100] + '...' if isinstance(error.get('input'), (bytes, bytearray)) else error.get('input')
-                    })
-                else:
-                    validation_errors.append(str(error))
-            error_detail["validation_errors"] = validation_errors
-            
-        # S'assurer que tous les champs sont sérialisables
-        for key, value in error_detail.items():
-            if isinstance(value, (bytes, bytearray)):
-                error_detail[key] = value.decode('utf-8', errors='replace')
-            elif hasattr(value, '__dict__'):
-                error_detail[key] = str(value)
-                
-        raise HTTPException(
-            status_code=500, 
-            detail=error_detail
-        )
+        logger.error(f"Error loading profile: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Failed to load profile {request.profile_name}: {str(e)}")
 
+    # Prepare configuration for the agentic flow
+    config = {
+        "configurable": {
+            "thread_id": request.thread_id,
+            "llm_config": llm_config
+        }
+    }
+
+    logger.info(f"Starting invoke_agent for thread {request.thread_id} with profile {request.profile_name or 'default'}")
+    
+    response = ""
+    final_state = None
+    
+    # This is the original, correct logic for handling the agent state
+    if request.is_first_message:
+        user_message = {
+            "kind": "request",
+            "parts": [{
+                "part_kind": "user-prompt",
+                "content": request.message,
+                "timestamp": datetime.utcnow().isoformat()
+            }]
+        }
+        message_bytes = json.dumps([user_message]).encode('utf-8')
+        initial_state = {
+            "latest_user_message": request.message,
+            "next_user_message": "",
+            "messages": [message_bytes],
+            "scope": "", "advisor_output": "", "file_list": [],
+            "refined_prompt": "", "refined_tools": "", "refined_agent": ""
+        }
+        input_for_flow = initial_state
+    else:
+        # For subsequent messages, we might only need to pass the new message
+        input_for_flow = {"next_user_message": request.message}
+
+    try:
+        flow = get_agentic_flow()
+        async for state_update in flow.astream(input_for_flow, config, stream_mode="values"):
+            final_state = state_update
+
+        if final_state:
+            if final_state.get('generated_code'):
+                result_obj = final_state['generated_code']
+                response = result_obj.data if hasattr(result_obj, 'data') and result_obj.data else str(result_obj)
+            elif final_state.get('advisor_output'):
+                response = final_state['advisor_output']
+            elif final_state.get('scope'):
+                response = final_state['scope']
+            else:
+                logger.warning("No generated content found in final state.")
+        
+        return {"response": response}
+
+    except Exception as e:
+        logger.error(f"Exception in invoke_agent: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
 @app.post('/test')
 async def test_provider(request: InvokeRequest):
     """Endpoint dédié aux tests de fournisseurs"""
     try:
-        # Logique de test simplifiée
+        # Logique de test simplifiee
         test_prompt = f"Test de connexion avec le fournisseur: {request.message}"
         
         # Configuration complète pour le graphe
@@ -339,6 +198,54 @@ async def test_provider(request: InvokeRequest):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+def configure_app():
+    """Configure and return the FastAPI application"""
+    try:
+        # Add startup event
+        @app.on_event("startup")
+        async def startup_event():
+            logger.info("🚀 Starting Archon Graph Service...")
+            try:
+                # Initialize any required services here
+                logger.info("✅ Services initialized successfully")
+            except Exception as e:
+                logger.critical(f"❌ Failed to initialize services: {e}", exc_info=True)
+                raise
+        
+        # Add shutdown event
+        @app.on_event("shutdown")
+        async def shutdown_event():
+            logger.info("🛑 Shutting down Archon Graph Service...")
+            
+        return app
+        
+    except Exception as e:
+        logger.critical(f"❌ Failed to configure application: {e}", exc_info=True)
+        raise
+
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8100)
+    
+    try:
+        # Configure the application
+        app = configure_app()
+        
+        # Configure Uvicorn
+        config = uvicorn.Config(
+            app=app,
+            host="0.0.0.0",
+            port=8110,
+            log_level="info",
+            reload=True,
+            reload_dirs=[str(Path(__file__).parent)],
+            workers=1
+        )
+        
+        # Create and run the server
+        server = uvicorn.Server(config)
+        logger.info(f"🌐 Starting server on http://{config.host}:{config.port}")
+        server.run()
+        
+    except Exception as e:
+        logger.critical(f"❌ Fatal error: {e}", exc_info=True)
+        sys.exit(1)
