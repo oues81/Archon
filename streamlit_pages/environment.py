@@ -98,8 +98,12 @@ def environment_tab():
     st.write("- HELP: Hover over the '?' icon on the right for each environment variable for help/examples.")
     st.warning("⚠️ If your agent service for MCP is already running, you'll need to restart it after changing environment variables.")
 
-    # Get current profile's environment variables
-    profile_env_vars = get_profile_env_vars()
+    # Get environment variables for the current profile
+    try:
+        profile_env_vars = get_profile_env_vars(current_profile)
+    except Exception as e:
+        st.error(f"Failed to load environment variables: {str(e)}")
+        profile_env_vars = {}
     
     # Define default URLs for providers
     llm_default_urls = {

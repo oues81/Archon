@@ -8,7 +8,9 @@ import importlib
 import os
 import sys
 from typing import Dict, List, Optional
+import logging
 
+logger = logging.getLogger(__name__)
 router = APIRouter()
 
 def get_config_path() -> Path:

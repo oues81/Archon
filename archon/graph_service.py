@@ -170,6 +170,9 @@ async def invoke_agent(request: InvokeRequest):
 async def test_provider(request: InvokeRequest):
     """Endpoint dédié aux tests de fournisseurs"""
     try:
+        # Récupérer le graphe agentique
+        agentic_flow = get_agentic_flow()
+
         # Logique de test simplifiee
         test_prompt = f"Test de connexion avec le fournisseur: {request.message}"
         
@@ -184,8 +187,11 @@ async def test_provider(request: InvokeRequest):
             }
         }
         
+        # La configuration doit être passée comme un deuxième argument positionnel
+        config = {"configurable": inputs["configurable"]}
+        
         # Exécution du test
-        result = await agentic_flow.ainvoke(inputs)
+        result = await agentic_flow.ainvoke(inputs, config)
         
         # Sérialisation correcte
         return {

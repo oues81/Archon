@@ -22,8 +22,46 @@ mkdir -p "$LOG_DIR"
 export LOG_LEVEL="${LOG_LEVEL:-INFO}"
 export UVICORN_LOG_LEVEL="${UVICORN_LOG_LEVEL:-info}"
 
+# Chemin vers le fichier de configuration des profils
+ENV_VARS_FILE="/app/src/archon/workbench/env_vars.json"
+
+# Vérifier si le fichier de configuration existe et charger le profil
+if [ -f "$ENV_VARS_FILE" ]; then
+    echo "Chargement du profil LLM depuis $ENV_VARS_FILE..."
+
+    # Extraire le nom du profil actuel
+    CURRENT_PROFILE=$(jq -r '.current_profile' "$ENV_VARS_FILE")
+
+    if [ -n "$CURRENT_PROFILE" ] && [ "$CURRENT_PROFILE" != "null" ]; then
+        echo "Profil actif trouvé : $CURRENT_PROFILE"
+
+        # Create a temporary file to hold the export commands
+        PROFILE_VARS_FILE=$(mktemp)
+
+        # Use jq to generate 'export KEY="VALUE"' lines and write them to the temp file
+        jq -r --arg profile "$CURRENT_PROFILE" \
+          '.profiles[$profile] | to_entries | .[] | "export " + .key + "=\"" + .value + "\""' \
+          "$ENV_VARS_FILE" > "$PROFILE_VARS_FILE"
+
+        # Source the temporary file to export the variables into the current shell
+        if [ -s "$PROFILE_VARS_FILE" ]; then
+            echo "Exporting variables from profile..."
+            source "$PROFILE_VARS_FILE"
+        else
+            echo "[AVERTISSEMENT] Le profil '$CURRENT_PROFILE' est vide ou n'a pas pu être traité."
+        fi
+
+        # Clean up the temporary file
+        rm "$PROFILE_VARS_FILE"
+    else
+        echo "[AVERTISSEMENT] Aucun profil actuel n'est défini dans $ENV_VARS_FILE."
+    fi
+else
+    echo "[AVERTISSEMENT] Fichier de configuration $ENV_VARS_FILE non trouvé."
+fi
+
 # Afficher les variables d'environnement pour le débogage
-echo "=== Variables d'environnement ==="
+echo "=== Variables d'environnement chargées ==="
 echo "PYTHONPATH: ${PYTHONPATH:-Non défini}"
 echo "LLM_PROVIDER: ${LLM_PROVIDER:-Non défini}"
 echo "BASE_URL: ${BASE_URL:-Non défini}"
@@ -32,7 +70,7 @@ echo "OLLAMA_HOST: ${OLLAMA_HOST:-Non défini}"
 echo "DEFAULT_WORKSPACE_PATH: ${DEFAULT_WORKSPACE_PATH:-Non défini}"
 echo "LOG_LEVEL: $LOG_LEVEL"
 echo "UVICORN_LOG_LEVEL: $UVICORN_LOG_LEVEL"
-echo "================================"
+echo "====================================="
 
 # Tester la connectivité à Ollama si nécessaire
 if [ "$LLM_PROVIDER" = "Ollama" ] || [ -z "$LLM_PROVIDER" ]; then

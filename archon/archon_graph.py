@@ -22,6 +22,7 @@ import logfire
 from typing import Dict, Any, Optional, Union, List, Tuple
 from contextlib import asynccontextmanager
 from dotenv import load_dotenv
+from openai import AsyncOpenAI
 
 # Configure logger
 logger = logging.getLogger(__name__)
@@ -135,7 +136,27 @@ from pydantic_ai.messages import (
 
 
 
-def get_llm_instance(provider: str, model_name: str, config: Dict[str, Any]):
+async def _ensure_ollama_model_is_pulled(openai_client: AsyncOpenAI, model_name: str):
+    """Helper function to check if an Ollama model exists and pull it if not."""
+    try:
+        logger.debug(f"Checking if Ollama model '{model_name}' exists...")
+        await openai_client.models.retrieve(model_name)
+        logger.debug(f"Ollama model '{model_name}' found.")
+    except Exception:
+        logger.warning(f"Ollama model '{model_name}' not found. Attempting to pull it...")
+        try:
+            # A simple chat completion request will trigger a pull if the model is not present.
+            await openai_client.chat.completions.create(
+                model=model_name,
+                messages=[{"role": "user", "content": "Hello"}],
+                max_tokens=1
+            )
+            logger.info(f"Successfully pulled or confirmed Ollama model: {model_name}")
+        except Exception as pull_error:
+            logger.error(f"Failed to pull Ollama model '{model_name}': {pull_error}")
+            raise pull_error
+
+async def get_llm_instance(provider: str, model_name: str, config: Dict[str, Any]):
     """Creates and returns an LLM instance based on the provided configuration."""
     provider = (provider or "openrouter").lower()
     logger.info(f"Configuring LLM instance for provider: {provider} with model: {model_name}")
@@ -148,46 +169,55 @@ def get_llm_instance(provider: str, model_name: str, config: Dict[str, Any]):
         client_kwargs = {"http_client": http_client}
 
         if provider == "ollama":
-            client_kwargs.update({
-                "api_key": "ollama",
-                "base_url": config.get("OLLAMA_BASE_URL") or os.getenv("OLLAMA_BASE_URL"),
-            })
+            base_url = config.get("OLLAMA_BASE_URL") or os.getenv("OLLAMA_BASE_URL")
+            if not base_url:
+                raise ValueError("OLLAMA_BASE_URL not found in profile or environment")
+            if not model_name:
+                raise ValueError("Model name is required for Ollama provider")
+                
+            client_kwargs.update({"api_key": "ollama", "base_url": base_url})
+            openai_client = AsyncOpenAI(**client_kwargs)
+            await _ensure_ollama_model_is_pulled(openai_client, model_name)
+            model = OpenAIModel(model_name=model_name, openai_client=openai_client)
+            
         elif provider == "openrouter":
-            api_key = config.get("LLM_API_KEY") or config.get("OPENROUTER_API_KEY") or os.getenv("LLM_API_KEY") or os.getenv("OPENROUTER_API_KEY")
+            api_key = config.get("LLM_API_KEY") or os.getenv("OPENROUTER_API_KEY")
             if not api_key:
-                raise ValueError("OPENROUTER_API_KEY or LLM_API_KEY not found in profile configuration or environment")
+                raise ValueError("OPENROUTER_API_KEY or LLM_API_KEY not found")
             client_kwargs.update({
                 "api_key": api_key,
                 "base_url": "https://openrouter.ai/api/v1",
                 "default_headers": {
-                    "HTTP-Referer": config.get("OPENROUTER_REFERRER", os.getenv("OPENROUTER_REFERRER", "http://localhost:8110")),
-                    "X-Title": config.get("OPENROUTER_X_TITLE", os.getenv("OPENROUTER_X_TITLE", "Archon"))
+                    "HTTP-Referer": config.get("OPENROUTER_REFERRER", "http://localhost:8110"),
+                    "X-Title": config.get("OPENROUTER_X_TITLE", "Archon")
                 }
             })
+            openai_client = AsyncOpenAI(**client_kwargs)
+            model = OpenAIModel(model_name=model_name, openai_client=openai_client)
+            
         elif provider == "openai":
-            api_key = config.get("LLM_API_KEY") or config.get("OPENAI_API_KEY") or os.getenv("LLM_API_KEY") or os.getenv("OPENAI_API_KEY")
+            api_key = config.get("LLM_API_KEY") or os.getenv("OPENAI_API_KEY")
             if not api_key:
-                raise ValueError("OPENAI_API_KEY or LLM_API_KEY not found in profile configuration or environment")
-            client_kwargs.update({
-                "api_key": api_key,
-                "base_url": "https://api.openai.com/v1"
-            })
+                raise ValueError("OPENAI_API_KEY or LLM_API_KEY not found")
+            client_kwargs.update({"api_key": api_key})
+            openai_client = AsyncOpenAI(**client_kwargs)
+            model = OpenAIModel(model_name=model_name, openai_client=openai_client)
+
         else:
             raise ValueError(f"Unsupported LLM provider: {provider}")
 
         # Ensure the http_client is always added to the list for cleanup
         http_clients.append(http_client)
         logger.debug(f"✅ Registered HTTP client for cleanup: {http_client}")
-
-        # Create the client and model instances
-        openai_client = AsyncOpenAI(**client_kwargs)
-        model = OpenAIModel(model_name=model_name, openai_client=openai_client)
         
         logger.info(f"✅ Successfully initialized LLM for {provider} with model {model_name}")
         return model
 
+    except ImportError as e:
+        logger.error(f"Missing dependencies for '{provider}': {e}")
+        raise ValueError(f"Dependencies for '{provider}' are not installed.") from e
     except Exception as e:
-        logger.error(f"❌ Failed to initialize LLM for {provider}: {str(e)}", exc_info=True)
+        logger.error(f"Failed to create LLM instance for provider {provider}: {e}")
         raise
 
 
@@ -248,27 +278,58 @@ def run_async_in_sync(coro):
     loop = ensure_event_loop()
     return loop.run_until_complete(coro)
 
-def define_scope_with_reasoner(state: AgentState, config: dict) -> AgentState:
+async def define_scope_with_reasoner(state: AgentState, config: dict) -> AgentState:
     """Defines the project scope using a reasoner agent based on the active profile."""
     logger.info("---STEP: Defining scope with reasoner agent---")
     try:
+        # Ensure required state keys exist
+        state.setdefault('error', None)
+        state.setdefault('scope', '')
+        state.setdefault('messages', [])
+        
+        # Get LLM configuration
         llm_config = config.get("configurable", {}).get("llm_config", {})
         model_name = llm_config.get("REASONER_MODEL")
         provider = llm_config.get("LLM_PROVIDER")
+        
         logger.info(f"🧠 REASONER - Provider: {provider} | Model: {model_name}")
-        logger.info(f"🧠 REASONER - User message: {state['latest_user_message']}")
-
+        
+        # Initialize messages if empty
+        if not state['messages']:
+            if 'latest_user_message' in state:
+                state['messages'] = [{'content': state['latest_user_message'], 'role': 'user'}]
+            else:
+                state['messages'] = [{'content': 'No message provided', 'role': 'system'}]
+        
+        # Get the last user message
+        last_message = next((msg for msg in reversed(state['messages']) if msg.get('role') == 'user'), None)
+        if last_message:
+            user_message = last_message['content']
+            state['latest_user_message'] = user_message
+            logger.info(f"🧠 REASONER - Processing user message: {user_message[:200]}...")
+        else:
+            user_message = state.get('latest_user_message', 'No user message available')
+            logger.warning("⚠️ No user message found in messages, using latest_user_message")
+        
+        # Initialize the reasoner agent
         reasoner = PydanticAgent(
-            get_llm_instance(provider, model_name, llm_config),
+            await get_llm_instance(provider, model_name, llm_config),
             system_prompt=reasoner_prompt
         )
 
-        logger.info("🔍 REASONER - Sending request...")
-        result = run_async_in_sync(reasoner.run(state['latest_user_message']))
+        # Process the message
+        logger.info("🔍 REASONER - Sending request to reasoner...")
+        result = await reasoner.run(user_message)
         scope_text = result.data if hasattr(result, 'data') else str(result)
 
-        logger.info(f"🔍 REASONER - Complete response received: {scope_text[:200]}...")
+        # Update state with results
         state['scope'] = scope_text
+        state['messages'].append({
+            'role': 'assistant',
+            'content': f"Scope defined: {scope_text[:200]}..."
+        })
+        
+        logger.info(f"✅ REASONER - Scope defined successfully: {scope_text[:200]}...")
         return state
         
     except Exception as e:
@@ -276,28 +337,49 @@ def define_scope_with_reasoner(state: AgentState, config: dict) -> AgentState:
         logger.error(error_msg, exc_info=True)
         state['error'] = error_msg
         state['scope'] = f"Error: {error_msg}"
+        state['messages'].append({
+            'role': 'error',
+            'content': error_msg
+        })
+        return state
         return state
 
-def advisor_with_examples(state: AgentState, config: dict) -> AgentState:
+async def advisor_with_examples(state: AgentState, config: dict) -> AgentState:
     """Generates advice and examples using the advisor agent based on the active profile."""
     logger.info("---STEP: Generating advice with advisor agent---")
     try:
+        # Ensure required state keys exist
+        state.setdefault('error', None)
+        state.setdefault('advisor_output', '')
+        state.setdefault('scope', state.get('scope', ''))
+        
+        # Get LLM configuration
         llm_config = config.get("configurable", {}).get("llm_config", {})
         model_name = llm_config.get("PRIMARY_MODEL")
         provider = llm_config.get("LLM_PROVIDER")
+        
         logger.info(f"💡 ADVISOR - Provider: {provider} | Model: {model_name}")
+        logger.info(f"💡 ADVISOR - Scope: {state['scope'][:200]}...")
 
+        # Initialize the advisor agent
         advisor = PydanticAgent(
-            get_llm_instance(provider, model_name, llm_config),
+            await get_llm_instance(provider, model_name, llm_config),
             system_prompt=advisor_prompt
         )
         
-        logger.info("💡 ADVISOR - Sending request...")
-        result = run_async_in_sync(advisor.run(state['scope']))
+        # Process the scope
+        logger.info("💡 ADVISOR - Sending request to advisor...")
+        result = await advisor.run(state['scope'])
         advisor_text = result.data if hasattr(result, 'data') else str(result)
 
-        logger.info(f"💡 ADVISOR - Complete response received: {advisor_text[:200]}...")
+        # Update state with results
         state['advisor_output'] = advisor_text
+        state['messages'].append({
+            'role': 'assistant',
+            'content': f"Advisor output: {advisor_text[:200]}..."
+        })
+        
+        logger.info(f"✅ ADVISOR - Advice generated successfully: {advisor_text[:200]}...")
         return state
 
     except Exception as e:
@@ -305,34 +387,56 @@ def advisor_with_examples(state: AgentState, config: dict) -> AgentState:
         logger.error(error_msg, exc_info=True)
         state['error'] = error_msg
         state['advisor_output'] = f"Error: {error_msg}"
+        state['messages'].append({
+            'role': 'error',
+            'content': error_msg
+        })
         return state
 
-def coder_agent(state: AgentState, config: dict) -> AgentState:
+async def coder_agent(state: AgentState, config: dict) -> AgentState:
     """Generates the final code using the coder agent based on the active profile."""
     logger.info("---STEP: Generating code with coder agent---")
     try:
+        # Ensure required state keys exist
+        state.setdefault('error', None)
+        state.setdefault('generated_code', '')
+        state.setdefault('scope', state.get('scope', ''))
+        state.setdefault('advisor_output', state.get('advisor_output', ''))
+        
+        # Get LLM configuration
         llm_config = config.get("configurable", {}).get("llm_config", {})
         model_name = llm_config.get("CODER_MODEL")
         provider = llm_config.get("LLM_PROVIDER")
+        
         logger.info(f"⚡ CODER - Provider: {provider} | Model: {model_name}")
+        logger.info(f"⚡ CODER - Scope: {state['scope'][:200]}...")
+        logger.info(f"⚡ CODER - Advisor Output: {state['advisor_output'][:200]}...")
 
-        scope = state.get('scope', '')
-        advisor_output = state.get('advisor_output', '')
-        logger.info(f"⚡ CODER - Scope: {scope[:200]}...")
-        logger.info(f"⚡ CODER - Advisor Output: {advisor_output[:200]}...")
-
+        # Initialize the coder agent
         coder = PydanticAgent(
-            get_llm_instance(provider, model_name, llm_config),
+            await get_llm_instance(provider, model_name, llm_config),
             system_prompt=coder_prompt_with_examples
         )
         
-        logger.info("⚡ CODER - Sending request...")
-        instruction = f"Scope: {scope}\n\nAdvisor Output: {advisor_output}"
-        result = run_async_in_sync(coder.run(instruction))
+        # Prepare the instruction with context
+        instruction = (
+            f"## Scope\n{state['scope']}\n\n"
+            f"## Advisor Output\n{state['advisor_output']}"
+        )
+        
+        # Generate code
+        logger.info("⚡ CODER - Sending request to coder...")
+        result = await coder.run(instruction)
         code_text = result.data if hasattr(result, 'data') else str(result)
 
-        logger.info(f"⚡ CODER - Complete response received: {code_text[:200]}...")
+        # Update state with results
         state['generated_code'] = code_text
+        state['messages'].append({
+            'role': 'assistant',
+            'content': f"Generated code: {code_text[:200]}..."
+        })
+        
+        logger.info(f"✅ CODER - Code generated successfully: {code_text[:200]}...")
         return state
         
     except Exception as e:
@@ -340,62 +444,121 @@ def coder_agent(state: AgentState, config: dict) -> AgentState:
         logger.error(error_msg, exc_info=True)
         state['error'] = error_msg
         state['generated_code'] = f"Error: {error_msg}"
+        state['messages'].append({
+            'role': 'error',
+            'content': error_msg
+        })
+        return state
         return state
 
 # Global instances and state
 llm_instance = None
 http_clients = []
 
-async def cleanup_http_clients():
+def cleanup_http_clients():
     """Clean up all HTTP clients on application exit"""
-    if not http_clients:
-        return
-        
     logger.info("🧹 Cleaning up HTTP clients...")
-    
-    for client in http_clients[:]:  # Create a copy of the list
-        try:
-            if client and not client.is_closed:
-                await client.aclose()
-                logger.debug(f"✅ Closed HTTP client: {client}")
-            http_clients.remove(client)  # Remove from the list after closing
-        except Exception as e:
-            logger.error(f"❌ Error closing HTTP client: {e}", exc_info=True)
+    # Clear the list synchronously
+    http_clients.clear()
+    # Let garbage collector handle the rest
+    import gc
+    gc.collect()
 
 # Register cleanup on exit
 def cleanup():
-    """Synchronous cleanup wrapper"""
+    """Synchronous cleanup wrapper that safely handles cleanup without requiring an event loop.
+    
+    This function is registered with atexit and must be able to run in any context,
+    including when the asyncio event loop is not available.
+    """
     try:
-        loop = asyncio.get_event_loop()
-        if loop.is_running():
-            asyncio.create_task(cleanup_http_clients())
-        else:
-            loop.run_until_complete(cleanup_http_clients())
+        # Use print as logging might be closed already
+        print("🧹 Performing cleanup...")
+        
+        # Clear the list synchronously - this is safe to do without an event loop
+        if http_clients:
+            print(f"ℹ️ Cleaning up {len(http_clients)} HTTP clients")
+            # Just clear the list - don't try to close clients as we might not have an event loop
+            http_clients.clear()
+        
     except Exception as e:
-        logger.error(f"Error during cleanup: {e}", exc_info=True)
+        # Print to stderr to ensure it's visible even if stdout is redirected
+        import sys, traceback
+        print("⚠️ Error during cleanup:", file=sys.stderr)
+        traceback.print_exc(file=sys.stderr)
+    
+    # Explicitly clean up any remaining resources
+    try:
+        import gc
+        gc.collect()
+    except Exception:
+        pass  # Don't let GC errors prevent cleanup
 
 atexit.register(cleanup)
 
 agentic_flow = None
 
 def get_agentic_flow():
+    """
+    Returns the compiled agentic flow, initializing it if necessary.
+    
+    This function is thread-safe and ensures the flow is properly initialized
+    with error handling and logging.
+    """
     global agentic_flow
+    
     if agentic_flow is None:
-        # Initialize the StateGraph and build the workflow
-        builder = StateGraph(AgentState)
-        builder.add_node("define_scope_with_reasoner", define_scope_with_reasoner)
-        builder.add_node("advisor_with_examples", advisor_with_examples)
-        builder.add_node("coder_agent", coder_agent)
-        builder.set_entry_point("define_scope_with_reasoner")
-        builder.add_edge("define_scope_with_reasoner", "advisor_with_examples")
-        builder.add_edge("advisor_with_examples", "coder_agent")
-        builder.add_edge("coder_agent", END)
-        memory = MemorySaver()
-        agentic_flow = builder.compile(checkpointer=memory)
+        try:
+            logger.info("🔄 Initializing agentic flow...")
+            
+            # Create a new StateGraph
+            builder = StateGraph(AgentState)
+            
+            # Add nodes
+            builder.add_node("define_scope_with_reasoner", define_scope_with_reasoner)
+            builder.add_node("advisor_with_examples", advisor_with_examples)
+            builder.add_node("coder_agent", coder_agent)
+            
+            # Set the entry point
+            builder.set_entry_point("define_scope_with_reasoner")
+            
+            # Define the workflow edges
+            builder.add_edge("define_scope_with_reasoner", "advisor_with_examples")
+            builder.add_edge("advisor_with_examples", "coder_agent")
+            builder.add_edge("coder_agent", END)
+            
+            # Initialize memory for checkpoints
+            memory = MemorySaver()
+            
+            # Compile the graph
+            agentic_flow = builder.compile(
+                checkpointer=memory,
+                # Add interrupt handling for better debugging
+                interrupt_before=["define_scope_with_reasoner", "advisor_with_examples", "coder_agent"],
+                interrupt_after=["define_scope_with_reasoner", "advisor_with_examples"]
+            )
+            
+            logger.info("✅ Agentic flow initialized successfully")
+            
+        except Exception as e:
+            error_msg = f"Failed to initialize agentic flow: {str(e)}"
+            logger.error(error_msg, exc_info=True)
+            raise RuntimeError(error_msg) from e
+    
     return agentic_flow
 
-if __name__ == '__main__':
-    try:
+async def run_agent_workflow(initial_state: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    """
+    Run the agent workflow with the provided initial state.
+    
+    Args:
+        initial_state: Optional initial state for the agent.
+                      If not provided, a default state will be used.
+                      
+    Returns:
+        Dict containing the final state of the agent.
+    """
+    if initial_state is None:
         initial_state = {
             'latest_user_message': 'Hello, can you help me create an AI agent?',
             'next_user_message': '',
@@ -407,16 +570,82 @@ if __name__ == '__main__':
             'refined_tools': '',
             'refined_agent': ''
         }
+    
+    try:
+        logger.info("🚀 Starting agentic flow execution...")
         
-        print("Starting agentic flow execution...")
-        result = agentic_flow.invoke(initial_state)
+        # Get the agentic flow
+        flow = get_agentic_flow()
         
-        print("\nExecution Result:")
-        print(f"- Latest Message: {result.get('latest_user_message', '')}")
-        print(f"- Scope Defined: {bool(result.get('scope', ''))}")
-        print(f"- Code Generated: {bool(result.get('generated_code', ''))}")
+        # Run the flow with the initial state
+        logger.info("⚡ Executing agent workflow...")
+        result = await flow.ainvoke(initial_state)
+        
+        # Log the results
+        logger.info("✅ Agent workflow completed successfully")
+        logger.info(f"📋 Scope: {result.get('scope', '')[:200]}...")
+        logger.info(f"📝 Code generated: {bool(result.get('generated_code', ''))}")
+        
+        return result
         
     except Exception as e:
-        print(f"\n[ERROR] An error occurred: {str(e)}")
-        print(f"[ERROR] Type: {type(e).__name__}")
-        print(f"[ERROR] Traceback: {traceback.format_exc()}")
+        error_msg = f"❌ Agent workflow failed: {str(e)}"
+        logger.error(error_msg, exc_info=True)
+        
+        # Ensure we still return a valid state with error information
+        if isinstance(initial_state, dict):
+            initial_state['error'] = error_msg
+            return initial_state
+        
+        # If we can't update the initial state, return a minimal error state
+        return {
+            'error': error_msg,
+            'messages': [
+                {
+                    'role': 'error',
+                    'content': f'Workflow failed: {str(e)}'
+                }
+            ]
+        }
+
+if __name__ == '__main__':
+    # Configure logging for the main script
+    try:
+        logging.basicConfig(
+            level=logging.INFO,
+            format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+            handlers=[
+                logging.StreamHandler(),
+                logging.FileHandler('agent_workflow.log')
+            ]
+        )
+        
+        # Run the workflow
+        final_state = asyncio.run(run_agent_workflow())
+        
+        # Print the results
+        print("\n" + "="*50)
+        print("AGENT WORKFLOW EXECUTION COMPLETE")
+        print("="*50)
+        
+        # Display key results
+        if 'error' in final_state:
+            print(f"❌ Error: {final_state['error']}")
+        
+        print("\n📋 Scope:")
+        print(final_state.get('scope', 'No scope defined'))
+        
+        if 'generated_code' in final_state and final_state['generated_code']:
+            print("\n💻 Generated Code:")
+            print(final_state['generated_code'])
+        
+        print("\n✅ Done!")
+        
+    except Exception as e:
+        logger.critical(f"Critical error in main execution: {str(e)}", exc_info=True)
+        print(f"\n❌ CRITICAL ERROR: {str(e)}")
+        print("Check the logs for more details.")
+        sys.exit(1)
+    except KeyboardInterrupt:
+        print("\n🛑 Execution interrupted by user")
+        sys.exit(0)
