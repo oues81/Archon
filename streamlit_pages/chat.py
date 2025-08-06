@@ -18,18 +18,21 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 # Import with correct path
 try:
     # First try direct import
-    from archon_graph import agentic_flow
+    from archon_graph import get_agentic_flow
+    agentic_flow = get_agentic_flow()
 except ImportError:
     try:
         # Then try with namespace
-        from archon.archon_graph import agentic_flow
+        from archon.archon_graph import get_agentic_flow
+        agentic_flow = get_agentic_flow()
     except ImportError:
         # Finally try with full path as last resort
         import sys
         logger = logging.getLogger(__name__)
         logger.warning("Fixing import paths for archon_graph")
         sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
-        from archon_graph import agentic_flow
+        from archon_graph import get_agentic_flow
+        agentic_flow = get_agentic_flow()
 
 # Setup logger
 logging.basicConfig(level=logging.INFO)
@@ -43,6 +46,12 @@ def get_thread_id():
 async def run_agent_with_streaming(user_input: str, thread_id: str):
     """Run the agent and stream the output chunks."""
     try:
+        if agentic_flow is None:
+            error_msg = "Agentic flow is not initialized. Please check the configuration."
+            logger.error(error_msg)
+            yield {"error": error_msg}
+            return
+            
         config = {"configurable": {"thread_id": thread_id}}
         # Use astream to get an async generator of the graph's state updates
         stream = agentic_flow.astream(

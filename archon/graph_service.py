@@ -87,17 +87,15 @@ async def invoke_agent(request: InvokeRequest):
             from archon.utils.utils import get_current_profile
             actual_profile = request.profile_name or get_current_profile()
             raise ValueError(f"Failed to load configuration for profile '{actual_profile}'")
-        # Utiliser dataclasses.asdict() au lieu de .dict() qui n'existe pas
-        llm_config_dict = dataclasses.asdict(provider.config)
-        
-        # Fix: Map the configuration keys to match what archon_graph.py expects (UPPERCASE)
+        # Correction : Construire le dictionnaire de configuration en accédant directement
+        # aux attributs de l'objet provider.config pour garantir la correspondance des clés.
         llm_config = {
-            'LLM_PROVIDER': llm_config_dict.get('provider'),
-            'REASONER_MODEL': llm_config_dict.get('reasoner_model'),
-            'PRIMARY_MODEL': llm_config_dict.get('primary_model'),
-            'CODER_MODEL': llm_config_dict.get('coder_model'),
-            'ADVISOR_MODEL': llm_config_dict.get('advisor_model'),
-            'OLLAMA_BASE_URL': llm_config_dict.get('base_url') if llm_config_dict.get('provider') == 'ollama' else None
+            'LLM_PROVIDER': provider.config.provider,
+            'REASONER_MODEL': provider.config.reasoner_model,
+            'PRIMARY_MODEL': provider.config.primary_model,
+            'CODER_MODEL': provider.config.coder_model,
+            'ADVISOR_MODEL': provider.config.advisor_model,
+            'OLLAMA_BASE_URL': provider.config.base_url
         }
         
         # Fix: Add the API key with the expected name for compatibility with archon_graph.py

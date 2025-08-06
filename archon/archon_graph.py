@@ -112,7 +112,10 @@ advisor: Optional['AIAgent'] = None
 coder: Optional['AIAgent'] = None
 
 # Unified LLM Provider Import
-from archon.archon.llm import LLMProvider, LLMConfig
+import sys
+import os
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'archon'))
+from llm import LLMProvider, LLMConfig
 
 # Pydantic AI Compatibility Imports
 from pydantic_ai import RunContext, Agent as PydanticAgent, ModelRetry
@@ -134,42 +137,37 @@ from pydantic_ai.messages import (
 
 def get_llm_instance(provider: str, model_name: str, config: Dict[str, Any]):
     """Creates and returns an LLM instance based on the provided configuration."""
-    # Vérification que le provider n'est pas None avant d'appeler .lower()
-    if provider is None:
-        provider = "openrouter"  # Valeur par défaut si le provider est None
-        logger.warning(f"Provider est None, utilisation de la valeur par défaut: {provider}")
-    else:
-        provider = provider.lower()
+    provider = (provider or "openrouter").lower()
     logger.info(f"Configuring LLM instance for provider: {provider} with model: {model_name}")
 
     try:
         from openai import AsyncOpenAI
         from pydantic_ai.models.openai import OpenAIModel
 
-        http_client = LoggingHTTPClient(timeout=30.0, limits=httpx.Limits(max_connections=100, max_keepalive_connections=20))
+        http_client = LoggingHTTPClient(timeout=60.0, limits=httpx.Limits(max_connections=100, max_keepalive_connections=20))
         client_kwargs = {"http_client": http_client}
 
         if provider == "ollama":
             client_kwargs.update({
                 "api_key": "ollama",
-                "base_url": config.get("OLLAMA_BASE_URL", "http://ollama:11434/v1"),
+                "base_url": config.get("OLLAMA_BASE_URL") or os.getenv("OLLAMA_BASE_URL"),
             })
         elif provider == "openrouter":
-            api_key = config.get("LLM_API_KEY") or config.get("OPENROUTER_API_KEY")
+            api_key = config.get("LLM_API_KEY") or config.get("OPENROUTER_API_KEY") or os.getenv("LLM_API_KEY") or os.getenv("OPENROUTER_API_KEY")
             if not api_key:
-                raise ValueError("OPENROUTER_API_KEY or LLM_API_KEY not found in profile configuration")
+                raise ValueError("OPENROUTER_API_KEY or LLM_API_KEY not found in profile configuration or environment")
             client_kwargs.update({
                 "api_key": api_key,
                 "base_url": "https://openrouter.ai/api/v1",
                 "default_headers": {
-                    "HTTP-Referer": config.get("OPENROUTER_REFERRER", "http://localhost:8110"),
-                    "X-Title": config.get("OPENROUTER_X_TITLE", "Archon")
+                    "HTTP-Referer": config.get("OPENROUTER_REFERRER", os.getenv("OPENROUTER_REFERRER", "http://localhost:8110")),
+                    "X-Title": config.get("OPENROUTER_X_TITLE", os.getenv("OPENROUTER_X_TITLE", "Archon"))
                 }
             })
         elif provider == "openai":
-            api_key = config.get("LLM_API_KEY") or config.get("OPENAI_API_KEY")
+            api_key = config.get("LLM_API_KEY") or config.get("OPENAI_API_KEY") or os.getenv("LLM_API_KEY") or os.getenv("OPENAI_API_KEY")
             if not api_key:
-                raise ValueError("OPENAI_API_KEY or LLM_API_KEY not found in profile configuration")
+                raise ValueError("OPENAI_API_KEY or LLM_API_KEY not found in profile configuration or environment")
             client_kwargs.update({
                 "api_key": api_key,
                 "base_url": "https://api.openai.com/v1"
@@ -177,6 +175,11 @@ def get_llm_instance(provider: str, model_name: str, config: Dict[str, Any]):
         else:
             raise ValueError(f"Unsupported LLM provider: {provider}")
 
+        # Ensure the http_client is always added to the list for cleanup
+        http_clients.append(http_client)
+        logger.debug(f"✅ Registered HTTP client for cleanup: {http_client}")
+
+        # Create the client and model instances
         openai_client = AsyncOpenAI(**client_kwargs)
         model = OpenAIModel(model_name=model_name, openai_client=openai_client)
         
@@ -184,40 +187,7 @@ def get_llm_instance(provider: str, model_name: str, config: Dict[str, Any]):
         return model
 
     except Exception as e:
-        logger.error(f"❌ Failed to initialize LLM for {provider}: {str(e)}")
-        import traceback
-        logger.error(traceback.format_exc())
-        raise
-        openai_client = AsyncOpenAI(**client_kwargs)
-        
-        # Register the HTTP client for cleanup
-        if 'http_client' in client_kwargs and client_kwargs['http_client']:
-            http_clients.append(client_kwargs['http_client'])
-            logger.debug(f"✅ Registered HTTP client for cleanup: {client_kwargs['http_client']}")
-        
-        # Log client configuration (without sensitive data)
-        safe_config = {
-            'provider': provider_name,
-            'model': model_name,
-            'base_url': client_kwargs.get('base_url', 'default'),
-            'timeout': 'configured' if 'http_client' in client_kwargs else 'default',
-            'http2_enabled': True  # HTTP/2 is enabled by default in httpx
-        }
-        logger.info(f"🚀 Initialized {provider_name} client with config: {safe_config}")
-        
-        # Create the model instance
-        model = OpenAIModel(
-            model_name=model_name,
-            openai_client=openai_client
-        )
-        
-        logger.info(f"✅ Successfully initialized {provider_name} provider with model {model_name}")
-        return model
-        
-    except Exception as e:
-        logger.error(f"❌ Failed to initialize {provider_name} provider: {str(e)}")
-        import traceback
-        logger.error(traceback.format_exc())
+        logger.error(f"❌ Failed to initialize LLM for {provider}: {str(e)}", exc_info=True)
         raise
 
 
@@ -282,7 +252,7 @@ def define_scope_with_reasoner(state: AgentState, config: dict) -> AgentState:
     """Defines the project scope using a reasoner agent based on the active profile."""
     logger.info("---STEP: Defining scope with reasoner agent---")
     try:
-        llm_config = config["configurable"]["llm_config"]
+        llm_config = config.get("configurable", {}).get("llm_config", {})
         model_name = llm_config.get("REASONER_MODEL")
         provider = llm_config.get("LLM_PROVIDER")
         logger.info(f"🧠 REASONER - Provider: {provider} | Model: {model_name}")
@@ -312,7 +282,7 @@ def advisor_with_examples(state: AgentState, config: dict) -> AgentState:
     """Generates advice and examples using the advisor agent based on the active profile."""
     logger.info("---STEP: Generating advice with advisor agent---")
     try:
-        llm_config = config["configurable"]["llm_config"]
+        llm_config = config.get("configurable", {}).get("llm_config", {})
         model_name = llm_config.get("PRIMARY_MODEL")
         provider = llm_config.get("LLM_PROVIDER")
         logger.info(f"💡 ADVISOR - Provider: {provider} | Model: {model_name}")
@@ -341,7 +311,7 @@ def coder_agent(state: AgentState, config: dict) -> AgentState:
     """Generates the final code using the coder agent based on the active profile."""
     logger.info("---STEP: Generating code with coder agent---")
     try:
-        llm_config = config["configurable"]["llm_config"]
+        llm_config = config.get("configurable", {}).get("llm_config", {})
         model_name = llm_config.get("CODER_MODEL")
         provider = llm_config.get("LLM_PROVIDER")
         logger.info(f"⚡ CODER - Provider: {provider} | Model: {model_name}")

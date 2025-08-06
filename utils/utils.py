@@ -17,9 +17,22 @@ import streamlit as st
 try:
     from openai import AsyncOpenAI
     from supabase import Client
-    from archon.utils.neo4j_client import Neo4jClient
+    try:
+        from archon.utils.neo4j_client import Neo4jClient
+    except ImportError:
+        # Fallback si Neo4jClient n'existe pas
+        class Neo4jClient:
+            def __init__(self, uri, username, password, database):
+                self.uri = uri
+                self.username = username
+                self.password = password
+                self.database = database
+            def close(self):
+                pass
 except ImportError as e:
     logging.warning(f"Import error for client libraries: {e}")
+    AsyncOpenAI = None
+    Client = None
 
 logger = logging.getLogger(__name__)
 
@@ -166,6 +179,118 @@ def get_env_var(var_name: str, profile_name: Optional[str] = None) -> Optional[s
         logger.error(f"❌ Error getting environment variable '{var_name}': {e}")
         return None
 
+def save_env_var(var_name: str, var_value: str, profile_name: Optional[str] = None) -> bool:
+    """
+    Save environment variable to a specific profile in env_vars.json
+    
+    Args:
+        var_name: Name of the environment variable
+        var_value: Value to save
+        profile_name: Profile to save to (uses current if None)
+    
+    Returns:
+        bool: True if successful, False otherwise
+    """
+    try:
+        env_file_path = get_env_vars_file_path()
+        
+        # Load existing env vars
+        if os.path.exists(env_file_path):
+            with open(env_file_path, 'r') as f:
+                env_vars = json.load(f)
+        else:
+            env_vars = {"current_profile": "ollama_default", "profiles": {}}
+        
+        # Ensure profiles section exists
+        if "profiles" not in env_vars:
+            env_vars["profiles"] = {}
+        
+        # Use provided profile or current profile
+        if profile_name is None:
+            profile_name = get_current_profile()
+        
+        # Ensure profile exists
+        if profile_name not in env_vars["profiles"]:
+            env_vars["profiles"][profile_name] = {}
+        
+        # Save the variable
+        env_vars["profiles"][profile_name][var_name] = var_value
+        
+        # Write back to file
+        with open(env_file_path, 'w') as f:
+            json.dump(env_vars, f, indent=2)
+        
+        logger.info(f"✅ Saved {var_name}='{var_value}' to profile '{profile_name}'")
+        return True
+        
+    except Exception as e:
+        logger.error(f"❌ Failed to save env var '{var_name}': {e}")
+        return False
+
+def reload_archon_graph():
+    """
+    Reload the archon graph configuration
+    This is a placeholder function for compatibility with existing code
+    """
+    logger.info("🔄 Reloading archon graph configuration")
+    return True
+
+def set_current_profile(profile_name: str) -> bool:
+    """Set the current active profile"""
+    try:
+        env_vars = load_env_vars()
+        env_vars["current_profile"] = profile_name
+        return save_env_vars(env_vars)
+    except Exception as e:
+        logger.error(f"❌ Failed to set current profile: {e}")
+        return False
+
+def get_all_profiles() -> list:
+    """Get all available profiles"""
+    try:
+        env_vars = load_env_vars()
+        return list(env_vars.get("profiles", {}).keys())
+    except Exception as e:
+        logger.error(f"❌ Failed to get all profiles: {e}")
+        return []
+
+def create_profile(profile_name: str) -> bool:
+    """Create a new profile"""
+    try:
+        env_vars = load_env_vars()
+        if "profiles" not in env_vars:
+            env_vars["profiles"] = {}
+        
+        if profile_name not in env_vars["profiles"]:
+            env_vars["profiles"][profile_name] = {}
+            return save_env_vars(env_vars)
+        
+        return True
+    except Exception as e:
+        logger.error(f"❌ Failed to create profile: {e}")
+        return False
+
+def delete_profile(profile_name: str) -> bool:
+    """Delete a profile"""
+    try:
+        env_vars = load_env_vars()
+        if "profiles" in env_vars and profile_name in env_vars["profiles"]:
+            del env_vars["profiles"][profile_name]
+            return save_env_vars(env_vars)
+        return True
+    except Exception as e:
+        logger.error(f"❌ Failed to delete profile: {e}")
+        return False
+
+def get_profile_env_vars(profile_name: str) -> dict:
+    """Get all environment variables for a specific profile"""
+    try:
+        env_vars = load_env_vars()
+        return env_vars.get("profiles", {}).get(profile_name, {})
+    except Exception as e:
+        logger.error(f"❌ Failed to get profile env vars: {e}")
+        return {}
+
 def save_env_vars(env_vars: Dict[str, Any]) -> bool:
     """Save environment variables to env_vars.json"""
     env_file_path = get_env_vars_file_path()
@@ -262,6 +387,11 @@ def get_clients() -> Tuple[Any, Optional[Any], Optional[Any]]:
         Tuple contenant (embedding_client, supabase_client, neo4j_client)
     """
     try:
+        # Vérifier la disponibilité des bibliothèques
+        if AsyncOpenAI is None:
+            logger.warning("AsyncOpenAI non disponible")
+            return None, None, None
+            
         # LLM client setup
         embedding_client = None
         provider = get_env_var('EMBEDDING_PROVIDER') or 'OpenAI'
@@ -270,20 +400,31 @@ def get_clients() -> Tuple[Any, Optional[Any], Optional[Any]]:
         # For Ollama, use a dummy API key if not provided and ensure the base URL is correct
         if provider == "Ollama":
             api_key = get_env_var('EMBEDDING_API_KEY') or 'ollama'
-            embedding_client = AsyncOpenAI(base_url=base_url, api_key=api_key)
+            try:
+                embedding_client = AsyncOpenAI(base_url=base_url, api_key=api_key)
+            except Exception as e:
+                logger.error(f"Failed to initialize AsyncOpenAI: {e}")
+                embedding_client = None
         else:
             api_key = get_env_var('EMBEDDING_API_KEY') or 'no-api-key-provided'
-            embedding_client = AsyncOpenAI(base_url=base_url, api_key=api_key)
+            try:
+                embedding_client = AsyncOpenAI(base_url=base_url, api_key=api_key)
+            except Exception as e:
+                logger.error(f"Failed to initialize AsyncOpenAI: {e}")
+                embedding_client = None
 
         # Supabase client setup
         supabase = None
         supabase_url = get_env_var("SUPABASE_URL")
         supabase_key = get_env_var("SUPABASE_SERVICE_KEY")
-        if supabase_url and supabase_key:
+        if supabase_url and supabase_key and Client is not None:
             try:
                 supabase = Client(supabase_url, supabase_key)
+                logger.debug(f"Supabase client initialized successfully")
             except Exception as e:
                 logger.error(f"Failed to initialize Supabase: {e}")
+        else:
+            logger.debug("Supabase configuration incomplete or Client not available")
         
         # Neo4j client setup
         neo4j_client = None
@@ -292,7 +433,7 @@ def get_clients() -> Tuple[Any, Optional[Any], Optional[Any]]:
         neo4j_password = get_env_var("NEO4J_PASSWORD")
         neo4j_database = get_env_var("NEO4J_DATABASE") or "neo4j"
         
-        if neo4j_uri and neo4j_user and neo4j_password:
+        if neo4j_uri and neo4j_user and neo4j_password and Neo4jClient is not None:
             try:
                 neo4j_client = Neo4jClient(
                     uri=neo4j_uri,
@@ -303,6 +444,8 @@ def get_clients() -> Tuple[Any, Optional[Any], Optional[Any]]:
                 logger.debug(f"Neo4j client initialized successfully at {neo4j_uri}")
             except Exception as e:
                 logger.error(f"Failed to initialize Neo4j: {e}")
+        else:
+            logger.debug("Neo4j configuration incomplete or Neo4jClient not available")
 
         return embedding_client, supabase, neo4j_client
     
