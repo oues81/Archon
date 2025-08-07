@@ -55,7 +55,7 @@ def final_report():
         
         import archon.llm_provider
         importlib.reload(archon.llm_provider)
-        from archon.llm_provider import llm_provider
+        from archon.llm import llm_provider
         
         print(f"Modèle: {llm_provider.config.primary_model}")
         

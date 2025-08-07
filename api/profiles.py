@@ -90,7 +90,7 @@ async def switch_profile(profile_name: str):
             else:
                 # Méthode 2: Réinitialisation directe du singleton
                 try:
-                    from archon.llm_provider import llm_provider, LLMProvider
+                    from archon.llm import llm_provider, LLMProvider
                     # Créer une nouvelle instance avec la configuration à jour
                     new_provider = LLMProvider()
                     # Remplacer l'instance existante
@@ -98,7 +98,7 @@ async def switch_profile(profile_name: str):
                     logger.info(f"✅ llm_provider réinitialisé avec succès pour le profil {profile_name}")
                 except ImportError:
                     try:
-                        from archon.llm_provider import llm_provider, LLMProvider
+                        from archon.llm import llm_provider, LLMProvider
                         new_provider = LLMProvider()
                         llm_provider.__dict__.update(new_provider.__dict__)
                         logger.info(f"✅ llm_provider réinitialisé avec succès pour le profil {profile_name}")

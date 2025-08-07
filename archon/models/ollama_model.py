@@ -7,18 +7,18 @@ import os
 from datetime import datetime
 import time
 import uuid
+import logging
 
 # Importations compatibles avec pydantic-ai
 from pydantic_ai.models import Model, ModelMessage, ModelSettings, ModelResponse
 from pydantic_ai.usage import Usage
 from pydantic_ai.messages import TextPart
 
-# Ajout pour éviter les problèmes d'importation circulaire
-import sys
-from pathlib import Path
+# Configuration Ollama
+from archon.config.ollama_config import get_ollama_config, update_ollama_config
 
-# Ajout du répertoire parent au path pour permettre les imports
-sys.path.append(str(Path(__file__).parent.parent))
+# Configuration du logger
+logger = logging.getLogger(__name__)
 
 
 class OllamaModel(Model):
@@ -27,7 +27,18 @@ class OllamaModel(Model):
     def __init__(self, model_name: str, base_url: str = None, **kwargs):
         # Initialiser les attributs avant d'appeler le constructeur parent
         self._model_name = model_name
-        self._base_url = base_url or os.getenv("OLLAMA_BASE_URL", "http://host.docker.internal:11434")
+        
+        # Récupérer la configuration Ollama
+        ollama_config = get_ollama_config()
+        
+        # Utiliser l'URL fournie, celle de l'environnement, ou celle détectée automatiquement
+        self._base_url = base_url or os.getenv("OLLAMA_BASE_URL") or ollama_config["base_url"]
+        self._timeout = float(kwargs.get("timeout", ollama_config["timeout"]))
+        self._max_retries = int(kwargs.get("max_retries", ollama_config["max_retries"]))
+        self._verify_ssl = kwargs.get("verify_ssl", ollama_config["verify_ssl"])
+        
+        logger.info(f"Initialisation du modèle Ollama avec l'URL: {self._base_url}")
+        logger.debug(f"Configuration Ollama - Timeout: {self._timeout}s, Max retries: {self._max_retries}")
         self._client = OllamaClient(self._base_url)
         
         # Appeler le constructeur parent sans arguments
@@ -310,9 +321,20 @@ class OllamaModel(Model):
 class OllamaClient:
     """Client asynchrone pour interagir avec l'API Ollama."""
     
-    def __init__(self, base_url: str = "http://host.docker.internal:11434"):
-        self.base_url = base_url.rstrip('/')
+    def __init__(self, base_url: str = None):
+        # Récupérer la configuration Ollama
+        ollama_config = get_ollama_config()
+        
+        # Utiliser l'URL fournie, celle de l'environnement, ou celle détectée automatiquement
+        self.base_url = (base_url or os.getenv("OLLAMA_BASE_URL") or 
+                        ollama_config["base_url"]).rstrip('/')
+        self._timeout = float(ollama_config.get("timeout", 30.0))
+        self._max_retries = int(ollama_config.get("max_retries", 3))
+        self._verify_ssl = bool(ollama_config.get("verify_ssl", False))
         self._session = None
+        
+        logger.info(f"Initialisation du client Ollama avec l'URL: {self.base_url}")
+        logger.debug(f"Configuration - Timeout: {self._timeout}s, Max retries: {self._max_retries}")
     
     async def get_session(self) -> aiohttp.ClientSession:
         """Retourne une session HTTP, en en créant une nouvelle si nécessaire."""
@@ -339,13 +361,58 @@ class OllamaClient:
         if self._session and not self._session.closed:
             await self._session.close()
     
-    async def _make_chat_request(self, session: aiohttp.ClientSession, url: str, payload: dict) -> Dict[str, Any]:
-        """Effectue la requête HTTP vers l'API Ollama."""
-        async with session.post(url, json=payload) as response:
-            response.raise_for_status()
-            if payload.get('stream', False):
-                return await self._handle_streaming_response(response)
-            return await response.json()
+    async def _make_chat_request(self, session: aiohttp.ClientSession, url: str, payload: dict):
+        """Effectue la requête HTTP vers l'API Ollama avec gestion des erreurs améliorée."""
+        last_error = None
+        
+        for attempt in range(self._max_retries + 1):
+            try:
+                logger.debug(f"Tentative {attempt + 1}/{self._max_retries + 1} - Envoi à {url}")
+                
+                timeout = aiohttp.ClientTimeout(total=self._timeout)
+                
+                async with session.post(
+                    url, 
+                    json=payload, 
+                    timeout=timeout,
+                    ssl=None if not self._verify_ssl else True
+                ) as response:
+                    if response.status != 200:
+                        error_text = await response.text()
+                        logger.error(f"Erreur HTTP {response.status} - {error_text}")
+                        
+                        # Si c'est une erreur 404, vérifier l'URL de base
+                        if response.status == 404 and attempt == 0:
+                            # Essayer de détecter automatiquement la bonne URL
+                            from archon.config.ollama_config import detect_ollama_url
+                            new_url = f"{detect_ollama_url()}/api/chat"
+                            if new_url != url:
+                                logger.warning(f"Tentative avec la nouvelle URL: {new_url}")
+                                url = new_url
+                                continue
+                        
+                        raise aiohttp.ClientError(
+                            f"Erreur HTTP {response.status}: {error_text}"
+                        )
+                    
+                    return await response.json()
+                    
+            except asyncio.TimeoutError as e:
+                last_error = TimeoutError(f"La requête a expiré après {self._timeout} secondes")
+                logger.warning(f"Timeout lors de la tentative {attempt + 1}")
+                
+            except aiohttp.ClientError as e:
+                last_error = e
+                logger.error(f"Erreur réseau: {str(e)}")
+                
+            # Attendre avant de réessayer (avec backoff exponentiel)
+            if attempt < self._max_retries:
+                wait_time = min(2 ** attempt, 10)  # Maximum 10 secondes
+                logger.debug(f"Nouvelle tentative dans {wait_time} secondes...")
+                await asyncio.sleep(wait_time)
+        
+        # Si on arrive ici, toutes les tentatives ont échoué
+        raise last_error or Exception("Échec inconnu lors de la requête vers Ollama")
     
     async def chat(
         self,
@@ -353,7 +420,7 @@ class OllamaClient:
         model: str,
         stream: bool = False,
         **kwargs
-    ) -> Dict[str, Any]:
+    ) -> Union[Dict[str, Any], AsyncIterator[Dict[str, Any]]]:
         """
         Effectue une conversation avec un modèle Ollama.
         
@@ -362,45 +429,83 @@ class OllamaClient:
             model: Nom du modèle Ollama à utiliser
             stream: Si True, active le mode streaming
             **kwargs: Arguments supplémentaires pour la requête
-            
+                - temperature: Contrôle le caractère aléatoire (0-1)
+                - top_p: Filtre de noyau (nucleus sampling)
+                - max_tokens: Nombre maximum de tokens à générer
+                - num_ctx: Taille du contexte (en tokens)
+                - num_predict: Nombre maximum de tokens à prédire
+                
         Returns:
-            La réponse du modèle au format JSON
+            La réponse du modèle au format JSON ou un itérateur de chunks en mode streaming
             
         Raises:
             TimeoutError: Si la requête dépasse le délai imparti
             aiohttp.ClientError: En cas d'erreur de requête HTTP
+            RuntimeError: Pour les autres erreurs inattendues
         """
+        # Construire l'URL de l'API
         url = f"{self.base_url}/api/chat"
+        
+        # Préparer les options du modèle
+        options = {
+            "temperature": kwargs.pop("temperature", 0.7),
+            "top_p": kwargs.pop("top_p", 0.9),
+            "num_predict": kwargs.pop("max_tokens", kwargs.pop("num_predict", 2000)),
+            "num_ctx": kwargs.pop("num_ctx", 2048),
+        }
+        
+        # Filtrer les options None
+        options = {k: v for k, v in options.items() if v is not None}
+        
+        # Construire le payload de la requête
         payload = {
             "model": model,
             "messages": messages,
             "stream": stream,
+            "options": options,
             **kwargs
         }
+        
+        logger.debug(f"Envoi de la requête à {url} avec le modèle {model}")
+        logger.debug(f"Options: {options}")
         
         # Obtenir la session HTTP
         session = await self.get_session()
         
+        # Gérer le mode streaming
+        if stream:
+            return self.chat_stream(messages, model, **kwargs)
+            
+        # Mode normal (non-streaming)
         try:
-            # Créer une tâche pour la requête HTTP
+            # Créer une tâche pour la requête HTTP avec un timeout
             request_task = asyncio.create_task(
                 self._make_chat_request(session, url, payload)
             )
             
             # Attendre la fin de la tâche avec un timeout
-            return await asyncio.wait_for(request_task, timeout=300)  # 5 minutes de timeout
+            response = await asyncio.wait_for(request_task, timeout=self._timeout)
+            
+            # Vérifier la réponse
+            if not response or 'message' not in response:
+                logger.error(f"Réponse inattendue de l'API Ollama: {response}")
+                raise RuntimeError("Réponse inattendue de l'API Ollama")
+                
+            return response
             
         except asyncio.TimeoutError:
             # Annuler la tâche en cas de timeout
             if 'request_task' in locals() and not request_task.done():
                 request_task.cancel()
-            raise TimeoutError("La requête a expiré après 5 minutes")
+            raise TimeoutError(f"La requête a expiré après {self._timeout} secondes")
             
         except aiohttp.ClientError as e:
-            raise RuntimeError(f"Erreur lors de la requête à l'API Ollama: {str(e)}")
+            logger.error(f"Erreur client HTTP: {str(e)}")
+            raise RuntimeError(f"Erreur lors de la communication avec l'API Ollama: {str(e)}")
             
         except Exception as e:
-            raise RuntimeError(f"Erreur inattendue: {str(e)}")
+            logger.error(f"Erreur inattendue: {str(e)}", exc_info=True)
+            raise RuntimeError(f"Erreur inattendue lors de l'appel à l'API Ollama: {str(e)}")
     
     async def chat_stream(
         self,
@@ -415,139 +520,183 @@ class OllamaClient:
             messages: Liste des messages de la conversation
             model: Nom du modèle Ollama à utiliser
             **kwargs: Arguments supplémentaires pour la requête
+                - temperature: Contrôle le caractère aléatoire (0-1)
+                - top_p: Filtre de noyau (nucleus sampling)
+                - max_tokens: Nombre maximum de tokens à générer
+                - num_ctx: Taille du contexte (en tokens)
+                - num_predict: Nombre maximum de tokens à prédire
             
         Yields:
-            Des morceaux de la réponse du modèle au fur et à mesure qu'ils sont reçus
+            Des morceaux de la réponse du modèle au format:
+            {
+                "role": "assistant",
+                "content": "contenu du message",
+                "done": False  # True pour le dernier chunk
+            }
             
         Raises:
             TimeoutError: Si la requête dépasse le délai imparti
-            aiohttp.ClientError: En cas d'erreur de requête HTTP
+            RuntimeError: En cas d'erreur de communication ou autre erreur inattendue
         """
+        # Construire l'URL de l'API
         url = f"{self.base_url}/api/chat"
+        
+        # Préparer les options du modèle
+        options = {
+            "temperature": kwargs.pop("temperature", 0.7),
+            "top_p": kwargs.pop("top_p", 0.9),
+            "num_predict": kwargs.pop("max_tokens", kwargs.pop("num_predict", 2000)),
+            "num_ctx": kwargs.pop("num_ctx", 2048),
+        }
+        
+        # Filtrer les options None
+        options = {k: v for k, v in options.items() if v is not None}
+        
+        # Construire le payload de la requête
         payload = {
             "model": model,
             "messages": messages,
-            "stream": True,
+            "stream": True,  # Important pour le streaming
+            "options": options,
             **kwargs
         }
         
+        logger.debug(f"Début du streaming vers {url} avec le modèle {model}")
+        logger.debug(f"Options: {options}")
+        
+        # Obtenir la session HTTP
         session = await self.get_session()
         
-        # Fonction pour gérer le streaming de la réponse
-        async def stream_response():
-            try:
-                async with session.post(url, json=payload) as response:
-                    response.raise_for_status()
-                    
-                    # Lire les données en streaming avec un timeout
-                    start_time = asyncio.get_event_loop().time()
-                    timeout = 300  # 5 minutes en secondes
-                    full_content = ""
-                    
-                    async for line in response.content:
-                        # Vérifier le temps écoulé
-                        elapsed = asyncio.get_event_loop().time() - start_time
-                        if elapsed > timeout:
-                            raise asyncio.TimeoutError("La requête en streaming a expiré après 5 minutes")
-                            
-                        if line:
-                            line = line.decode('utf-8').strip()
-                            if line.startswith('data: '):
-                                try:
-                                    data = json.loads(line[6:])  # Enlève 'data: ' du début
-                                    # Mettre à jour le contenu complet
-                                    if 'message' in data and 'content' in data['message']:
-                                        full_content += data['message']['content']
-                                    
-                                    # Ajouter les informations d'utilisation à chaque chunk
-                                    token_count = len(full_content.split()) if full_content else 0
-                                    data['usage'] = Usage(
-                                        requests=1,
-                                        request_tokens=0,  # Pas d'information sur les tokens du prompt dans le streaming
-                                        response_tokens=token_count,
-                                        total_tokens=token_count
-                                    )
-                                    
-                                    yield data
-                                except json.JSONDecodeError:
-                                    continue
-            except asyncio.CancelledError:
-                raise
-            except Exception as e:
-                print(f"Erreur lors du streaming: {str(e)}")
-                raise
-        
-        # Créer une tâche pour le streaming
-        stream_task = asyncio.create_task(stream_response().__anext__())
-        
         try:
-            # Attendre les résultats avec un timeout global
-            while True:
-                try:
-                    # Utiliser un timeout court pour permettre la vérification périodique
-                    item = await asyncio.wait_for(stream_task, timeout=5)
-                    yield item
-                    # Préparer la prochaine itération
-                    stream_task = asyncio.create_task(stream_response().__anext__())
-                except StopAsyncIteration:
-                    break
-                except asyncio.TimeoutError as e:
-                    # Vérifier si la tâche est terminée avec une erreur
-                    if stream_task.done():
+            # Créer un timeout pour la connexion initiale
+            timeout = aiohttp.ClientTimeout(total=self._timeout)
+            
+            async with session.post(
+                url,
+                json=payload,
+                timeout=timeout,
+                ssl=None if not self._verify_ssl else True
+            ) as response:
+                if response.status != 200:
+                    error_text = await response.text()
+                    logger.error(f"Erreur HTTP {response.status} - {error_text}")
+                    raise RuntimeError(f"Erreur HTTP {response.status}: {error_text}")
+                
+                # Lire le flux de réponse ligne par ligne
+                buffer = ""
+                async for chunk in response.content.iter_chunked(1024):
+                    # Décoder le chunk en texte
+                    chunk_text = chunk.decode('utf-8')
+                    buffer += chunk_text
+                    
+                    # Traiter toutes les lignes complètes dans le buffer
+                    while "\n" in buffer:
+                        line, buffer = buffer.split("\n", 1)
+                        line = line.strip()
+                        if not line:
+                            continue
+                            
                         try:
-                            await stream_task  # Pour lever l'erreur si elle existe
-                        except StopAsyncIteration:
-                            break
+                            # Décoder la ligne JSON
+                            data = json.loads(line)
+                            
+                            # Vérifier si c'est un chunk de données valide
+                            if 'message' in data and 'content' in data['message']:
+                                yield {
+                                    'role': 'assistant',
+                                    'content': data['message']['content'],
+                                    'done': data.get('done', False)
+                                }
+                            
+                            # Si c'est le dernier chunk, on sort de la boucle
+                            if data.get('done', False):
+                                return
+                                
+                        except json.JSONDecodeError as e:
+                            logger.warning(f"Erreur de décodage JSON: {line}")
+                            continue
                         except Exception as e:
-                            raise
-                    # Sinon, continuer à attendre
-                    continue
-        except asyncio.CancelledError:
-            # Annuler la tâche en cours si elle existe
-            if not stream_task.done():
-                stream_task.cancel()
-                try:
-                    await stream_task
-                except (asyncio.CancelledError, StopAsyncIteration):
-                    pass
-            raise
-        finally:
-            # Nettoyer la tâche si elle existe toujours
-            if not stream_task.done():
-                stream_task.cancel()
-                try:
-                    await stream_task
-                except (asyncio.CancelledError, StopAsyncIteration):
-                    pass
+                            logger.error(f"Erreur lors du traitement du chunk: {str(e)}", exc_info=True)
+                            continue
+                            
+        except asyncio.TimeoutError:
+            logger.error(f"La requête a dépassé le timeout de {self._timeout} secondes")
+            raise TimeoutError(f"La requête a expiré après {self._timeout} secondes")
+            
+        except aiohttp.ClientError as e:
+            logger.error(f"Erreur client HTTP: {str(e)}")
+            raise RuntimeError(f"Erreur lors de la communication avec l'API Ollama: {str(e)}")
+            
+        except Exception as e:
+            logger.error(f"Erreur inattendue lors du streaming: {str(e)}", exc_info=True)
+            raise RuntimeError(f"Erreur inattendue lors du streaming: {str(e)}")
     
     async def _handle_streaming_response(self, response) -> Dict[str, Any]:
-        """Traite une réponse en streaming et renvoie un objet de réponse unifié."""
+        """
+        Traite une réponse en streaming et renvoie un objet de réponse unifié.
+        
+        Args:
+            response: La réponse HTTP de l'API Ollama
+            
+        Returns:
+            Un dictionnaire contenant la réponse complète du modèle et les métadonnées
+            
+        Raises:
+            RuntimeError: Si une erreur survient lors du traitement de la réponse
+        """
         full_content = ""
-        async for line in response.content:
-            if line:
-                line = line.decode('utf-8').strip()
-                if line.startswith('data: '):
+        model_name = getattr(self, 'model_name', "")
+        
+        try:
+            # Lire le contenu de la réponse
+            buffer = ""
+            async for chunk in response.content.iter_chunked(1024):
+                # Décoder le chunk en texte
+                chunk_text = chunk.decode('utf-8')
+                buffer += chunk_text
+                
+                # Traiter toutes les lignes complètes dans le buffer
+                while "\n" in buffer:
+                    line, buffer = buffer.split("\n", 1)
+                    line = line.strip()
+                    if not line:
+                        continue
+                        
                     try:
-                        data = json.loads(line[6:])  # Enlève 'data: ' du début
+                        # Décoder la ligne JSON
+                        data = json.loads(line)
+                        
+                        # Extraire le contenu du message si disponible
                         if 'message' in data and 'content' in data['message']:
                             full_content += data['message']['content']
-                    except json.JSONDecodeError:
+                            
+                        # Mettre à jour le nom du modèle s'il est fourni
+                        if 'model' in data and not model_name:
+                            model_name = data['model']
+                            
+                    except json.JSONDecodeError as e:
+                        logger.warning(f"Erreur de décodage JSON: {line}")
                         continue
+                        
+        except Exception as e:
+            logger.error(f"Erreur lors de la lecture de la réponse: {str(e)}", exc_info=True)
+            raise RuntimeError(f"Erreur lors du traitement de la réponse: {str(e)}")
         
         # Calculer le nombre de tokens (estimation approximative)
         token_count = len(full_content.split()) if full_content else 0
         
+        # Retourner la réponse unifiée
         return {
-            "model": self.model_name if hasattr(self, 'model_name') else "",
+            "model": model_name,
             "message": {
                 "role": "assistant",
                 "content": full_content
             },
-            "usage": Usage(
-                requests=1,
-                request_tokens=token_count,  # Estimation
-                response_tokens=token_count,
-                total_tokens=token_count * 2
-            ),
+            "usage": {
+                "requests": 1,
+                "request_tokens": 0,  # Impossible de connaître le nombre exact sans compter les tokens
+                "response_tokens": token_count,
+                "total_tokens": token_count
+            },
             "done": True
         }

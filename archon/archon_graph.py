@@ -280,6 +280,7 @@ def run_async_in_sync(coro):
 
 async def define_scope_with_reasoner(state: AgentState, config: dict) -> AgentState:
     """Defines the project scope using a reasoner agent based on the active profile."""
+    logger.info("🚨 DEBUG: ENTERING define_scope_with_reasoner function")
     logger.info("---STEP: Defining scope with reasoner agent---")
     try:
         # Ensure required state keys exist
@@ -402,6 +403,21 @@ async def coder_agent(state: AgentState, config: dict) -> AgentState:
         state.setdefault('generated_code', '')
         state.setdefault('scope', state.get('scope', ''))
         state.setdefault('advisor_output', state.get('advisor_output', ''))
+
+        # Validate inputs
+        if not state['scope'] or len(state['scope'].split()) < 3:
+            error_msg = "Scope is too short or undefined. Cannot generate code."
+            logger.warning(f"⚠️ CODER - {error_msg}")
+            state['error'] = error_msg
+            state['generated_code'] = f"Error: {error_msg}"
+            return state
+
+        if not state['advisor_output'] or len(state['advisor_output'].split()) < 3:
+            error_msg = "Advisor output is too short or undefined. Cannot generate code."
+            logger.warning(f"⚠️ CODER - {error_msg}")
+            state['error'] = error_msg
+            state['generated_code'] = f"Error: {error_msg}"
+            return state
         
         # Get LLM configuration
         llm_config = config.get("configurable", {}).get("llm_config", {})
@@ -532,10 +548,7 @@ def get_agentic_flow():
             
             # Compile the graph
             agentic_flow = builder.compile(
-                checkpointer=memory,
-                # Add interrupt handling for better debugging
-                interrupt_before=["define_scope_with_reasoner", "advisor_with_examples", "coder_agent"],
-                interrupt_after=["define_scope_with_reasoner", "advisor_with_examples"]
+                checkpointer=memory
             )
             
             logger.info("✅ Agentic flow initialized successfully")

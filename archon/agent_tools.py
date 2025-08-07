@@ -5,7 +5,7 @@ import sys
 import os
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from utils.utils import get_env_var
+from archon.utils.utils import get_env_var
 
 # Définition du modèle d'embedding et de ses dimensions
 # Les modèles OpenAI ont des dimensions différentes:

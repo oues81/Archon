@@ -11,28 +11,10 @@ import sys
 import os
 import asyncio
 import logging
+import httpx
 
 # Add project root to Python path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
-# Import with correct path
-try:
-    # First try direct import
-    from archon_graph import get_agentic_flow
-    agentic_flow = get_agentic_flow()
-except ImportError:
-    try:
-        # Then try with namespace
-        from archon.archon_graph import get_agentic_flow
-        agentic_flow = get_agentic_flow()
-    except ImportError:
-        # Finally try with full path as last resort
-        import sys
-        logger = logging.getLogger(__name__)
-        logger.warning("Fixing import paths for archon_graph")
-        sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
-        from archon_graph import get_agentic_flow
-        agentic_flow = get_agentic_flow()
 
 # Setup logger
 logging.basicConfig(level=logging.INFO)
@@ -44,25 +26,23 @@ def get_thread_id():
     return str(uuid.uuid4())
 
 async def run_agent_with_streaming(user_input: str, thread_id: str):
-    """Run the agent and stream the output chunks."""
+    """Run the agent by calling the backend API and stream the output chunks."""
+    api_url = "http://localhost:8110/invoke"
+    payload = {
+        "message": user_input,
+        "thread_id": thread_id,
+        "is_first_message": not st.session_state.get("messages")
+    }
     try:
-        if agentic_flow is None:
-            error_msg = "Agentic flow is not initialized. Please check the configuration."
-            logger.error(error_msg)
-            yield {"error": error_msg}
-            return
-            
-        config = {"configurable": {"thread_id": thread_id}}
-        # Use astream to get an async generator of the graph's state updates
-        stream = agentic_flow.astream(
-            {"latest_user_message": user_input},
-            config,
-            stream_mode="values"  # Yields the full state dict at each step
-        )
-        async for state in stream:
-            yield state
-    except Exception as e:
+        async with httpx.AsyncClient(timeout=300) as client:
+            response = await client.post(api_url, json=payload)
+            response.raise_for_status()  # Raise an exception for bad status codes
+            yield response.json()
+    except httpx.RequestError as e:
         logger.error(f"Error communicating with the backend: {e}", exc_info=True)
+        yield {"error": f"Could not connect to the agent service at {api_url}. Is it running?"}
+    except Exception as e:
+        logger.error(f"An unexpected error occurred: {e}", exc_info=True)
         yield {"error": str(e)}
 
 async def chat_tab():
@@ -102,18 +82,24 @@ async def chat_tab():
 
             with st.spinner("Archon is thinking..."):
                 try:
-                    # Stream the agent's response
-                    async for state in run_agent_with_streaming(user_input, thread_id):
-                        logger.info(f"Received state update: {list(state.keys())}")
-                        if "generated_code" in state and state["generated_code"]:
-                            final_code = state["generated_code"]
+                    # Call the agent and get the response
+                    response_data = None
+                    async for data in run_agent_with_streaming(user_input, thread_id):
+                        response_data = data
 
-                    if final_code:
-                        # Ajout d'un retour à la ligne avant et après le bloc de code
-                        full_response = f"\n```python\n{final_code}\n```\n"
-                        response_placeholder.markdown(full_response)
+                    if response_data and not response_data.get("error"):
+                        # Assuming the response contains the generated code in a 'response' key
+                        # based on API_REFERENCE.md
+                        final_code = response_data.get("response", "")
+                        if final_code:
+                            full_response = f"\n```python\n{final_code}\n```\n"
+                            response_placeholder.markdown(full_response)
+                        else:
+                            full_response = "\nSorry, I couldn't generate the code. Please try again.\n"
+                            response_placeholder.markdown(full_response)
                     else:
-                        full_response = "\nSorry, I couldn't generate the code. Please try again.\n"
+                        error_message = response_data.get("error", "An unknown error occurred.")
+                        full_response = f"An error occurred: {error_message}"
                         response_placeholder.markdown(full_response)
 
                 except Exception as e:

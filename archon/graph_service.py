@@ -42,7 +42,7 @@ except ImportError:
 
 from archon.archon_graph import get_agentic_flow
 from archon.utils.utils import write_to_log
-from archon.archon.llm import LLMProvider
+from archon.llm import get_llm_provider
 
 try:
     from langgraph.types import Command
@@ -80,15 +80,18 @@ async def invoke_agent(request: InvokeRequest):
     apply a configuration profile for the duration of the request.
     """
     try:
-        # Initialize LLM provider with the requested profile or current profile
-        provider = LLMProvider(profile_name=request.profile_name)
+        # Get the singleton instance of the LLM provider
+        provider = get_llm_provider()
+
+        # Reload the provider with the requested profile if specified
+        if request.profile_name:
+            if not provider.reload_profile(request.profile_name):
+                raise ValueError(f"Failed to load configuration for profile '{request.profile_name}'")
+
         if not provider.config:
-            # Get the actual profile name for error message
-            from archon.utils.utils import get_current_profile
-            actual_profile = request.profile_name or get_current_profile()
-            raise ValueError(f"Failed to load configuration for profile '{actual_profile}'")
-        # Correction : Construire le dictionnaire de configuration en accédant directement
-        # aux attributs de l'objet provider.config pour garantir la correspondance des clés.
+            raise ValueError("LLM provider configuration is not loaded.")
+
+        # Build the configuration dictionary from the provider's config
         llm_config = {
             'LLM_PROVIDER': provider.config.provider,
             'REASONER_MODEL': provider.config.reasoner_model,
@@ -97,8 +100,8 @@ async def invoke_agent(request: InvokeRequest):
             'ADVISOR_MODEL': provider.config.advisor_model,
             'OLLAMA_BASE_URL': provider.config.base_url
         }
-        
-        # Fix: Add the API key with the expected name for compatibility with archon_graph.py
+
+        # Add the API key with the expected name for compatibility
         if provider.config.api_key:
             llm_config['LLM_API_KEY'] = provider.config.api_key
             if provider.config.provider == 'openrouter':
@@ -123,49 +126,69 @@ async def invoke_agent(request: InvokeRequest):
     final_state = None
     
     # This is the original, correct logic for handling the agent state
-    if request.is_first_message:
-        user_message = {
-            "kind": "request",
-            "parts": [{
-                "part_kind": "user-prompt",
-                "content": request.message,
-                "timestamp": datetime.utcnow().isoformat()
-            }]
-        }
-        message_bytes = json.dumps([user_message]).encode('utf-8')
-        initial_state = {
-            "latest_user_message": request.message,
-            "next_user_message": "",
-            "messages": [message_bytes],
-            "scope": "", "advisor_output": "", "file_list": [],
-            "refined_prompt": "", "refined_tools": "", "refined_agent": ""
-        }
-        input_for_flow = initial_state
-    else:
-        # For subsequent messages, we might only need to pass the new message
-        input_for_flow = {"next_user_message": request.message}
+    # Prepare the initial state for the agentic flow
+    # The key is to provide the user's message as the 'latest_user_message'
+    # and ensure the scope is initialized with the user's request
+    initial_state = {
+        "latest_user_message": request.message,
+        "next_user_message": "",
+        "messages": [{
+            "role": "user",
+            "content": request.message
+        }],
+        "scope": request.message,  # Pass the user's message as the initial scope
+        "advisor_output": "",
+        "file_list": [],
+        "refined_prompt": "",
+        "refined_tools": "",
+        "refined_agent": "",
+        "generated_code": None,
+        "error": None
+    }
+    input_for_flow = initial_state
 
     try:
         flow = get_agentic_flow()
+        logger.info(f"🚨 DEBUG: About to start flow.astream with input: {input_for_flow}")
+        logger.info(f"🚨 DEBUG: Config: {config}")
+        
+        iteration_count = 0
         async for state_update in flow.astream(input_for_flow, config, stream_mode="values"):
+            iteration_count += 1
+            logger.info(f"🚨 DEBUG: Iteration {iteration_count}, state_update: {state_update}")
             final_state = state_update
+        
+        logger.info(f"🚨 DEBUG: Flow completed after {iteration_count} iterations")
 
         if final_state:
-            if final_state.get('generated_code'):
-                result_obj = final_state['generated_code']
-                response = result_obj.data if hasattr(result_obj, 'data') and result_obj.data else str(result_obj)
-            elif final_state.get('advisor_output'):
-                response = final_state['advisor_output']
-            elif final_state.get('scope'):
-                response = final_state['scope']
+            generated_content = final_state.get("generated_code")
+
+            # Case 1: Content is an error message from the agent
+            if isinstance(generated_content, str) and generated_content.strip().startswith("Error:"):
+                logger.warning(f"Agent returned an error: {generated_content}")
+                response = generated_content
+            # Case 2: Content is valid code
+            elif generated_content:
+                response = generated_content
+            # Case 3: No content was generated, check for an error in the state
             else:
-                logger.warning("No generated content found in final state.")
-        
+                error_message = final_state.get("error")
+                if error_message:
+                    logger.warning(f"Agent finished with an error state: {error_message}")
+                    response = f"Error: {error_message}"
+                else:
+                    logger.warning("No generated content and no error message in final state.")
+                    response = "Error: The agent finished its work but did not produce any output."
+        else:
+            logger.error("Agent workflow finished without a final state.")
+            response = "Error: The agent workflow failed to complete."
+
         return {"response": response}
 
     except Exception as e:
         logger.error(f"Exception in invoke_agent: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
+
 @app.post('/test')
 async def test_provider(request: InvokeRequest):
     """Endpoint dédié aux tests de fournisseurs"""

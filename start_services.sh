@@ -33,7 +33,7 @@ if [ -f "$ENV_VARS_FILE" ]; then
     CURRENT_PROFILE=$(jq -r '.current_profile' "$ENV_VARS_FILE")
 
     if [ -n "$CURRENT_PROFILE" ] && [ "$CURRENT_PROFILE" != "null" ]; then
-        echo "Profil actif trouvé : $CURRENT_PROFILE"
+        echo "Successfully loaded profile: $CURRENT_PROFILE"
 
         # Create a temporary file to hold the export commands
         PROFILE_VARS_FILE=$(mktemp)
