@@ -226,6 +226,13 @@ def is_allowed_url(url: str) -> bool:
         "https://github.com/coleam00/context-engineering-intro",
         "https://github.com/coleam00/context-engineering-intro/",
         "https://raw.githubusercontent.com/coleam00/context-engineering-intro/",
+        # High-signal prompt/context engineering guides
+        "https://platform.openai.com/docs/guides/prompt-engineering",
+        "https://docs.anthropic.com/",
+        # Vector DB & AI pipelines (for indexing context)
+        "https://supabase.com/docs/guides/ai",
+        # LlamaIndex conceptual docs
+        "https://docs.llamaindex.ai/",
     ]
     return any(url.startswith(p) for p in allow)
 
@@ -258,6 +265,13 @@ def get_windsurf_urls() -> List[str]:
         "https://github.com/coleam00/context-engineering-intro",
         "https://github.com/coleam00/context-engineering-intro/blob/main/README.md",
         "https://github.com/coleam00/context-engineering-intro/blob/main/INITIAL_EXAMPLE.md",
+        # Broader prompt engineering & context resources
+        "https://platform.openai.com/docs/guides/prompt-engineering",
+        "https://docs.anthropic.com/en/docs/build-with-claude/prompt-engineering",
+        # Vector DB usage for AI assistants
+        "https://supabase.com/docs/guides/ai",
+        # LlamaIndex concepts for context mgmt
+        "https://docs.llamaindex.ai/en/stable/getting_started/concepts.html",
     ]
 
     # Deduplicate, enforce allowlist
@@ -373,7 +387,10 @@ def insert_chunk_sync(chunk: ProcessedChunk) -> bool:
 # ----------------------------- Crawl orchestration --------------------------
 
 class CrawlProgressTracker:
-    """Minimal tracker compatible with existing UI expectations."""
+    """Tracker de progression aligné avec l'interface utilisée dans l'UI Streamlit.
+
+    Fournit get_status(), logs, is_running, durées, etc., similaire au tracker MCP.
+    """
     def __init__(self, callback: Optional[Callable[[Dict[str, Any]], None]] = None):
         self.callback = callback
         self.urls_found = 0
@@ -381,17 +398,15 @@ class CrawlProgressTracker:
         self.urls_succeeded = 0
         self.urls_failed = 0
         self.chunks_stored = 0
-        self._active = False
+        self.logs: List[str] = []
+        self.is_running: bool = False
+        self.start_time: Optional[float] = None
+        self.end_time: Optional[float] = None
 
     def _emit(self, event: str, message: str):
         if self.callback:
             try:
-                self.callback({
-                    "event": event,
-                    "message": message,
-                    "stats": self.as_dict(),
-                    "ts": time.time(),
-                })
+                self.callback(self.get_status())
             except Exception:
                 pass
 
@@ -402,20 +417,44 @@ class CrawlProgressTracker:
             "urls_succeeded": self.urls_succeeded,
             "urls_failed": self.urls_failed,
             "chunks_stored": self.chunks_stored,
-            "active": self._active,
+            "active": self.is_running,
+        }
+
+    def get_status(self) -> Dict[str, Any]:
+        duration = None
+        if self.start_time is not None:
+            end = self.end_time if self.end_time is not None else time.time()
+            duration = end - self.start_time
+        success_rate = (self.urls_succeeded / self.urls_processed * 100) if self.urls_processed else 0.0
+        progress = (self.urls_processed / self.urls_found * 100) if self.urls_found else 0.0
+        return {
+            "is_running": self.is_running,
+            "urls_found": self.urls_found,
+            "urls_processed": self.urls_processed,
+            "urls_succeeded": self.urls_succeeded,
+            "urls_failed": self.urls_failed,
+            "chunks_stored": self.chunks_stored,
+            "progress": progress,
+            "success_rate": success_rate,
+            "duration_seconds": duration,
+            "logs": self.logs.copy(),
         }
 
     def start(self):
-        self._active = True
-        self._emit("start", "Windsurf workflows crawl started")
+        self.is_running = True
+        self.start_time = time.time()
+        self.log("Windsurf workflows crawl started")
 
     def log(self, message: str):
         logger.info(message)
+        ts = time.strftime("%H:%M:%S", time.localtime())
+        self.logs.append(f"[{ts}] {message}")
         self._emit("log", message)
 
     def complete(self):
-        self._active = False
-        self._emit("complete", "Crawl complete")
+        self.is_running = False
+        self.end_time = time.time()
+        self.log("Crawl complete")
 
 
 def process_and_store_document_sync(url: str, content: str, tracker: Optional[CrawlProgressTracker] = None) -> int:
