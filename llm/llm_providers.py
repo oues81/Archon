@@ -82,9 +82,11 @@ class LLMConfig:
         base_url = profile_data.get('BASE_URL')
         
         if provider == 'ollama' and 'OLLAMA_BASE_URL' in profile_data:
-            base_url = profile_data['OLLAMA_BASE_URL']
-            if base_url and not base_url.endswith('/v1'):
-                base_url = base_url.rstrip('/') + '/v1'
+            # Normalize Ollama base URL: no '/v1' prefix, just host:port
+            base_url = (profile_data['OLLAMA_BASE_URL'] or '').rstrip('/')
+            if base_url.endswith('/v1'):
+                # Remove trailing '/v1' if present
+                base_url = base_url[:-3].rstrip('/')
 
         # Strict validation: require explicit models for each agent
         reasoner_model = profile_data.get('REASONER_MODEL')

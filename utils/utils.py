@@ -17,26 +17,29 @@ try:
 except Exception:
     st = None
 
-# Imports nécessaires pour la fonction get_clients
+# Imports nécessaires pour la fonction get_clients (optionnels, chargés paresseusement)
 try:
-    from openai import AsyncOpenAI
-    from supabase import Client
-    try:
-        from archon.utils.neo4j_client import Neo4jClient
-    except ImportError:
-        # Fallback si Neo4jClient n'existe pas
-        class Neo4jClient:
-            def __init__(self, uri, username, password, database):
-                self.uri = uri
-                self.username = username
-                self.password = password
-                self.database = database
-            def close(self):
-                pass
-except ImportError as e:
-    logging.warning(f"Import error for client libraries: {e}")
+    from openai import AsyncOpenAI  # Peut être absent selon l'environnement
+except ImportError:
     AsyncOpenAI = None
+
+try:
+    from supabase import Client  # Peut être absent
+except ImportError:
     Client = None
+
+try:
+    from archon.utils.neo4j_client import Neo4jClient
+except ImportError:
+    # Fallback si Neo4jClient n'existe pas
+    class Neo4jClient:
+        def __init__(self, uri, username, password, database):
+            self.uri = uri
+            self.username = username
+            self.password = password
+            self.database = database
+        def close(self):
+            pass
 
 logger = logging.getLogger(__name__)
 
@@ -166,14 +169,17 @@ def configure_logging() -> dict:
     return summary
 
 def get_env_vars_file_path() -> str:
-    """Return the single source-of-truth path for env_vars.json.
+    """Return the path for env_vars.json compatible with host and containers.
 
-    Enforced path as requested: /home/oues/archon/src/archon/workbench/env_vars.json
+    Resolution order:
+    1) ARCHON_CONFIG env var if set
+    2) Module-relative default: <repo>/src/archon/workbench/env_vars.json
     """
-    enforced_path = "/home/oues/archon/src/archon/workbench/env_vars.json"
-    if not os.path.exists(enforced_path):
-        logger.warning(f"env_vars.json not found at enforced path: {enforced_path}")
-    return enforced_path
+    cfg = os.environ.get("ARCHON_CONFIG")
+    if cfg:
+        return cfg
+    default_path = Path(__file__).parent.parent / 'workbench' / 'env_vars.json'
+    return str(default_path)
 
 def load_env_vars() -> Dict[str, Any]:
     """Load environment variables from env_vars.json"""
@@ -496,31 +502,43 @@ def get_clients() -> Tuple[Any, Optional[Any], Optional[Any]]:
         Tuple contenant (embedding_client, supabase_client, neo4j_client)
     """
     try:
-        # Vérifier la disponibilité des bibliothèques
-        if AsyncOpenAI is None:
-            logger.warning("AsyncOpenAI non disponible")
-            return None, None, None
-            
-        # LLM client setup
+        # Détermination du provider d'embedding
         embedding_client = None
         provider = get_env_var('EMBEDDING_PROVIDER') or 'OpenAI'
         base_url = get_env_var('EMBEDDING_BASE_URL') or 'https://api.openai.com/v1'
-        
+
+        # Import paresseux d'OpenAI si requis par le provider
+        _need_openai = str(provider).strip().lower() in {"openai", "ollama"}
+        _AsyncOpenAI = AsyncOpenAI
+        if _need_openai and _AsyncOpenAI is None:
+            try:
+                from openai import AsyncOpenAI as _AO
+                _AsyncOpenAI = _AO
+            except ImportError:
+                logger.debug("openai package not installed; skipping AsyncOpenAI client init")
+
         # For Ollama, use a dummy API key if not provided and ensure the base URL is correct
         if provider == "Ollama":
             api_key = get_env_var('EMBEDDING_API_KEY') or 'ollama'
-            try:
-                embedding_client = AsyncOpenAI(base_url=base_url, api_key=api_key)
-            except Exception as e:
-                logger.error(f"Failed to initialize AsyncOpenAI: {e}")
-                embedding_client = None
+            if _AsyncOpenAI is None:
+                logger.debug("AsyncOpenAI unavailable for Ollama-compatible client; embedding_client=None")
+            else:
+                try:
+                    embedding_client = _AsyncOpenAI(base_url=base_url, api_key=api_key)
+                except Exception as e:
+                    logger.error(f"Failed to initialize AsyncOpenAI: {e}")
+                    embedding_client = None
         else:
             api_key = get_env_var('EMBEDDING_API_KEY') or 'no-api-key-provided'
-            try:
-                embedding_client = AsyncOpenAI(base_url=base_url, api_key=api_key)
-            except Exception as e:
-                logger.error(f"Failed to initialize AsyncOpenAI: {e}")
-                embedding_client = None
+            if _need_openai and _AsyncOpenAI is not None:
+                try:
+                    embedding_client = _AsyncOpenAI(base_url=base_url, api_key=api_key)
+                except Exception as e:
+                    logger.error(f"Failed to initialize AsyncOpenAI: {e}")
+                    embedding_client = None
+            else:
+                # Provider not requiring OpenAI client or package not present
+                logger.debug("Skipping AsyncOpenAI init: provider doesn't require it or package missing")
 
         # Supabase client setup
         supabase = None

@@ -11,10 +11,16 @@ import time
 import asyncio
 from functools import wraps
 from sse_starlette.sse import EventSourceResponse
+import requests
+import uuid
 
 # Profile and provider utilities
 try:
-    from archon.utils.utils import get_all_profiles, get_current_profile
+    from archon.utils.utils import (
+        get_all_profiles,
+        get_current_profile,
+        set_current_profile,
+    )
     from archon.llm import get_llm_provider
     _profiles_available = True
 except Exception as _e:
@@ -38,6 +44,39 @@ app = FastAPI(
     description="MCP Server for Archon AI Agent Builder",
     version="1.0.0"
 )
+
+# File-wide async queue for MCP SSE responses
+_mcp_response_queue: "asyncio.Queue[Dict[str, Any]]" = asyncio.Queue()
+
+# Conversation state and graph endpoint (aligns with main.py behavior)
+active_threads: Dict[str, List[str]] = {}
+GRAPH_SERVICE_URL = os.getenv("GRAPH_SERVICE_URL", "http://archon:8110")
+
+def _make_request(thread_id: str, user_input: str, config: dict, profile_name: Optional[str] = None) -> Dict[str, Any]:
+    """Synchronous request to the graph service (mirrors main.py behavior)."""
+    try:
+        payload: Dict[str, Any] = {
+            "message": user_input,
+            "thread_id": thread_id,
+            "is_first_message": not active_threads.get(thread_id, []),
+            "config": config,
+        }
+        if profile_name is not None:
+            payload["profile_name"] = profile_name
+
+        response = requests.post(
+            f"{GRAPH_SERVICE_URL}/invoke",
+            json=payload,
+            timeout=300,
+        )
+        response.raise_for_status()
+        return response.json()
+    except requests.exceptions.Timeout:
+        logger.error(f"Request timed out for thread {thread_id}")
+        raise TimeoutError("Request to graph service timed out. The operation took longer than expected.")
+    except requests.exceptions.RequestException as e:
+        logger.error(f"Request failed for thread {thread_id}: {e}")
+        raise
 
 # Configuration CORS
 app.add_middleware(
@@ -102,18 +141,64 @@ async def list_resources():
 async def event_stream():
     async def event_generator():
         try:
+            # Emit immediate ready event to avoid client timeouts
+            yield {
+                "event": "ready",
+                "data": json.dumps({"status": "ready", "timestamp": time.time()})
+            }
             while True:
-                # Envoyer un événement de pulsation toutes les 30 secondes
-                yield {
-                    "event": "heartbeat",
-                    "data": json.dumps({"status": "alive", "timestamp": time.time()})
-                }
-                await asyncio.sleep(30)
+                # Stream any queued MCP responses first
+                try:
+                    item = await asyncio.wait_for(_mcp_response_queue.get(), timeout=5)
+                    yield {
+                        "event": "message",
+                        "data": json.dumps(item)
+                    }
+                except asyncio.TimeoutError:
+                    # Heartbeat every ~5s if no messages
+                    yield {
+                        "event": "heartbeat",
+                        "data": json.dumps({"status": "alive", "timestamp": time.time()})
+                    }
         except asyncio.CancelledError:
             logger.info("SSE connection closed by client")
         except Exception as e:
             logger.error(f"Error in SSE stream: {str(e)}")
     
+    return EventSourceResponse(event_generator())
+
+# Alias SSE attendu par certains clients (ex: Windsurf) sur /sse
+@app.head("/sse")
+async def sse_head():
+    # Permettre aux clients de sonder l'existence de l'endpoint SSE
+    return Response(status_code=200)
+
+@app.get("/sse")
+async def sse_stream():
+    async def event_generator():
+        try:
+            # Emit immediate ready event to avoid client timeouts
+            yield {
+                "event": "ready",
+                "data": json.dumps({"status": "ready", "timestamp": time.time()})
+            }
+            while True:
+                try:
+                    item = await asyncio.wait_for(_mcp_response_queue.get(), timeout=5)
+                    yield {
+                        "event": "message",
+                        "data": json.dumps(item)
+                    }
+                except asyncio.TimeoutError:
+                    yield {
+                        "event": "heartbeat",
+                        "data": json.dumps({"status": "alive", "timestamp": time.time()})
+                    }
+        except asyncio.CancelledError:
+            logger.info("SSE connection closed by client")
+        except Exception as e:
+            logger.error(f"Error in SSE stream: {str(e)}")
+
     return EventSourceResponse(event_generator())
 
 # --- Profile management HTTP endpoints ---
@@ -149,6 +234,11 @@ async def http_profile_select(body: _SelectBody):
         ok = provider.reload_profile(body.profile_name)
         if not ok:
             raise HTTPException(status_code=400, detail=f"Invalid or unavailable profile: {body.profile_name}")
+        # Persister le profil actif pour que /profiles/active le reflète
+        try:
+            set_current_profile(body.profile_name)
+        except Exception as _e:
+            logger.warning(f"Selected profile reloaded but failed to persist active profile: {_e}")
         return {"status": "success", "active_profile": body.profile_name}
     except HTTPException:
         raise
@@ -156,84 +246,239 @@ async def http_profile_select(body: _SelectBody):
         logger.error(f"Error selecting profile: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
-# Endpoint pour la communication MCP
+def _process_mcp_payload(data: Dict[str, Any]) -> Dict[str, Any]:
+    # Vérification de la requête
+    if not isinstance(data, dict):
+        raise HTTPException(status_code=400, detail="Invalid request format")
+
+    # Traitement de la requête
+    response: Dict[str, Any] = {
+        "jsonrpc": "2.0",
+        "id": data.get("id")
+    }
+
+    method = data.get("method", "")
+
+    if method == "initialize":
+        # Advertise tool capability so clients will request tool listing
+        response["result"] = {
+            "capabilities": {
+                "workspace": {"workspaceFolders": True},
+                "textDocument": {
+                    "synchronization": {"dynamicRegistration": True},
+                    "completion": {"dynamicRegistration": True}
+                },
+                # Non-standard hints commonly used by MCP clients
+                "tools": {"listChanged": True, "supportsListing": True, "supportsCalling": True},
+            },
+            "serverInfo": {
+                "name": "Archon MCP Server",
+                "version": "1.0.0"
+            }
+        }
+    elif method == "initialized":
+        response["result"] = {}
+    elif method == "list_resources":
+        response["result"] = {
+            "resources": [
+                {
+                    "name": "archon",
+                    "description": "Archon AI Agent Builder",
+                    "version": "1.0.0"
+                }
+            ]
+        }
+    elif method == "list_profiles":
+        if not _profiles_available:
+            response["error"] = {"code": -32001, "message": "Profile utilities unavailable"}
+        else:
+            response["result"] = {"profiles": get_all_profiles()}
+    elif method == "get_active_profile":
+        if not _profiles_available:
+            response["error"] = {"code": -32001, "message": "Profile utilities unavailable"}
+        else:
+            response["result"] = {"active_profile": get_current_profile()}
+    elif method == "set_profile":
+        if not _profiles_available:
+            response["error"] = {"code": -32001, "message": "Profile utilities unavailable"}
+        else:
+            params = data.get("params") or {}
+            pname = params.get("profile_name") if isinstance(params, dict) else None
+            if not pname:
+                response["error"] = {"code": -32602, "message": "Missing 'profile_name'"}
+            else:
+                provider = get_llm_provider()
+                ok = provider.reload_profile(pname)
+                if not ok:
+                    response["error"] = {"code": -32002, "message": f"Invalid or unavailable profile: {pname}"}
+                else:
+                    response["result"] = {"status": "success", "active_profile": pname}
+    # Tools discovery (support common aliases)
+    elif method in {"list_tools", "listTools", "tools/list"}:
+        logger.info("Handling tools list request")
+        tools = [
+            {
+                "name": "ping",
+                "description": "Health check tool that returns pong.",
+                "inputSchema": {"type": "object", "properties": {}, "additionalProperties": False},
+            },
+            {
+                "name": "set_profile",
+                "description": "Set active Archon profile.",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {"profile_name": {"type": "string"}},
+                    "required": ["profile_name"],
+                    "additionalProperties": False,
+                },
+            },
+            {
+                "name": "create_thread",
+                "description": "Create a new Archon conversation thread and return its ID.",
+                "inputSchema": {"type": "object", "properties": {}, "additionalProperties": False},
+            },
+            {
+                "name": "run_agent",
+                "description": "Run the Archon agent with user input in a given thread.",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "thread_id": {"type": "string"},
+                        "user_input": {"type": "string"},
+                        "profile_name": {"type": "string"},
+                    },
+                    "required": ["thread_id", "user_input"],
+                    "additionalProperties": False,
+                },
+            },
+            {
+                "name": "list_profiles",
+                "description": "List available Archon profiles.",
+                "inputSchema": {"type": "object", "properties": {}, "additionalProperties": False},
+            },
+            {
+                "name": "get_active_profile",
+                "description": "Get the currently active Archon profile.",
+                "inputSchema": {"type": "object", "properties": {}, "additionalProperties": False},
+            },
+        ]
+        response["result"] = {"tools": tools, "nextCursor": None}
+    # Tool invocation
+    elif method in {"tools/call", "callTool"}:
+        params = data.get("params") or {}
+        tool_name = params.get("name") if isinstance(params, dict) else None
+        tool_args = params.get("arguments") if isinstance(params, dict) else None
+        logger.info(f"Handling tool call: name={tool_name}, args={tool_args}")
+        if not tool_name:
+            response["error"] = {"code": -32602, "message": "Missing 'name' for tool call"}
+        else:
+            if tool_name == "ping":
+                response["result"] = {"content": [{"type": "text", "text": "pong"}]}
+            elif tool_name == "set_profile":
+                if not _profiles_available:
+                    response["error"] = {"code": -32001, "message": "Profile utilities unavailable"}
+                else:
+                    pname = tool_args.get("profile_name") if isinstance(tool_args, dict) else None
+                    if not pname:
+                        response["error"] = {"code": -32602, "message": "Missing 'profile_name'"}
+                    else:
+                        provider = get_llm_provider()
+                        ok = provider.reload_profile(pname)
+                        if not ok:
+                            response["error"] = {"code": -32002, "message": f"Invalid or unavailable profile: {pname}"}
+                        else:
+                            # Persist active profile so other endpoints reflect the change
+                            try:
+                                set_current_profile(pname)
+                            except Exception as _e:
+                                logger.warning(f"Selected profile reloaded but failed to persist active profile: {_e}")
+                            response["result"] = {"content": [{"type": "text", "text": f"active_profile={pname}"}]}
+            elif tool_name == "create_thread":
+                # Generate a UUID thread and return it
+                tid = str(uuid.uuid4())
+                active_threads[tid] = []
+                response["result"] = {"content": [{"type": "text", "text": tid}]}
+            elif tool_name == "run_agent":
+                # Validate arguments
+                if not isinstance(tool_args, dict):
+                    response["error"] = {"code": -32602, "message": "Invalid arguments for run_agent"}
+                else:
+                    tid = tool_args.get("thread_id")
+                    user_input = tool_args.get("user_input")
+                    profile_name = tool_args.get("profile_name")
+                    if not tid or not user_input:
+                        response["error"] = {"code": -32602, "message": "'thread_id' and 'user_input' are required"}
+                    else:
+                        # Ensure thread bucket exists
+                        if tid not in active_threads:
+                            active_threads[tid] = []
+                        config = {"configurable": {"thread_id": tid}}
+                        try:
+                            result = _make_request(tid, user_input, config, profile_name)
+                            active_threads[tid].append(user_input)
+                            # Expecting {'response': str}
+                            text_resp = result.get("response") if isinstance(result, dict) else str(result)
+                            response["result"] = {"content": [{"type": "text", "text": text_resp}]}
+                        except Exception as e:
+                            response["error"] = {"code": -32003, "message": f"run_agent failed: {e}"}
+            elif tool_name == "list_profiles":
+                if not _profiles_available:
+                    response["error"] = {"code": -32001, "message": "Profile utilities unavailable"}
+                else:
+                    try:
+                        profiles = get_all_profiles()
+                        response["result"] = {"content": [{"type": "text", "text": json.dumps(profiles)}]}
+                    except Exception as e:
+                        response["error"] = {"code": -32004, "message": f"list_profiles failed: {e}"}
+            elif tool_name == "get_active_profile":
+                if not _profiles_available:
+                    response["error"] = {"code": -32001, "message": "Profile utilities unavailable"}
+                else:
+                    try:
+                        ap = get_current_profile()
+                        response["result"] = {"content": [{"type": "text", "text": ap or ""}]}
+                    except Exception as e:
+                        response["error"] = {"code": -32005, "message": f"get_active_profile failed: {e}"}
+            else:
+                response["result"] = {"status": "success", "method": method}
+
+    return response
+
+# Endpoint pour la communication MCP (legacy direct HTTP)
 @app.post("/mcp")
 async def handle_mcp(request: Request):
     try:
         data = await request.json()
         logger.info(f"Received MCP request: {json.dumps(data, indent=2)}")
-        
-        # Vérification de la requête
-        if not isinstance(data, dict):
-            raise HTTPException(status_code=400, detail="Invalid request format")
-        
-        # Traitement de la requête
-        response = {
-            "jsonrpc": "2.0",
-            "id": data.get("id")
-        }
-        
-        method = data.get("method", "")
-        
-        if method == "initialize":
-            response["result"] = {
-                "capabilities": {
-                    "workspace": {"workspaceFolders": True},
-                    "textDocument": {
-                        "synchronization": {"dynamicRegistration": True},
-                        "completion": {"dynamicRegistration": True}
-                    }
-                },
-                "serverInfo": {
-                    "name": "Archon MCP Server",
-                    "version": "1.0.0"
-                }
-            }
-        elif method == "initialized":
-            response["result"] = {}
-        elif method == "list_resources":
-            response["result"] = {
-                "resources": [
-                    {
-                        "name": "archon",
-                        "description": "Archon AI Agent Builder",
-                        "version": "1.0.0"
-                    }
-                ]
-            }
-        elif method == "list_profiles":
-            if not _profiles_available:
-                response["error"] = {"code": -32001, "message": "Profile utilities unavailable"}
-            else:
-                response["result"] = {"profiles": get_all_profiles()}
-        elif method == "get_active_profile":
-            if not _profiles_available:
-                response["error"] = {"code": -32001, "message": "Profile utilities unavailable"}
-            else:
-                response["result"] = {"active_profile": get_current_profile()}
-        elif method == "set_profile":
-            if not _profiles_available:
-                response["error"] = {"code": -32001, "message": "Profile utilities unavailable"}
-            else:
-                params = data.get("params") or {}
-                pname = params.get("profile_name") if isinstance(params, dict) else None
-                if not pname:
-                    response["error"] = {"code": -32602, "message": "Missing 'profile_name'"}
-                else:
-                    provider = get_llm_provider()
-                    ok = provider.reload_profile(pname)
-                    if not ok:
-                        response["error"] = {"code": -32002, "message": f"Invalid or unavailable profile: {pname}"}
-                    else:
-                        response["result"] = {"status": "success", "active_profile": pname}
-        else:
-            response["result"] = {"status": "success", "method": method}
-        
-        return response
-        
+        return _process_mcp_payload(data)
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Error handling MCP request: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
+
+# MCP SSE messages endpoint: client sends JSON-RPC here; responses are emitted on SSE
+@app.post("/messages")
+async def mcp_messages(request: Request):
+    try:
+        data = await request.json()
+        logger.info(f"Received MCP message: {json.dumps(data, indent=2)}")
+        resp = _process_mcp_payload(data)
+        # Enqueue for SSE stream consumers
+        await _mcp_response_queue.put(resp)
+        # Also return the JSON-RPC response inline to satisfy clients expecting immediate body with id
+        return JSONResponse(content=resp)
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error handling MCP message: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# Compatibility: some clients POST JSON-RPC to /sse instead of /messages
+@app.post("/sse")
+async def sse_post(request: Request):
+    # Delegate to the same handler as /messages
+    return await mcp_messages(request)
 
 # Si le fichier est exécuté directement
 if __name__ == "__main__":

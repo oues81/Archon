@@ -30,6 +30,26 @@ from archon.utils.utils import configure_logging, get_bool_env
 _log_summary = configure_logging()
 logger = logging.getLogger(__name__)
 
+async def _with_retries(coro_factory, tries: int = 3, base_delay: float = 0.5):
+    """Run an async operation with simple exponential backoff.
+    coro_factory: a zero-arg callable returning an awaitable.
+    """
+    last_exc: Optional[BaseException] = None
+    for attempt in range(1, tries + 1):
+        try:
+            return await coro_factory()
+        except Exception as e:
+            last_exc = e
+            if attempt >= tries:
+                raise
+            delay = base_delay * (2 ** (attempt - 1))
+            logger.warning(f"Retrying after error (attempt {attempt}/{tries}) in LLM call: {e} | sleeping {delay:.2f}s")
+            await asyncio.sleep(delay)
+
+def _fallback_model(llm_config: Dict[str, Any], default: str = "phi4-mini:latest") -> str:
+    """Pick an Ollama fallback model from config or use a sensible default."""
+    return llm_config.get("OLLAMA_MODEL") or os.getenv("OLLAMA_MODEL") or default
+
 class LoggingHTTPClient(httpx.AsyncClient):
     """HTTP client with request/response logging"""
     
@@ -205,7 +225,13 @@ async def get_llm_instance(provider: str, model_name: str, config: Dict[str, Any
                 raise ValueError("OLLAMA_BASE_URL not found in profile or environment")
             if not model_name:
                 raise ValueError("Model name is required for Ollama provider")
-                
+            # Normalize to ensure OpenAI-compatible endpoints under /v1
+            _bu = base_url.rstrip("/")
+            if not _bu.endswith("/v1"):
+                base_url = f"{_bu}/v1"
+            else:
+                base_url = _bu
+            
             client_kwargs.update({"api_key": "ollama", "base_url": base_url})
             openai_client = AsyncOpenAI(**client_kwargs)
             await _ensure_ollama_model_is_pulled(openai_client, model_name)
@@ -351,7 +377,18 @@ async def define_scope_with_reasoner(state: AgentState, config: dict) -> AgentSt
 
         # Process the message
         logger.info("🔍 REASONER - Sending request to reasoner...")
-        result = await reasoner.run(user_message)
+        try:
+            result = await _with_retries(lambda: reasoner.run(user_message))
+        except Exception as e:
+            # Fallback to Ollama if OpenRouter (or primary) fails
+            logger.warning(f"Reasoner failed, attempting fallback to Ollama: {e}")
+            try:
+                fb_model = _fallback_model(llm_config)
+                fb_llm = await get_llm_instance("ollama", fb_model, llm_config)
+                reasoner_fb = PydanticAgent(fb_llm, system_prompt=reasoner_prompt)
+                result = await _with_retries(lambda: reasoner_fb.run(user_message))
+            except Exception:
+                raise
         scope_text = result.data if hasattr(result, 'data') else str(result)
 
         # Update state with results
@@ -401,7 +438,17 @@ async def advisor_with_examples(state: AgentState, config: dict) -> AgentState:
         
         # Process the scope
         logger.info("💡 ADVISOR - Sending request to advisor...")
-        result = await advisor.run(state['scope'])
+        try:
+            result = await _with_retries(lambda: advisor.run(state['scope']))
+        except Exception as e:
+            logger.warning(f"Advisor failed, attempting fallback to Ollama: {e}")
+            try:
+                fb_model = _fallback_model(llm_config)
+                fb_llm = await get_llm_instance("ollama", fb_model, llm_config)
+                advisor_fb = PydanticAgent(fb_llm, system_prompt=advisor_prompt)
+                result = await _with_retries(lambda: advisor_fb.run(state['scope']))
+            except Exception:
+                raise
         advisor_text = result.data if hasattr(result, 'data') else str(result)
 
         # Update state with results
@@ -487,7 +534,17 @@ async def coder_agent(state: AgentState, config: dict) -> AgentState:
 
         # Generate code
         logger.info("⚡ CODER - Sending request to coder...")
-        result = await coder.run(instruction, deps=deps)
+        try:
+            result = await _with_retries(lambda: coder.run(instruction, deps=deps))
+        except Exception as e:
+            logger.warning(f"Coder failed, attempting fallback to Ollama: {e}")
+            try:
+                fb_model = _fallback_model(llm_config)
+                fb_llm = await get_llm_instance("ollama", fb_model, llm_config)
+                coder_fb = create_pydantic_ai_coder(custom_model=fb_llm)
+                result = await _with_retries(lambda: coder_fb.run(instruction, deps=deps))
+            except Exception:
+                raise
         code_text = result.data if hasattr(result, 'data') else str(result)
 
         # Update state with results
