@@ -211,13 +211,19 @@ def fetch_url_content_sync(url: str, timeout: int = 20) -> Optional[str]:
 
 def is_allowed_url(url: str) -> bool:
     allow = [
-        "https://docs.windsurf.com/windsurf/",
+        # Windsurf docs sections
+        "https://docs.windsurf.com/windsurf/cascade/",
         "https://docs.windsurf.com/windsurf/cascade",
-        "https://docs.windsurf.com/windsurf/context",
-        "https://docs.windsurf.com/windsurf/workflows",
-        "https://docs.windsurf.com/windsurf/context-engineering",
-        "https://docs.windsurf.com/windsurf/cascade/methods",
-        # Selected GitHub content for context engineering intro/examples
+        "https://docs.windsurf.com/windsurf/mcp",
+        "https://docs.windsurf.com/windsurf/memories",
+        "https://docs.windsurf.com/windsurf/models",
+        "https://docs.windsurf.com/windsurf/terminal",
+        "https://docs.windsurf.com/windsurf/getting-started",
+        "https://docs.windsurf.com/context-awareness/",
+        "https://docs.windsurf.com/best-practices/",
+        "https://docs.windsurf.com/llms.txt",
+        # Context engineering community repo
+        "https://github.com/coleam00/context-engineering-intro",
         "https://github.com/coleam00/context-engineering-intro/",
         "https://raw.githubusercontent.com/coleam00/context-engineering-intro/",
     ]
@@ -226,17 +232,32 @@ def is_allowed_url(url: str) -> bool:
 
 def get_windsurf_urls() -> List[str]:
     seeds: List[str] = [
-        # Core docs (Cascade + workflows + context engineering)
-        "https://docs.windsurf.com/windsurf/cascade/",
+        # Cascade — Core/Workflows/Planning/Web search/Memories
+        "https://docs.windsurf.com/windsurf/cascade/cascade",
         "https://docs.windsurf.com/windsurf/cascade/workflows",
-        "https://docs.windsurf.com/windsurf/context-engineering",
-        "https://docs.windsurf.com/windsurf/context-engineering/principles",
-        "https://docs.windsurf.com/windsurf/workflows",
-        # How-tos and MCP pages that overlap with workflows methodology
+        "https://docs.windsurf.com/windsurf/cascade/planning-mode",
+        "https://docs.windsurf.com/windsurf/cascade/web-search",
+        "https://docs.windsurf.com/windsurf/cascade/memories",
+        # Windsurf — Memories (global)
+        "https://docs.windsurf.com/windsurf/memories",
+        # MCP
         "https://docs.windsurf.com/windsurf/cascade/mcp",
-        # Example public repo with context engineering examples
+        "https://docs.windsurf.com/windsurf/mcp",
+        # Context awareness & indexing
+        "https://docs.windsurf.com/context-awareness/overview",
+        "https://docs.windsurf.com/context-awareness/local-indexing",
+        # Prompting & best practices
+        "https://docs.windsurf.com/best-practices/prompt-engineering",
+        # Models/Terminal/Getting started
+        "https://docs.windsurf.com/windsurf/models",
+        "https://docs.windsurf.com/windsurf/terminal",
+        "https://docs.windsurf.com/windsurf/getting-started",
+        # Index list (useful for discovery)
+        "https://docs.windsurf.com/llms.txt",
+        # Context Engineering resources (community/open)
         "https://github.com/coleam00/context-engineering-intro",
         "https://github.com/coleam00/context-engineering-intro/blob/main/README.md",
+        "https://github.com/coleam00/context-engineering-intro/blob/main/INITIAL_EXAMPLE.md",
     ]
 
     # Deduplicate, enforce allowlist

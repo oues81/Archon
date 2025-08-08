@@ -295,4 +295,107 @@ def documentation_tab(supabase_client):
                     
                     # Display the sample data
                     st.dataframe(sample_data.data)
+                    st.info("Affichage d'un échantillon de 10 enregistrements. La base de données contient plus d'enregistrements.")
+            except Exception as e:
+                st.error(f"Erreur lors de la requête à la base de données: {str(e)}")
+
+    with doc_tabs[2]:
+        st.subheader("Windsurf Workflows & Context Engineering")
+        st.markdown(
+            """
+            Crawl and index Windsurf documentation focusing on Cascade workflows, rules and Context Engineering.
+            The crawler will:
+            1. Fetch selected Windsurf/Context Engineering URLs
+            2. Split content into chunks
+            3. Generate LLM-based titles and summaries
+            4. Generate embeddings and upsert into Supabase
+            """
+        )
+
+        supabase_url = get_env_var("SUPABASE_URL")
+        supabase_key = get_env_var("SUPABASE_SERVICE_KEY")
+
+        if not supabase_url or not supabase_key:
+            st.warning("⚠️ Supabase is not configured. Please set up your environment variables first.")
+            create_new_tab_button("Go to Environment Section", "Environment", key="goto_env_from_windsurf")
+        else:
+            if "winds_crawl_tracker" not in st.session_state:
+                st.session_state.winds_crawl_tracker = None
+            if "winds_crawl_status" not in st.session_state:
+                st.session_state.winds_crawl_status = None
+            if "winds_last_update_time" not in st.session_state:
+                st.session_state.winds_last_update_time = time.time()
+
+            col1, col2 = st.columns(2)
+            with col1:
+                if st.button("Crawl Windsurf Workflows & Context", key="crawl_windsurf") and not (
+                    st.session_state.winds_crawl_tracker and getattr(st.session_state.winds_crawl_tracker, "is_running", False)
+                ):
+                    try:
+                        def update_progress(status):
+                            st.session_state.winds_crawl_status = status
+                        st.session_state.winds_crawl_tracker = start_windsurf_crawl(update_progress)
+                        st.session_state.winds_crawl_status = st.session_state.winds_crawl_tracker.get_status()
+                        st.rerun()
+                    except Exception as e:
+                        st.error(f"❌ Error starting crawl: {str(e)}")
+            with col2:
+                if st.button("Clear Windsurf docs", key="clear_windsurf"):
+                    with st.spinner("Clearing existing Windsurf docs..."):
+                        try:
+                            clear_windsurf_records()
+                            st.success("✅ Successfully cleared Windsurf records.")
+                            st.rerun()
+                        except Exception as e:
+                            st.error(f"❌ Error clearing Windsurf docs: {str(e)}")
+
+            if st.session_state.winds_crawl_tracker:
+                progress_container = st.container()
+                with progress_container:
+                    current_time = time.time()
+                    if current_time - st.session_state.winds_last_update_time >= 1:
+                        st.session_state.winds_crawl_status = st.session_state.winds_crawl_tracker.get_status()
+                        st.session_state.winds_last_update_time = current_time
+                    status = st.session_state.winds_crawl_status
+                    if status and status.get("urls_found", 0) > 0:
+                        progress = status["urls_processed"] / status["urls_found"]
+                        st.progress(progress)
+                    c1, c2, c3, c4 = st.columns(4)
+                    if status:
+                        c1.metric("URLs Found", status.get("urls_found", 0))
+                        c2.metric("Processed", status.get("urls_processed", 0))
+                        c3.metric("Successful", status.get("urls_succeeded", 0))
+                        c4.metric("Failed", status.get("urls_failed", 0))
+                    else:
+                        c1.metric("URLs Found", 0)
+                        c2.metric("Processed", 0)
+                        c3.metric("Successful", 0)
+                        c4.metric("Failed", 0)
+                    with st.expander("Crawling Logs", expanded=True):
+                        if status and "logs" in status:
+                            logs_text = "\n".join(status["logs"][-20:])
+                            st.code(logs_text)
+                        else:
+                            st.code("No logs available yet...")
+                    if status and not status.get("is_running", False) and status.get("end_time"):
+                        if status.get("urls_failed", 0) == 0:
+                            st.success("✅ Crawling completed successfully!")
+                        else:
+                            st.warning(f"⚠️ Crawling completed with {status.get('urls_failed', 0)} failed URLs.")
+                if not status or status.get("is_running", False):
+                    st.rerun()
+
+        st.subheader("Database Statistics")
+        try:
+            result = supabase_client.table("site_pages").select("count", count="exact").eq("metadata->>source", "windsurf_workflows").execute()
+            count = result.count if hasattr(result, "count") else 0
+            st.metric("Windsurf Workflows Chunks", count)
+            if count > 0 and st.button("View Indexed Data", key="view_windsurf_data"):
+                sample_data = supabase_client.table("site_pages").select("url,title,summary,chunk_number").eq("metadata->>source", "windsurf_workflows").limit(10).execute()
+                st.dataframe(sample_data.data)
+                st.info("Showing up to 10 sample records.")
+        except Exception as e:
+            st.error(f"Error querying database: {str(e)}")
+
+    with doc_tabs[3]:
         st.info("Additional documentation sources will be available in future updates.")
