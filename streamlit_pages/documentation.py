@@ -6,6 +6,10 @@ import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from archon.archon.crawl_pydantic_ai_docs import start_crawl_with_requests, clear_existing_records
 from archon.archon.crawl_mcp_docs import start_crawl_with_requests as start_mcp_crawl, clear_existing_records as clear_mcp_records
+from archon.archon.crawl_windsurf_workflows_docs import (
+    start_crawl_with_requests as start_windsurf_crawl,
+    clear_existing_records as clear_windsurf_records,
+)
 from utils.utils import get_env_var, create_new_tab_button
 
 def documentation_tab(supabase_client):
@@ -13,7 +17,7 @@ def documentation_tab(supabase_client):
     st.header("Documentation")
     
     # Create tabs for different documentation sources
-    doc_tabs = st.tabs(["Pydantic AI Docs", "MCP Documentation", "Future Sources"])
+    doc_tabs = st.tabs(["Pydantic AI Docs", "MCP Documentation", "Windsurf Workflows & Context", "Future Sources"])
     
     with doc_tabs[0]:
         st.subheader("Pydantic AI Documentation")
@@ -291,9 +295,4 @@ def documentation_tab(supabase_client):
                     
                     # Display the sample data
                     st.dataframe(sample_data.data)
-                    st.info("Affichage d'un échantillon de 10 enregistrements. La base de données contient plus d'enregistrements.")
-            except Exception as e:
-                st.error(f"Erreur lors de la requête à la base de données: {str(e)}")
-    
-    with doc_tabs[2]:
         st.info("Additional documentation sources will be available in future updates.")

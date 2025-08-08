@@ -493,3 +493,13 @@ def start_crawl_with_requests(progress_callback: Optional[Callable[[Dict[str, An
     th = threading.Thread(target=runner, daemon=True)
     th.start()
     return tracker
+
+
+def clear_existing_records() -> None:
+    """Clear previously indexed Windsurf workflows records from Supabase."""
+    try:
+        sb = _get_supabase()
+        sb.table("site_pages").delete().eq("metadata->>source", "windsurf_workflows").execute()
+        logger.info("Cleared existing Windsurf workflows records from Supabase")
+    except Exception as e:  # pragma: no cover - network/db
+        logger.error(f"Failed clearing Windsurf workflows records: {e}")
