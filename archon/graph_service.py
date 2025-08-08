@@ -51,6 +51,33 @@ except ImportError:
     
 app = FastAPI()
 
+# --- Helpers ---
+def sanitize_output(text: str) -> str:
+    """Remove common 'thinking' or meta wrappers that some models leak into final output.
+
+    Keeps this conservative: only strips known markers at the start/end without altering content in-between.
+    """
+    if not isinstance(text, str) or not text:
+        return text
+    t = text.strip()
+    # Remove common XML-like think blocks at the boundaries
+    if t.lower().startswith("<think>") and t.lower().endswith("</think>"):
+        return t[7:-8].strip()
+    # Remove leading labels often used by some models
+    for prefix in ("Thinking:", "Think:", "Thought:", "Analysis:"):
+        if t.startswith(prefix):
+            return t[len(prefix):].lstrip()
+    # Strip surrounding triple backtick fences, with or without language tag
+    if t.startswith("```") and t.endswith("```"):
+        inner = t[3:-3].strip()
+        # If a language tag is present at the start of inner, remove first line
+        if "\n" in inner:
+            first_line, rest = inner.split("\n", 1)
+            if first_line.strip().lower() in ("json", "markdown", "md", "text", "yaml", "yml", "toml"):
+                return rest.strip()
+        return inner
+    return text
+
 # Montage du router des profils s'il est disponible
 if profiles_available and profiles_router:
     app.include_router(profiles_router, prefix="/api")
@@ -69,6 +96,11 @@ class InvokeRequest(BaseModel):
 async def health_check():
     """Health check endpoint"""
     return {"status": "ok"}    
+
+@app.head("/health")
+async def health_head():
+    """HEAD variant for health checks (no body)."""
+    return {"status": "ok"}
 
 @app.post("/invoke")
 async def invoke_agent(request: InvokeRequest):
@@ -119,6 +151,27 @@ async def invoke_agent(request: InvokeRequest):
 
     logger.info(f"Starting invoke_agent for thread {request.thread_id} with profile {request.profile_name or 'default'}")
     
+    # Optional output size cap from caller config, with env fallback
+    max_response_chars: Optional[int] = None
+    try:
+        if request.config and isinstance(request.config, dict):
+            cfg = request.config.get("configurable", {})
+            if isinstance(cfg, dict) and cfg.get("max_response_chars") is not None:
+                max_response_chars = int(cfg.get("max_response_chars"))
+    except Exception:
+        max_response_chars = None
+    # Environment fallback if not provided in request
+    if max_response_chars is None:
+        try:
+            env_val = os.environ.get("MAX_RESPONSE_CHARS") or os.environ.get("MCP_MAX_RESPONSE_CHARS")
+            if env_val is not None:
+                max_response_chars = int(env_val)
+            else:
+                # Default sensible cap for responsiveness
+                max_response_chars = 3500
+        except Exception:
+            max_response_chars = 3500
+
     response = ""
     final_state = None
     
@@ -180,6 +233,31 @@ async def invoke_agent(request: InvokeRequest):
             logger.error("Agent workflow finished without a final state.")
             response = "Error: The agent workflow failed to complete."
 
+        # Sanitize stray meta/thinking markers before truncation
+        if isinstance(response, str):
+            response = sanitize_output(response)
+
+        # Optional detailed logging of model response prior to truncation
+        try:
+            verbose = str(os.getenv("LOG_VERBOSE_RESPONSES", "false")).lower() in {"1", "true", "yes", "on"}
+            max_log = int(os.getenv("LOG_RESPONSE_LOG_CHARS", "1000"))
+        except Exception:
+            verbose = False
+            max_log = 1000
+        if isinstance(response, str):
+            if verbose:
+                logger.info(f"📄 Full response (pre-trunc): {response}")
+            else:
+                snippet = response if len(response) <= max_log else response[:max_log] + " …[snip]"
+                logger.debug(f"📄 Response snippet (pre-trunc {max_log}c): {snippet}")
+
+        # Apply optional truncation just before returning
+        if isinstance(response, str) and max_response_chars is not None and len(response) > max_response_chars:
+            logger.info(
+                f"Truncating response for thread {request.thread_id} to {max_response_chars} chars"
+            )
+            response = response[:max_response_chars] + "\n[TRUNCATED]"
+
         return {"response": response}
 
     except Exception as e:
@@ -188,15 +266,61 @@ async def invoke_agent(request: InvokeRequest):
 
 @app.post('/test')
 async def test_provider(request: InvokeRequest):
-    """Endpoint dédié aux tests de fournisseurs"""
+    """Endpoint dédié aux tests de fournisseurs
+    - Honore `profile_name` si fourni (sinon profil actif par défaut)
+    - Sanitize + troncature optionnelle (max_response_chars)
+    - Retourne un JSON strict et concis avec métadonnées
+    """
     try:
-        # Récupérer le graphe agentique
-        agentic_flow = get_agentic_flow()
+        start_ts = datetime.now()
 
-        # Logique de test simplifiee
+        # Préparer le provider et charger le profil demandé
+        provider = get_llm_provider()
+        profile_used = None
+        if request.profile_name:
+            ok = provider.reload_profile(request.profile_name)
+            if not ok:
+                raise HTTPException(status_code=400, detail=f"Invalid or unavailable profile: {request.profile_name}")
+            profile_used = request.profile_name
+        else:
+            # Meilleur effort pour rapporter le profil actif
+            profile_used = getattr(getattr(provider, 'config', None), 'profile_name', None) or os.environ.get("LLM_PROFILE") or "default"
+
+        # Déterminer le provider effectif (best-effort)
+        provider_name = None
+        cfg = getattr(provider, 'config', None)
+        if cfg and isinstance(cfg, dict):
+            provider_name = cfg.get('provider') or cfg.get('name')
+        if not provider_name:
+            env_name = os.environ.get("LLM_PROVIDER", "")
+            provider_name = env_name if env_name else "unknown"
+
+        # Construire le flux et la requête de test
+        agentic_flow = get_agentic_flow()
         test_prompt = f"Test de connexion avec le fournisseur: {request.message}"
-        
-        # Configuration complète pour le graphe
+
+        # Extraire max_response_chars s'il est fourni
+        max_chars = None
+        try:
+            if request.config and isinstance(request.config, dict):
+                conf = request.config.get("configurable") or {}
+                if isinstance(conf, dict):
+                    mrc = conf.get("max_response_chars")
+                    if isinstance(mrc, int) and mrc > 0:
+                        max_chars = mrc
+        except Exception:
+            pass
+        # Fallback via env
+        if max_chars is None:
+            try:
+                env_val = os.environ.get("MCP_MAX_RESPONSE_CHARS") or os.environ.get("MAX_RESPONSE_CHARS")
+                if env_val:
+                    ival = int(env_val)
+                    if ival > 0:
+                        max_chars = ival
+            except Exception:
+                max_chars = None
+
         inputs = {
             "messages": [{"content": test_prompt, "type": "human"}],
             "thread_id": request.thread_id,
@@ -206,20 +330,57 @@ async def test_provider(request: InvokeRequest):
                 "checkpoint_id": f"test-{datetime.now().isoformat()}"
             }
         }
-        
-        # La configuration doit être passée comme un deuxième argument positionnel
         config = {"configurable": inputs["configurable"]}
-        
-        # Exécution du test
+
+        # Appel
         result = await agentic_flow.ainvoke(inputs, config)
-        
-        # Sérialisation correcte
+
+        # Extraire un échantillon texte concis depuis le résultat
+        def to_text(data: Any) -> str:
+            try:
+                if isinstance(data, str):
+                    return data
+                if isinstance(data, dict):
+                    for key in ("response", "generated_code", "advisor_output", "scope"):
+                        val = data.get(key)
+                        if isinstance(val, str) and val.strip():
+                            return val
+                    # messages -> dernier contenu texte
+                    msgs = data.get("messages")
+                    if isinstance(msgs, list) and msgs:
+                        last = msgs[-1]
+                        if isinstance(last, dict):
+                            c = last.get("content")
+                            if isinstance(c, str) and c.strip():
+                                return c
+                # fallback generic
+                return str(data)
+            except Exception:
+                return str(data)
+
+        response_text = to_text(result)
+        if isinstance(response_text, str):
+            response_text = sanitize_output(response_text)
+
+        truncated = False
+        if isinstance(response_text, str) and max_chars is not None and len(response_text) > max_chars:
+            response_text = response_text[:max_chars]
+            truncated = True
+
+        latency_ms = max(0, int((datetime.now() - start_ts).total_seconds() * 1000))
+
         return {
             "status": "success",
-            "provider": "openrouter" if "openrouter" in os.environ.get("LLM_PROVIDER", "").lower() else "ollama",
-            "response": str(result)
+            "provider": provider_name,
+            "profile_used": profile_used,
+            "latency_ms": latency_ms,
+            "truncated": truncated,
+            "response_sample": response_text,
         }
+    except HTTPException:
+        raise
     except Exception as e:
+        logger.error(f"Exception in test_provider: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
 def configure_app():

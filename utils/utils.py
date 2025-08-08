@@ -11,7 +11,11 @@ import importlib
 import webbrowser
 from typing import Optional, Dict, Any, Tuple
 from pathlib import Path
-import streamlit as st
+# Optional dependency: streamlit (not required in server-only containers)
+try:
+    import streamlit as st
+except Exception:
+    st = None
 
 # Imports nécessaires pour la fonction get_clients
 try:
@@ -137,9 +141,18 @@ def configure_logging() -> dict:
     file_enabled = str(os.getenv("LOG_TO_FILE", "false")).lower() in {"1", "true", "yes", "on"}
     if file_enabled:
         file_path = os.getenv("LOG_FILE_PATH", os.path.join(os.getcwd(), "logs", "archon.log"))
+        # Rotation settings can be tuned via env
+        try:
+            max_bytes = int(os.getenv("LOG_FILE_MAX_BYTES", "1000000"))
+        except Exception:
+            max_bytes = 1_000_000
+        try:
+            backup_count = int(os.getenv("LOG_BACKUP_COUNT", "3"))
+        except Exception:
+            backup_count = 3
         try:
             os.makedirs(os.path.dirname(file_path), exist_ok=True)
-            fhandler = RotatingFileHandler(file_path, maxBytes=1_000_000, backupCount=3)
+            fhandler = RotatingFileHandler(file_path, maxBytes=max_bytes, backupCount=backup_count)
             fhandler.setFormatter(formatter)
             root.addHandler(fhandler)
             summary["file"] = True
@@ -153,21 +166,14 @@ def configure_logging() -> dict:
     return summary
 
 def get_env_vars_file_path() -> str:
-    """Get the path to the env_vars.json file"""
-    # Try multiple possible locations
-    possible_paths = [
-        "/app/workbench/env_vars.json",
-        "/app/src/archon/workbench/env_vars.json",
-        "src/archon/workbench/env_vars.json",
-        "workbench/env_vars.json"
-    ]
-    
-    for path in possible_paths:
-        if os.path.exists(path):
-            return path
-    
-    # Default path if none found
-    return "/app/src/archon/workbench/env_vars.json"
+    """Return the single source-of-truth path for env_vars.json.
+
+    Enforced path as requested: /home/oues/archon/src/archon/workbench/env_vars.json
+    """
+    enforced_path = "/home/oues/archon/src/archon/workbench/env_vars.json"
+    if not os.path.exists(enforced_path):
+        logger.warning(f"env_vars.json not found at enforced path: {enforced_path}")
+    return enforced_path
 
 def load_env_vars() -> Dict[str, Any]:
     """Load environment variables from env_vars.json"""

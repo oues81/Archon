@@ -12,6 +12,15 @@ import asyncio
 from functools import wraps
 from sse_starlette.sse import EventSourceResponse
 
+# Profile and provider utilities
+try:
+    from archon.utils.utils import get_all_profiles, get_current_profile
+    from archon.llm import get_llm_provider
+    _profiles_available = True
+except Exception as _e:
+    logging.getLogger(__name__).warning(f"Profile utilities unavailable: {_e}")
+    _profiles_available = False
+
 # Configuration du logging
 logging.basicConfig(
     level=logging.INFO,
@@ -66,6 +75,15 @@ async def health_check():
         "version": "1.0.0"
     }
 
+@app.head("/health")
+async def health_head():
+    # Return minimal headers/body for HEAD probes
+    return {
+        "status": "ok",
+        "service": "archon-mcp",
+        "version": "1.0.0"
+    }
+
 # Endpoint pour lister les ressources
 @app.get("/resources")
 async def list_resources():
@@ -97,6 +115,46 @@ async def event_stream():
             logger.error(f"Error in SSE stream: {str(e)}")
     
     return EventSourceResponse(event_generator())
+
+# --- Profile management HTTP endpoints ---
+@app.get("/profiles/list")
+async def http_profiles_list():
+    if not _profiles_available:
+        raise HTTPException(status_code=503, detail="Profile utilities unavailable")
+    try:
+        return {"profiles": get_all_profiles()}
+    except Exception as e:
+        logger.error(f"Error listing profiles: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/profiles/active")
+async def http_profile_active():
+    if not _profiles_available:
+        raise HTTPException(status_code=503, detail="Profile utilities unavailable")
+    try:
+        return {"active_profile": get_current_profile()}
+    except Exception as e:
+        logger.error(f"Error getting active profile: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+class _SelectBody(BaseModel):
+    profile_name: str = Field(..., min_length=1)
+
+@app.post("/profiles/select")
+async def http_profile_select(body: _SelectBody):
+    if not _profiles_available:
+        raise HTTPException(status_code=503, detail="Profile utilities unavailable")
+    try:
+        provider = get_llm_provider()
+        ok = provider.reload_profile(body.profile_name)
+        if not ok:
+            raise HTTPException(status_code=400, detail=f"Invalid or unavailable profile: {body.profile_name}")
+        return {"status": "success", "active_profile": body.profile_name}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error selecting profile: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
 
 # Endpoint pour la communication MCP
 @app.post("/mcp")
@@ -143,6 +201,31 @@ async def handle_mcp(request: Request):
                     }
                 ]
             }
+        elif method == "list_profiles":
+            if not _profiles_available:
+                response["error"] = {"code": -32001, "message": "Profile utilities unavailable"}
+            else:
+                response["result"] = {"profiles": get_all_profiles()}
+        elif method == "get_active_profile":
+            if not _profiles_available:
+                response["error"] = {"code": -32001, "message": "Profile utilities unavailable"}
+            else:
+                response["result"] = {"active_profile": get_current_profile()}
+        elif method == "set_profile":
+            if not _profiles_available:
+                response["error"] = {"code": -32001, "message": "Profile utilities unavailable"}
+            else:
+                params = data.get("params") or {}
+                pname = params.get("profile_name") if isinstance(params, dict) else None
+                if not pname:
+                    response["error"] = {"code": -32602, "message": "Missing 'profile_name'"}
+                else:
+                    provider = get_llm_provider()
+                    ok = provider.reload_profile(pname)
+                    if not ok:
+                        response["error"] = {"code": -32002, "message": f"Invalid or unavailable profile: {pname}"}
+                    else:
+                        response["result"] = {"status": "success", "active_profile": pname}
         else:
             response["result"] = {"status": "success", "method": method}
         
