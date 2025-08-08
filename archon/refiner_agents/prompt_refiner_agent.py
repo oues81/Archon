@@ -12,7 +12,7 @@ from archon.models.ollama_model import OllamaModel
 # Add the parent directory to sys.path to allow importing from the parent directory
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from utils.utils import get_env_var
-from archon.agent_prompts import prompt_refiner_agent_prompt
+from archon.archon.agent_prompts import prompt_refiner_agent_prompt
 
 # Chargement des variables d'environnement
 load_dotenv()

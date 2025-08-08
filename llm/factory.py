@@ -8,14 +8,19 @@ import json
 import httpx
 from dataclasses import dataclass
 
-# Import relatif pour éviter les problèmes de circularité
+# Import des modèles Ollama depuis le bon paquet
 try:
-    from ..models.ollama_model import OllamaModel
-except ImportError:
-    # Fallback pour les imports absolus
-    from archon.models.ollama_model import OllamaModel
+    # Import via paquet exposé (grâce à l'alias dans archon.archon.models.__init__)
+    from archon.archon.models.ollama_model import OllamaModel
+except Exception:
+    # Fallback relatif direct si nécessaire
+    from ..archon.ollama_model import OllamaModel  # type: ignore
 
-from ..config.model_config import ModelConfig
+# Import ModelConfig depuis l'emplacement réel
+try:
+    from archon.archon.config.model_config import ModelConfig
+except Exception:
+    from ..archon.config.model_config import ModelConfig  # type: ignore
 
 @dataclass
 class OpenRouterResponse:
@@ -104,6 +109,16 @@ class ModelFactory:
     
     @classmethod
     def from_env(cls, provider: str = None):
-        """Crée un modèle à partir des variables d'environnement."""
-        config = ModelConfig.from_env(provider)
+        """Crée un modèle à partir du profil courant défini dans env_vars.json.
+
+        Sélectionner un modèle via des variables d'environnement directes est
+        déprécié. Nous lisons le profil courant depuis la configuration et
+        construisons la configuration modèle à partir de ce profil.
+        """
+        from archon.config.config import load_config
+        cfg = load_config() or {}
+        current_profile = cfg.get('current_profile')
+        if not current_profile:
+            raise ValueError("Aucun 'current_profile' défini dans env_vars.json")
+        config = ModelConfig.from_profile(current_profile)
         return cls.create_model(config)

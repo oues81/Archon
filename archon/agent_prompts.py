@@ -396,3 +396,18 @@ How to measure if the agent is working correctly.
 
 Transform the user's request into a clear, implementable project scope.
 """
+
+# Explicit exports for clarity
+__all__ = [
+    'prompt_refiner_agent_prompt',
+    'prompt_refiner_prompt',
+    'tools_refiner_prompt',
+    'agent_refiner_prompt',
+    'primary_coder_prompt',
+    'advisor_prompt',
+    'reasoner_prompt',
+]
+
+# Backward-compatibility alias expected by some modules
+# The canonical name is `primary_coder_prompt`; older code may import `coder_prompt_with_examples`.
+coder_prompt_with_examples = primary_coder_prompt

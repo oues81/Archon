@@ -3,13 +3,19 @@
 
 from neo4j import GraphDatabase
 import logging
+from typing import Dict, List, Any, Optional
 
 logger = logging.getLogger(__name__)
 
 class Neo4jClient:
-    def __init__(self, uri, user, password):
+    def __init__(self, uri: str, user: str, password: str, database: str = "neo4j"):
+        self.uri = uri
+        self.database = database
         try:
             self.driver = GraphDatabase.driver(uri, auth=(user, password))
+            # Test a simple query to confirm connectivity
+            with self.driver.session(database=self.database) as session:
+                session.run("RETURN 1")
             logger.info("Successfully connected to Neo4j.")
         except Exception as e:
             logger.error(f"Failed to connect to Neo4j: {e}")
@@ -19,16 +25,21 @@ class Neo4jClient:
         if self.driver is not None:
             self.driver.close()
 
-    def run_query(self, query, parameters=None):
+    def is_connected(self) -> bool:
+        return self.driver is not None
+
+    def run_query(self, query: str, parameters: Optional[Dict[str, Any]] = None) -> List[Dict[str, Any]]:
         if self.driver is None:
             logger.error("Neo4j driver not initialized.")
             return []
-        with self.driver.session() as session:
+        if parameters is None:
+            parameters = {}
+        with self.driver.session(database=self.database) as session:
             result = session.run(query, parameters)
-            return [record.data() for record in result]
+            # Convert to plain dicts
+            return [dict(r) for r in result]
 
-    # The following methods are stubs based on docs/NEO4J_INTEGRATION.md
-    # They need to be fully implemented.
+    # The following methods were previously stubs; provide minimal, working implementations.
 
     def create_entity(self, label, properties):
         logger.warning("create_entity is a stub and not fully implemented.")
@@ -69,3 +80,27 @@ class Neo4jClient:
     def recommend_related_technologies(self, tech_name):
         logger.warning("recommend_related_technologies is a stub and not fully implemented.")
         return []
+
+    # Added: Stats and labels APIs used by Streamlit page
+    def get_database_stats(self) -> Dict[str, Any]:
+        if self.driver is None:
+            return {"node_count": 0, "relationship_count": 0, "label_count": 0}
+        query = (
+            "MATCH (n)\n"
+            "RETURN count(n) as node_count,\n"
+            "       size([()--() | 1]) as relationship_count,\n"
+            "       count(distinct labels(n)) as label_count"
+        )
+        rows = self.run_query(query)
+        return rows[0] if rows else {"node_count": 0, "relationship_count": 0, "label_count": 0}
+
+    def get_node_labels(self) -> List[Dict[str, Any]]:
+        if self.driver is None:
+            return []
+        # Works on Neo4j 5.x
+        query = (
+            "CALL db.labels() YIELD label\n"
+            "RETURN label, count{MATCH (n) WHERE label in labels(n) RETURN n} as count\n"
+            "ORDER BY count DESC"
+        )
+        return self.run_query(query)

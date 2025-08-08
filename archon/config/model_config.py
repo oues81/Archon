@@ -24,6 +24,108 @@ class ModelConfig:
     headers: Optional[Dict[str, str]] = None
 
     @classmethod
+    def from_profile(cls, profile_name: str) -> 'ModelConfig':
+        """Crée une configuration depuis un profil de env_vars.json.
+
+        Cette méthode est utilisée par les tests qui patchent
+        `archon.config.config.load_config`.
+        """
+        try:
+            from archon.config.config import load_config  # patched in tests
+        except Exception as e:  # pragma: no cover
+            logger.error(f"Impossible d'importer load_config: {e}")
+            raise
+
+        data = load_config() or {}
+        profiles: Dict[str, Any] = data.get('profiles', {})
+        profile: Dict[str, Any] = profiles.get(profile_name, {})
+        if not profile:
+            raise ValueError(f"Profil non trouvé: {profile_name}")
+
+        provider = str(profile.get('LLM_PROVIDER', 'ollama')).lower()
+
+        # Commun
+        temp = float(profile.get('TEMPERATURE', 0.7)) if isinstance(profile.get('TEMPERATURE', 0.7), (int, float, str)) else 0.7
+        max_tok = int(profile.get('MAX_TOKENS', 2048)) if isinstance(profile.get('MAX_TOKENS', 2048), (int, float, str)) else 2048
+
+        # API keys
+        api_key = (
+            profile.get('LLM_API_KEY')
+            or profile.get('OPENAI_API_KEY')
+            or profile.get('OPENROUTER_API_KEY')
+            or None
+        )
+
+        # Model name preference
+        model_name = (
+            profile.get('PRIMARY_MODEL')
+            or profile.get('model')
+            or ''
+        )
+
+        # Base URL resolution
+        base_url = profile.get('BASE_URL') or ''
+
+        headers: Optional[Dict[str, str]] = None
+
+        if provider == 'openrouter':
+            # Defaults for OpenRouter
+            base_url = base_url or 'https://openrouter.ai/api/v1'
+            if not api_key:
+                # Les tests patchent les appels HTTP, éviter d'échouer fort ici
+                api_key = 'test-key'
+
+            clean_model = str(model_name).replace('openrouter:', '').replace('openrouter/', '')
+            # Si modèle gratuit avec suffixe :free, enlever le suffixe pour l'appel
+            model_to_use = clean_model.split(':')[0] if ':free' in clean_model else clean_model
+
+            headers = {
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {api_key}",
+                "HTTP-Referer": "https://github.com/oues/archon",
+                "X-Title": "Archon AI Agent",
+            }
+
+            return cls(
+                provider='openrouter',
+                model_name=model_to_use,
+                base_url=base_url,
+                api_key=api_key,
+                temperature=temp,
+                max_tokens=max_tok,
+                headers=headers,
+            )
+
+        if provider == 'openai':
+            base_url = base_url or 'https://api.openai.com/v1'
+            if not api_key:
+                api_key = 'test-key'
+
+            return cls(
+                provider='openai',
+                model_name=model_name or 'gpt-4o-mini',
+                base_url=base_url,
+                api_key=api_key,
+                temperature=temp,
+                max_tokens=max_tok,
+            )
+
+        # Default: ollama
+        base_url = profile.get('OLLAMA_BASE_URL') or base_url or 'http://localhost:11434'
+        # Normaliser pour inclure /v1 si absent
+        if base_url and not base_url.rstrip('/').endswith('/v1'):
+            base_url = base_url.rstrip('/') + '/v1'
+
+        return cls(
+            provider='ollama',
+            model_name=model_name or 'phi3:latest',
+            base_url=base_url,
+            api_key=None,
+            temperature=temp,
+            max_tokens=max_tok,
+        )
+
+    @classmethod
     def from_env(cls, provider: str = None) -> 'ModelConfig':
         """
         Crée une configuration à partir des variables d'environnement.

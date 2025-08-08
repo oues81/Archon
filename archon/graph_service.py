@@ -8,17 +8,14 @@ import dataclasses
 from datetime import datetime
 from pathlib import Path
 
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.StreamHandler(sys.stderr)
-    ]
-)
+from archon.utils.utils import configure_logging
+
+_log_summary = configure_logging()
 logger = logging.getLogger(__name__)
-
-
+logger.info(
+    f"🚀 API startup | console={_log_summary.get('console')} file={_log_summary.get('file')}"
+    f" path={_log_summary.get('file_path')} json={_log_summary.get('json')}"
+)
 
 # Appliquer le correctif pour TypedDict
 try:
@@ -40,7 +37,7 @@ except ImportError:
     profiles_available = False
     logging.warning("Module api.profiles non disponible")
 
-from archon.archon_graph import get_agentic_flow
+from archon.archon.archon_graph import get_agentic_flow
 from archon.utils.utils import write_to_log
 from archon.llm import get_llm_provider
 
@@ -149,16 +146,16 @@ async def invoke_agent(request: InvokeRequest):
 
     try:
         flow = get_agentic_flow()
-        logger.info(f"🚨 DEBUG: About to start flow.astream with input: {input_for_flow}")
-        logger.info(f"🚨 DEBUG: Config: {config}")
+        logger.debug(f"About to start flow.astream with input: {input_for_flow}")
+        logger.debug(f"Config: {config}")
         
         iteration_count = 0
         async for state_update in flow.astream(input_for_flow, config, stream_mode="values"):
             iteration_count += 1
-            logger.info(f"🚨 DEBUG: Iteration {iteration_count}, state_update: {state_update}")
+            logger.debug(f"Iteration {iteration_count}, state_update: {state_update}")
             final_state = state_update
         
-        logger.info(f"🚨 DEBUG: Flow completed after {iteration_count} iterations")
+        logger.debug(f"Flow completed after {iteration_count} iterations")
 
         if final_state:
             generated_content = final_state.get("generated_code")

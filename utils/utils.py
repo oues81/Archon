@@ -49,6 +49,109 @@ def write_to_log(message: str, level: str = 'info'):
     else:
         logging.info(message)
 
+def get_bool_env(var_name: str, default: bool = False) -> bool:
+    """Return a boolean environment/profile value with common truthy parsing.
+
+    Accepts values like 1/0, true/false, yes/no (case-insensitive).
+    """
+    val = get_env_var(var_name)
+    if val is None:
+        return default
+    return str(val).strip().lower() in {"1", "true", "yes", "y", "on"}
+
+def validate_rag_env() -> bool:
+    """Validate required environment for RAG when enabled. Returns True if OK.
+
+    We require at minimum: SUPABASE_URL, SUPABASE_SERVICE_KEY, EMBEDDING_PROVIDER, EMBEDDING_API_KEY.
+    """
+    required = [
+        ("SUPABASE_URL", get_env_var("SUPABASE_URL")),
+        ("SUPABASE_SERVICE_KEY", get_env_var("SUPABASE_SERVICE_KEY")),
+        ("EMBEDDING_PROVIDER", get_env_var("EMBEDDING_PROVIDER")),
+        ("EMBEDDING_API_KEY", get_env_var("EMBEDDING_API_KEY")),
+    ]
+    missing = [k for k, v in required if not v]
+    if missing:
+        logger.warning(f"RAG enabled but missing required vars: {missing}")
+        return False
+    return True
+
+def configure_logging() -> dict:
+    """Configure application logging once, with optional file and JSON formatting.
+
+    Env vars:
+    - LOG_LEVEL: logging level (default INFO)
+    - LOG_TO_FILE: enable file logging (true/false)
+    - LOG_FILE_PATH: file path for logs (default ./logs/archon.log)
+    - LOG_JSON: output logs in JSON (true/false)
+
+    Returns a summary dict of active sinks.
+    """
+    import sys
+    import json as _json
+    from logging import StreamHandler, Formatter
+    from logging.handlers import RotatingFileHandler
+
+    root = logging.getLogger()
+    summary = {"console": True, "file": False, "file_path": None, "json": False}
+
+    # Idempotent guard
+    if getattr(root, "_archon_logging_configured", False):
+        return getattr(root, "_archon_logging_summary", summary)
+
+    # Level
+    level_name = os.getenv("LOG_LEVEL", "INFO").upper()
+    try:
+        level = getattr(logging, level_name)
+    except AttributeError:
+        level = logging.INFO
+    root.setLevel(level)
+
+    # Formatter
+    json_enabled = str(os.getenv("LOG_JSON", "false")).lower() in {"1", "true", "yes", "on"}
+    summary["json"] = json_enabled
+
+    class JsonFormatter(Formatter):
+        def format(self, record: logging.LogRecord) -> str:
+            payload = {
+                "ts": getattr(record, "created", None),
+                "level": record.levelname,
+                "logger": record.name,
+                "msg": record.getMessage(),
+            }
+            if record.exc_info:
+                payload["exc_info"] = self.formatException(record.exc_info)
+            return _json.dumps(payload, ensure_ascii=False)
+
+    if json_enabled:
+        formatter = JsonFormatter()
+    else:
+        formatter = Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+
+    # Console handler
+    console = StreamHandler(sys.stderr)
+    console.setFormatter(formatter)
+    root.addHandler(console)
+
+    # File handler
+    file_enabled = str(os.getenv("LOG_TO_FILE", "false")).lower() in {"1", "true", "yes", "on"}
+    if file_enabled:
+        file_path = os.getenv("LOG_FILE_PATH", os.path.join(os.getcwd(), "logs", "archon.log"))
+        try:
+            os.makedirs(os.path.dirname(file_path), exist_ok=True)
+            fhandler = RotatingFileHandler(file_path, maxBytes=1_000_000, backupCount=3)
+            fhandler.setFormatter(formatter)
+            root.addHandler(fhandler)
+            summary["file"] = True
+            summary["file_path"] = file_path
+        except Exception as e:
+            logging.getLogger(__name__).warning(f"Could not enable file logging: {e}")
+
+    # Mark configured
+    setattr(root, "_archon_logging_configured", True)
+    setattr(root, "_archon_logging_summary", summary)
+    return summary
+
 def get_env_vars_file_path() -> str:
     """Get the path to the env_vars.json file"""
     # Try multiple possible locations
@@ -431,15 +534,14 @@ def get_clients() -> Tuple[Any, Optional[Any], Optional[Any]]:
         neo4j_uri = get_env_var("NEO4J_URI")
         neo4j_user = get_env_var("NEO4J_USER")
         neo4j_password = get_env_var("NEO4J_PASSWORD")
-        neo4j_database = get_env_var("NEO4J_DATABASE") or "neo4j"
         
         if neo4j_uri and neo4j_user and neo4j_password and Neo4jClient is not None:
             try:
+                # Neo4jClient(uri, user, password)
                 neo4j_client = Neo4jClient(
-                    uri=neo4j_uri,
-                    username=neo4j_user,
-                    password=neo4j_password,
-                    database=neo4j_database
+                    neo4j_uri,
+                    neo4j_user,
+                    neo4j_password,
                 )
                 logger.debug(f"Neo4j client initialized successfully at {neo4j_uri}")
             except Exception as e:

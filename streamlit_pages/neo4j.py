@@ -117,15 +117,28 @@ def neo4j_tab(neo4j_client: Optional[Neo4jClient] = None):
                     return
                 
                 # Création d'un client Neo4j temporaire pour le test
-                test_client = Neo4jClient(uri, user, password, database)
+                test_client = Neo4jClient(uri, user, password)
                 
                 # Exécuter une requête simple pour vérifier la connexion
                 result = test_client.run_query("RETURN 'Connection successful' AS message")
                 
                 if result and result[0].get('message') == 'Connection successful':
                     st.success("Connected to Neo4j successfully!")
-                    # Récupérer des statistiques de base
-                    stats = test_client.get_database_stats()
+                    # Récupérer des statistiques de base (robuste si la méthode manque)
+                    if hasattr(test_client, 'get_database_stats'):
+                        stats = test_client.get_database_stats()
+                    else:
+                        # Fallback direct via Cypher
+                        rows = test_client.run_query(
+                            """
+                            MATCH (n)
+                            RETURN 
+                              count(n) as node_count,
+                              size([()--() | 1]) as relationship_count,
+                              count(distinct labels(n)) as label_count
+                            """
+                        )
+                        stats = rows[0] if rows else {"node_count": 0, "relationship_count": 0, "label_count": 0}
                     st.info(f"Database Stats: {stats['node_count']} nodes, {stats['relationship_count']} relationships")
                 else:
                     st.error("Connection test returned unexpected results")
@@ -148,7 +161,7 @@ def neo4j_tab(neo4j_client: Optional[Neo4jClient] = None):
         
         if all([uri, user, password]):
             try:
-                client = Neo4jClient(uri, user, password, database)
+                client = Neo4jClient(uri, user, password)
             except Exception as e:
                 st.warning("Neo4j client could not be initialized automatically.")
     
@@ -159,13 +172,34 @@ def neo4j_tab(neo4j_client: Optional[Neo4jClient] = None):
         with st.expander("Database Information"):
             try:
                 # Récupérer des statistiques
-                stats = client.get_database_stats()
+                if hasattr(client, 'get_database_stats'):
+                    stats = client.get_database_stats()
+                else:
+                    rows = client.run_query(
+                        """
+                        MATCH (n)
+                        RETURN 
+                          count(n) as node_count,
+                          size([()--() | 1]) as relationship_count,
+                          count(distinct labels(n)) as label_count
+                        """
+                    )
+                    stats = rows[0] if rows else {"node_count": 0, "relationship_count": 0, "label_count": 0}
                 st.metric("Nodes", stats['node_count'])
                 st.metric("Relationships", stats['relationship_count'])
                 st.metric("Node Labels", stats['label_count'])
                 
                 # Afficher les labels disponibles
-                labels = client.get_node_labels()
+                if hasattr(client, 'get_node_labels'):
+                    labels = client.get_node_labels()
+                else:
+                    labels = client.run_query(
+                        """
+                        CALL db.labels() YIELD label
+                        RETURN label, count{MATCH (n) WHERE label in labels(n) RETURN n} as count
+                        ORDER BY count DESC
+                        """
+                    )
                 if labels:
                     st.subheader("Node Labels")
                     label_df = pd.DataFrame(labels)

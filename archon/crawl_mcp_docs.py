@@ -5,8 +5,6 @@
 
 import asyncio
 import os
-import sys
-import time
 import json
 import logging
 import re
@@ -14,10 +12,13 @@ import html2text
 import threading
 import requests
 from datetime import datetime
+from urllib.parse import urlparse
 from dataclasses import dataclass
-from pydantic import BaseModel, Field
 from typing import List, Dict, Any, Optional, Callable, Tuple
+from archon.utils.utils import get_env_var
 import hashlib
+from openai import AsyncOpenAI
+from supabase import create_client
 
 def extract_title_from_chunk(text: str) -> Optional[str]:
     """Extraire un titre pertinent à partir du texte d'un chunk.
@@ -77,7 +78,6 @@ def extract_summary_from_chunk(text: str) -> Optional[str]:
             summary += '...'
     
     return summary
-import logging
 
 # Configuration du logging
 logging.basicConfig(
@@ -85,10 +85,6 @@ logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
 logger = logging.getLogger("mcp_crawler")
-
-# Import des clients nécessaires pour l'embedding et Supabase
-from openai import AsyncOpenAI
-from supabase import create_client, Client
 
 # Initialisation du convertisseur HTML vers Markdown
 html_converter = html2text.HTML2Text()
@@ -99,16 +95,75 @@ html_converter.body_width = 0  # Pas de césure
 
 # Initialisation des variables globales
 # Définir la valeur par défaut du modèle d'embedding (Ollama utilise nomic-embed-text)
-embedding_model = os.environ.get("EMBEDDING_MODEL", "nomic-embed-text")
+# Read embedding model from profiles/env, default to 1536-dim OpenAI model
+embedding_model = get_env_var('EMBEDDING_MODEL') or 'text-embedding-3-small'
 
 # Initialisation des clients
 embedding_client = None
 supabase = None
 llm_client = None
+# État d'initialisation (thread-safe)
+_clients_init_lock = threading.Lock()
+_clients_initialized = False
+
+# Allowlist for authoritative domains and org paths (expanded)
+ALLOWED_DOMAINS = {
+    # Official site & spec
+    "modelcontextprotocol.io",
+    "spec.modelcontextprotocol.io",
+    # Official GitHub org
+    "github.com",
+    # IDE clients / docs
+    "code.visualstudio.com",
+    "docs.windsurf.com",
+    # Ecosystem vendors
+    "supabase.com",
+    "openai.github.io",
+    "platform.openai.com",
+    "anthropic.com",
+    "docs.anthropic.com",
+    # Libraries
+    "docs.llamaindex.ai",
+}
+
+def is_allowed_url(url: str) -> bool:
+    """Return True if the URL is within allowed domains and expected org paths.
+    - Allows official sites and GitHub org 'modelcontextprotocol' READMEs
+    - Excludes obvious binary assets
+    """
+    try:
+        parsed = urlparse(url)
+        host = parsed.netloc.lower()
+        path = parsed.path.lower()
+
+        if host not in ALLOWED_DOMAINS:
+            return False
+
+        # Exclude common binary/static assets
+        if any(path.endswith(ext) for ext in (".png", ".jpg", ".jpeg", ".svg", ".gif", ".pdf", ".zip")):
+            return False
+
+        # If GitHub, limit to the official org and text pages (README.md, .md paths)
+        if host == "github.com":
+            # Expect /modelcontextprotocol/<repo>/blob/main/README.md or similar .md files
+            parts = [p for p in path.split("/") if p]
+            if len(parts) < 2 or parts[0] != "modelcontextprotocol":
+                return False
+            if not path.endswith(".md"):
+                return False
+        return True
+    except Exception:
+        return False
 
 def init_clients():
     """Initialise les clients d'API nécessaires."""
-    global embedding_client, supabase, llm_client
+    global embedding_client, supabase, llm_client, _clients_initialized
+    # Empêcher les initialisations concurrentes
+    if _clients_initialized:
+        return True
+    with _clients_init_lock:
+        if _clients_initialized:
+            return True
     
     try:
         # Afficher toutes les variables d'environnement disponibles pour le débogage
@@ -120,14 +175,24 @@ def init_clients():
         # Configuration pour Ollama (en utilisant la variable depuis le .env ou la valeur pour Docker)
         embedding_base_url = os.environ.get('EMBEDDING_BASE_URL')
         
-        # Dans Docker, utiliser 'ollama:11434' au lieu de 'host.docker.internal:11434' ou 'localhost:11434'
-        if not embedding_base_url or 'host.docker.internal' in embedding_base_url or 'localhost' in embedding_base_url:
-            embedding_base_url = "http://ollama:11434"
-            logger.info(f"Modification de l'URL pour Docker: {embedding_base_url}")
+        # Normaliser l'URL pour Docker et s'assurer du suffixe /api
+        if (not embedding_base_url 
+            or 'host.docker.internal' in embedding_base_url 
+            or 'localhost' in embedding_base_url 
+            or 'ollama:11434' in embedding_base_url):
+            embedding_base_url = "http://ollama:11434/api"
+            logger.info(f"Normalisation de l'URL Ollama pour Docker: {embedding_base_url}")
+        
+        # S'assurer que le suffixe /api est présent
+        if not embedding_base_url.rstrip('/').endswith('/api'):
+            embedding_base_url = embedding_base_url.rstrip('/') + '/api'
+            logger.info(f"Ajout du suffixe /api à l'URL Ollama: {embedding_base_url}")
         
         logger.info(f"Initialisation du client Ollama avec l'URL: {embedding_base_url}")
         embedding_client = AsyncOpenAI(base_url=embedding_base_url, api_key="ollama")
-        logger.info(f"Client Ollama initialisé avec succès")
+        # Utiliser le même endpoint OpenAI-compatible pour le LLM (chat completions)
+        llm_client = AsyncOpenAI(base_url=embedding_base_url, api_key="ollama")
+        logger.info("Clients OpenAI-compatibles initialisés avec succès (embeddings et LLM)")
         
         # Initialisation du client Supabase avec les vraies clés du fichier .env
         supabase_url = os.environ.get("SUPABASE_URL")
@@ -141,20 +206,33 @@ def init_clients():
         
         if supabase_url and supabase_key:
             try:
-                from supabase import create_client
                 logger.info(f"Tentative de connexion à Supabase: {supabase_url}")
                 supabase = create_client(supabase_url, supabase_key)
                 
                 # Tester que la connexion fonctionne
                 test_response = supabase.table("site_pages").select("id").limit(1).execute()
                 logger.info(f"Client Supabase initialisé avec succès et testé: {test_response}")
-                
+                _clients_initialized = True
                 return True
             except Exception as e:
                 logger.error(f"Erreur lors de l'initialisation du client Supabase: {e}")
                 # Ne pas tomber en mode test, lever une exception
                 raise e
         else:
+            # Essayer via profils/env_vars.json
+            supabase_url = get_env_var("SUPABASE_URL")
+            supabase_key = get_env_var("SUPABASE_SERVICE_KEY")
+            if supabase_url and supabase_key:
+                try:
+                    logger.info(f"Tentative de connexion à Supabase (profil): {supabase_url}")
+                    supabase = create_client(supabase_url, supabase_key)
+                    # Test rapide
+                    supabase.table("site_pages").select("id").limit(1).execute()
+                    logger.info("Client Supabase initialisé via profil")
+                    _clients_initialized = True
+                    return True
+                except Exception as e2:
+                    logger.error(f"Échec initialisation Supabase via profil: {e2}")
             logger.error("Variables Supabase manquantes (SUPABASE_URL, SUPABASE_SERVICE_KEY)")
             raise Exception("Variables Supabase obligatoires manquantes")
             
@@ -162,8 +240,7 @@ def init_clients():
         logger.error(f"Erreur lors de l'initialisation des clients: {e}")
         raise e
 
-# Exécuter l'initialisation des clients immédiatement
-init_clients()
+# Ne pas initialiser immédiatement; laisser main()/UI faire l'init lorsque l'env est prêt
 
 # Taille maximale des chunks
 MAX_CHUNK_SIZE = 5000
@@ -380,6 +457,61 @@ def get_title_and_summary(chunk: str, url: str, chunk_number: int = 0) -> Tuple[
         else:
             return f"Documentation MCP (partie {chunk_number+1})", "Document MCP"
 
+def _sanitize_zerowidth(text: str) -> str:
+    """Supprime les caractères de largeur nulle (ZWSP, ZWNJ, ZWJ, BOM) d'une chaîne.
+
+    Args:
+        text: Chaîne potentiellement contaminée par des caractères invisibles
+    Returns:
+        Chaîne nettoyée
+    """
+    try:
+        return re.sub(r"[\u200B-\u200D\uFEFF]", "", text)
+    except Exception:
+        return text
+
+async def get_title_and_summary_llm(chunk: str, url: str) -> Optional[Tuple[str, str]]:
+    """Utilise un LLM (OpenAI-compatible) pour extraire un titre et un résumé concis.
+
+    Préfère un format JSON structuré {"title": str, "summary": str}. En cas d'erreur,
+    retourne None pour déclencher le fallback heuristique.
+    """
+    try:
+        if not llm_client:
+            logger.debug("LLM non initialisé – tentative d'initialisation paresseuse")
+            try:
+                init_clients()
+            except Exception:
+                return None
+            if not llm_client:
+                return None
+        system_prompt = (
+            "You extract a short, informative title and a precise, helpful summary for a documentation chunk. "
+            "Return JSON with keys 'title' and 'summary'. The summary should capture the main points of the chunk, "
+            "be specific (bullet-like sentences if useful), and stay under ~3 sentences."
+        )
+        # Model selection: allow override via PRIMARY_MODEL, else a lightweight default
+        model_name = os.environ.get("PRIMARY_MODEL") or "gpt-4o-mini"
+        content_snippet = chunk[:1200]
+        resp = await llm_client.chat.completions.create(
+            model=model_name,
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": f"URL: {url}\n\nContent:\n{content_snippet}"},
+            ],
+            response_format={"type": "json_object"},
+        )
+        payload = resp.choices[0].message.content
+        data = json.loads(payload)
+        title = _sanitize_zerowidth(str(data.get("title", "")).strip()) or None
+        summary = str(data.get("summary", "")).strip() or None
+        if not title or not summary:
+            return None
+        return title, summary
+    except Exception as e:
+        logger.debug(f"LLM title/summary extraction failed, fallback to heuristic: {e}")
+        return None
+
 async def get_embedding(text: str) -> List[float]:
     """Génère un vecteur d'embedding pour le texte donné.
     
@@ -392,10 +524,17 @@ async def get_embedding(text: str) -> List[float]:
     # Récupérer la dimension des embeddings depuis les variables d'environnement
     embedding_dim = int(os.environ.get('EMBEDDING_DIMENSIONS', 768))
     
-    # Vérifier que le client est initialisé
+    # Vérifier que le client est initialisé (lazy init thread-safe)
     if not embedding_client:
-        logger.error("Client d'embedding non initialisé")
-        return [0.0] * embedding_dim
+        logger.debug("Client d'embedding non initialisé – tentative d'initialisation paresseuse")
+        try:
+            init_clients()
+        except Exception:
+            logger.error("Échec d'initialisation du client d'embedding")
+            return [0.0] * embedding_dim
+        if not embedding_client:
+            logger.error("Client d'embedding indisponible après initialisation")
+            return [0.0] * embedding_dim
     
     # Limiter la taille du texte pour éviter les erreurs de token limit
     max_text_length = 8000
@@ -442,8 +581,13 @@ async def get_embedding(text: str) -> List[float]:
 async def process_chunk(chunk: str, chunk_number: int, url: str) -> Optional[ProcessedChunk]:
     """Traiter un seul chunk de texte de façon asynchrone."""
     try:
-        # Extraire le titre et le résumé
-        title, summary = get_title_and_summary(chunk, url, chunk_number)
+        # Extraire le titre et le résumé: d'abord via LLM, sinon heuristique
+        extracted = await get_title_and_summary_llm(chunk, url)
+        if extracted:
+            title, summary = extracted
+        else:
+            title, summary = get_title_and_summary(chunk, url, chunk_number)
+        title = _sanitize_zerowidth(title)
         
         # Extraire la catégorie de l'URL
         parts = url.split('/')
@@ -472,12 +616,8 @@ async def insert_chunk(chunk: ProcessedChunk) -> bool:
     """Insérer un chunk traité dans Supabase."""
     try:
         # Créer un identifiant unique pour le chunk basé sur l'URL et le numéro de chunk
-        unique_id = f"{chunk.url}_{chunk.chunk_number}"
-        chunk_id = hashlib.md5(unique_id.encode()).hexdigest()
-        
-        # Préparer les données pour l'insertion
+        # Préparer les données pour l'insertion (pas d'ID string si la colonne est bigint)
         data = {
-            "id": chunk_id,  # Utiliser un ID unique pour éviter les doublons
             "url": chunk.url,
             "chunk_number": chunk.chunk_number,
             "title": chunk.title,
@@ -493,8 +633,8 @@ async def insert_chunk(chunk: ProcessedChunk) -> bool:
         if chunk.embedding:
             data["embedding"] = chunk.embedding
         
-        # Utiliser upsert pour mettre à jour si le chunk existe déjà
-        result = supabase.table("site_pages").upsert(data).execute()
+        # Utiliser upsert idempotent sur la contrainte (url, chunk_number)
+        supabase.table("site_pages").upsert(data, on_conflict="url,chunk_number").execute()
         
         print(f"Chunk {chunk.chunk_number} inséré pour {chunk.url}")
         return True
@@ -575,33 +715,17 @@ def convert_github_url_to_raw(url: str) -> str:
     
     return raw_url
 
-async def fetch_url_content(url: str) -> Optional[str]:
-    """Récupère le contenu d'une URL (HTML ou Markdown) et le convertit en Markdown.
-    
-    Args:
-        url: URL à récupérer
-        
-    Returns:
-        str: Contenu en Markdown ou None si erreur
-    """
+def fetch_url_content_sync(url: str) -> Optional[str]:
+    """Récupère le contenu d'une URL (HTML/Markdown) et le convertit en Markdown (synchrone)."""
     try:
-        # Transformer les URLs GitHub en URLs de contenu brut pour la récupération
         raw_url = convert_github_url_to_raw(url)
-                
         response = requests.get(raw_url, timeout=30)
-        
         if response.status_code != 200:
-            logger.error(f"Erreur {response.status_code} lors de la récupération de {raw_url}")
             return None
-        
         content_type = response.headers.get('content-type', '')
-        
-        # Si c'est du HTML, convertir en Markdown
         if 'text/html' in content_type:
             return html_converter.handle(response.text)
-        # Sinon, supposer que c'est déjà du texte brut ou du Markdown
-        else:
-            return response.text
+        return response.text
     except requests.exceptions.RequestException as e:
         print(f"Erreur lors de la récupération de l'URL {url}: {e}")
         return None
@@ -687,33 +811,6 @@ async def crawl_urls(urls: List[str], tracker: Optional[CrawlProgressTracker] = 
     
     return total_chunks_stored
 
-def fetch_url_content(url: str) -> Optional[str]:
-    """Récupérer le contenu d'une URL en utilisant requests et le convertir en markdown."""
-    try:
-        print(f"Récupération du contenu de {url}")
-        
-        # Transformer les URLs GitHub en URLs de contenu brut pour la récupération
-        raw_url = convert_github_url_to_raw(url)
-        
-        # Récupérer le contenu
-        response = requests.get(raw_url)
-        response.raise_for_status()
-        
-        content_type = response.headers.get('content-type', '')
-        
-        # Si c'est du HTML, convertir en Markdown
-        if 'text/html' in content_type:
-            return html_converter.handle(response.text)
-        # Sinon, supposer que c'est déjà du texte brut ou du Markdown
-        else:
-            return response.text
-    except requests.exceptions.RequestException as e:
-        print(f"Erreur lors de la récupération de l'URL {url}: {e}")
-        return None
-    except Exception as e:
-        print(f"Erreur inattendue lors de la récupération de {url}: {e}")
-        return None
-
 def process_chunk_sync(chunk_text: str, chunk_number: int, url: str) -> Optional[ProcessedChunk]:
     """Version synchrone de process_chunk pour le traitement en thread."""
     try:
@@ -771,7 +868,7 @@ def insert_chunk_sync(chunk: ProcessedChunk) -> bool:
     """
     global supabase
     
-    # Ne plus accepter le mode test - Supabase doit être configuré
+    # Supabase doit être configuré
     if supabase is None:
         logger.error("ERREUR CRITIQUE: Client Supabase non initialisé. Vérifiez les variables d'environnement.")
         logger.error("SUPABASE_URL: " + str(os.environ.get("SUPABASE_URL")))
@@ -784,63 +881,73 @@ def insert_chunk_sync(chunk: ProcessedChunk) -> bool:
             
         # Réinitialiser le client Supabase pour un nouvel essai
         try:
-            from supabase import create_client
-            supabase_url = os.environ.get("SUPABASE_URL", "https://kyqznnxtdjteefvdkwto.supabase.co")
-            supabase_key = os.environ.get("SUPABASE_SERVICE_KEY")
+            supabase_url = os.environ.get("SUPABASE_URL") or get_env_var("SUPABASE_URL")
+            supabase_key = os.environ.get("SUPABASE_SERVICE_KEY") or get_env_var("SUPABASE_SERVICE_KEY")
             if supabase_url and supabase_key:
                 logger.info(f"Tentative de réinitialisation du client Supabase avec: {supabase_url}")
                 supabase = create_client(supabase_url, supabase_key)
                 logger.info("Client Supabase réinitialisé avec succès")
         except Exception as e:
-            logger.error(f"Impossible de réinitialiser le client Supabase: {e}")
-            return False
-    
-    try:
-        # Convertir l'embedding en format JSON serialisable
-        embedding_json = json.dumps(chunk.embedding)
-        
-        # Préparer les données à insérer
-        data = {
-            "url": chunk.url,
-            "title": chunk.title,
-            "content": chunk.content,
-            "summary": chunk.summary,
-            "chunk_number": chunk.chunk_number,
-            "embedding": embedding_json,
-            "metadata": json.dumps({
-                "source": "mcp_docs",
-                "category": chunk.category,
-                "indexed_at": datetime.now().isoformat()
-            })
-        }
-        
-        # Insérer les données dans Supabase
+            logger.error("Impossible d'initialiser le client Supabase: aucune configuration valide trouvée")
+            raise RuntimeError("Supabase non configuré")
+    # S'assurer que l'embedding est une liste de floats (pour pgvector/float8[])
+    embedding_list: Optional[List[float]] = None
+    if isinstance(chunk.embedding, list):
         try:
-            # Vérifier une dernière fois que le client est initialisé
-            if supabase is None:
-                logger.error("ERREUR CRITIQUE: Client Supabase toujours non initialisé après tentative de réinitialisation")
-                return False
-            
-            # Créer un nouvel événement loop pour exécuter la fonction asynchrone dans un contexte synchrone
-            loop = asyncio.new_event_loop()
-            logger.info(f"Insertion du chunk '{chunk.title}' dans Supabase...")
-            response = loop.run_until_complete(supabase.table("site_pages").insert(data).execute())
-            loop.close()
-            
-            if hasattr(response, 'data') and response.data:
-                logger.info(f"Chunk '{chunk.title}' inséré avec succès dans Supabase")
-                return True
-            else:
-                logger.warning(f"Inséré dans Supabase, mais sans confirmation: {response}")
-                return True  # Optimiste, supposer que ça a fonctionné
-        except Exception as e:
-            logger.error(f"Erreur lors de l'insertion dans Supabase: {e}")
-            # Vérifier si l'erreur est liée à une connexion ou à un problème d'authentification
-            if "auth" in str(e).lower() or "cred" in str(e).lower() or "key" in str(e).lower():
-                logger.critical("Problème d'authentification Supabase - vérifiez les clés API")
-            elif "connect" in str(e).lower():
-                logger.critical("Problème de connexion Supabase - vérifiez la connectivité réseau")
+            embedding_list = [float(x) for x in chunk.embedding]
+        except Exception:
+            embedding_list = None
+    
+    # Préparer les données à insérer (metadata en JSON objet, pas string)
+    data = {
+        "url": chunk.url,
+        "title": chunk.title,
+        "content": chunk.content,
+        "summary": chunk.summary,
+        "chunk_number": chunk.chunk_number,
+        "embedding": embedding_list,
+        "metadata": {
+            "source": "mcp_docs",
+            "category": chunk.category,
+            "indexed_at": datetime.now().isoformat(),
+        },
+    }
+    
+    # Insérer les données dans Supabase (synchrone)
+    try:
+        # Vérifier une dernière fois que le client est initialisé
+        if supabase is None:
+            logger.error("ERREUR CRITIQUE: Client Supabase toujours non initialisé après tentative de réinitialisation")
             return False
+        
+        logger.info(f"Insertion/Upsert du chunk '{chunk.title}' dans Supabase...")
+        try:
+            # Upsert idempotent basé sur la contrainte unique (url, chunk_number)
+            response = supabase.table("site_pages").upsert(data, on_conflict="url,chunk_number").execute()
+        except Exception as up_e:
+            # Si la contrainte unique n'existe pas, fallback en insert avec avertissement
+            msg = str(up_e)
+            if "ON CONFLICT" in msg or "unique" in msg.lower():
+                logger.warning("Aucune contrainte unique (url, chunk_number) détectée: fallback en insert."
+                               " Recommander d'ajouter un index unique sur (url, chunk_number) pour idempotence.")
+                response = supabase.table("site_pages").insert(data).execute()
+            else:
+                raise
+        
+        if hasattr(response, 'data') and response.data:
+            logger.info(f"Chunk '{chunk.title}' inséré avec succès dans Supabase")
+            return True
+        else:
+            logger.warning(f"Inséré dans Supabase, mais sans confirmation: {response}")
+            return True  # Optimiste, supposer que ça a fonctionné
+    except Exception as e:
+        logger.error(f"Erreur lors de l'insertion dans Supabase: {e}")
+        # Vérifier si l'erreur est liée à une connexion ou à un problème d'authentification
+        if "auth" in str(e).lower() or "cred" in str(e).lower() or "key" in str(e).lower():
+            logger.critical("Problème d'authentification Supabase - vérifiez les clés API")
+        elif "connect" in str(e).lower():
+            logger.critical("Problème de connexion Supabase - vérifiez la connectivité réseau")
+        return False
     except Exception as e:
         logger.error(f"Erreur lors de la préparation des données pour l'insertion: {e}")
         return False
@@ -857,34 +964,8 @@ def process_and_store_document_sync(url: str, markdown: str, tracker: Optional[C
             print(f"Document divisé en {len(chunks)} chunks: {url}")
         
         chunks_stored = 0
-        
-        # Si les variables d'environnement Supabase ne sont pas définies, mode test
-        supabase_test_mode = os.environ.get("SUPABASE_URL") is None or os.environ.get("SUPABASE_SERVICE_KEY") is None
-        if supabase_test_mode:
-            if tracker:
-                tracker.log(f"Mode test actif: génération des embeddings sans stockage pour {len(chunks)} chunks")
-            else:
-                print(f"Mode test actif: génération des embeddings sans stockage pour {len(chunks)} chunks")
-            
-            for i, chunk_content in enumerate(chunks):
-                try:
-                    # Générer les embeddings sans les stocker
-                    title = extract_title_from_chunk(chunk_content) or f"Chunk {i} from {url}"
-                    
-                    # Simuler le succès pour les tests
-                    chunks_stored += 1
-                    if tracker:
-                        tracker.chunks_stored += 1
-                        
-                except Exception as e:
-                    if tracker:
-                        tracker.log(f"Erreur lors du traitement du chunk {i} en mode test: {e}")
-                    else:
-                        print(f"Erreur lors du traitement du chunk {i} en mode test: {e}")
-            
-            return chunks_stored
-        
-        # Sinon, traitement normal
+
+        # Traitement normal: générer, insérer, compter (pas de mode test implicite)
         for i, chunk_content in enumerate(chunks):
             processed_chunk = process_chunk_sync(chunk_content, i, url)
             
@@ -924,7 +1005,7 @@ def crawl_parallel_with_requests(urls: List[str], tracker: Optional[CrawlProgres
             
             try:
                 # Récupérer le contenu
-                content = fetch_url_content(url)
+                content = fetch_url_content_sync(url)
                 
                 if content:
                     # Traiter et stocker le document avec la version synchrone
@@ -997,6 +1078,14 @@ def main_with_requests(tracker: Optional[CrawlProgressTracker] = None):
         else:
             print("Récupération des URLs de la documentation MCP...")
         urls = get_mcp_urls()  # Utilise notre fonction à jour
+
+        # Filtrer les URLs non autorisées par la allowlist
+        allowed_urls = [u for u in urls if is_allowed_url(u)]
+        if tracker:
+            removed = len(urls) - len(allowed_urls)
+            if removed:
+                tracker.log(f"Filtrage allowlist: {removed} URL(s) exclue(s)")
+        urls = allowed_urls
         
         if not urls:
             if tracker:
@@ -1048,53 +1137,131 @@ def start_crawl_with_requests(progress_callback: Optional[Callable[[Dict[str, An
     return tracker
 
 def get_mcp_urls() -> List[str]:
-    """Obtenir la liste des URLs de documentation MCP officielle.
-    
-    Returns:
-        List[str]: Liste des URLs à crawler
-    """
-    # URLs des documents officiels du protocole MCP (mis à jour et vérifiés)
-    mcp_urls = [
-        # Dépôt principal
-        "https://github.com/modelcontextprotocol/modelcontextprotocol/blob/main/README.md",
-        "https://github.com/modelcontextprotocol/.github/blob/main/profile/CONTRIBUTING.md",
-        
-        # Spécification
-        "https://github.com/modelcontextprotocol/specification/blob/main/README.md",
-        
-        # SDK TypeScript
-        "https://github.com/modelcontextprotocol/typescript-sdk/blob/main/README.md",
-        
-        # SDK Python
-        "https://github.com/modelcontextprotocol/python-sdk/blob/main/README.md",
-        
-        # SDK Java
-        "https://github.com/modelcontextprotocol/java-sdk/blob/main/README.md",
-        
-        # SDK Kotlin
-        "https://github.com/modelcontextprotocol/kotlin-sdk/blob/main/README.md",
-        
-        # SDK C#
-        "https://github.com/modelcontextprotocol/csharp-sdk/blob/main/README.md",
-        
-        # Documentation
-        "https://modelcontextprotocol.io/",
-        "https://spec.modelcontextprotocol.io/",
-        
-        # Liste des serveurs
-        "https://github.com/modelcontextprotocol/servers/blob/main/README.md"
-    ]
-    
-    # Supprimer les doublons
-    mcp_urls = list(set(mcp_urls))
-    
-    print(f"Trouvé {len(mcp_urls)} URLs MCP à crawler")
-    return mcp_urls
+    """Construire une liste élargie d'URLs MCP autorisées (plusieurs centaines possibles).
 
-async def clear_existing_records() -> bool:
-    """Effacer les enregistrements MCP existants de la table site_pages."""
+    Combine des seeds canoniques + expansion automatique via sitemaps (sites officiels)
+    et exploration des arbres GitHub des dépôts MCP officiels.
+    """
+    seeds: List[str] = [
+        # Officiel
+        "https://modelcontextprotocol.io/introduction",
+        "https://modelcontextprotocol.io/overview",
+        "https://modelcontextprotocol.io/faqs",
+        "https://modelcontextprotocol.io/quickstart/client",
+        "https://modelcontextprotocol.io/quickstart/server",
+        "https://modelcontextprotocol.io/docs/learn/architecture",
+        "https://modelcontextprotocol.io/examples",
+        # Spécification
+        "https://spec.modelcontextprotocol.io/specification/",
+        "https://spec.modelcontextprotocol.io/specification/basic/",
+        # GitHub org pages clés
+        "https://github.com/modelcontextprotocol/servers",
+        "https://github.com/modelcontextprotocol/servers/blob/main/README.md",
+        "https://github.com/modelcontextprotocol/modelcontextprotocol/blob/main/README.md",
+        "https://github.com/modelcontextprotocol/.github/blob/main/CONTRIBUTING.md",
+        # IDE clients
+        "https://code.visualstudio.com/mcp",
+        "https://code.visualstudio.com/docs/copilot/chat/mcp-servers",
+        "https://docs.windsurf.com/windsurf/mcp",
+        "https://docs.windsurf.com/windsurf/cascade/mcp",
+        # Vendors & libs
+        "https://supabase.com/docs/guides/getting-started/mcp",
+        "https://supabase.com/features/mcp-server",
+        "https://openai.github.io/openai-agents-python/mcp/",
+        "https://platform.openai.com/docs/mcp",
+        "https://docs.anthropic.com/en/docs/claude-code/mcp",
+        "https://docs.anthropic.com/en/docs/build-with-claude/mcp",
+        "https://docs.llamaindex.ai/en/stable/examples/tools/mcp/",
+    ]
+
+    expanded = set(seeds)
+
+    # Expansion via sitemaps pour les domaines officiels
     try:
-        result = await supabase.table("site_pages").delete().eq("metadata->>source", "mcp_docs").execute()
+        expanded.update(fetch_sitemap_urls("https://modelcontextprotocol.io/sitemap.xml"))
+    except Exception as e:
+        logger.warning(f"Sitemap MCP site erreur: {e}")
+    try:
+        expanded.update(fetch_sitemap_urls("https://spec.modelcontextprotocol.io/sitemap.xml"))
+    except Exception as e:
+        logger.warning(f"Sitemap MCP spec erreur: {e}")
+
+    # Expansion GitHub: parcourir l'arborescence des dépôts importants
+    gh_repos = [
+        ("modelcontextprotocol", "servers"),
+        ("modelcontextprotocol", "modelcontextprotocol"),
+    ]
+    for org, repo in gh_repos:
+        try:
+            expanded.update(fetch_github_repo_docs(org, repo))
+        except Exception as e:
+            logger.warning(f"GitHub tree erreur pour {org}/{repo}: {e}")
+
+    # Filtrer par allowlist et normaliser
+    urls: List[str] = []
+    for u in expanded:
+        try:
+            host = urlparse(u).hostname or ""
+            if any(host.endswith(d) for d in ALLOWED_DOMAINS):
+                urls.append(u)
+        except Exception:
+            continue
+
+    urls = sorted(set(urls))
+    logger.info(f"Liste MCP construite: {len(urls)} URLs")
+    return urls
+
+def fetch_sitemap_urls(sitemap_url: str) -> List[str]:
+    """Récupérer toutes les URLs d'un sitemap XML.
+
+    Args:
+        sitemap_url: URL du sitemap.xml
+    Returns:
+        Liste d'URLs trouvées
+    """
+    try:
+        resp = requests.get(sitemap_url, timeout=20)
+        if resp.status_code != 200:
+            return []
+        xml = resp.text
+        # Extraire <loc>...</loc>
+        locs = re.findall(r"<loc>(.*?)</loc>", xml)
+        return [loc.strip() for loc in locs if loc.strip()]
+    except Exception:
+        return []
+
+async def fetch_url_content(url: str) -> Optional[str]:
+    """Wrapper asynchrone autour de fetch_url_content_sync."""
+    return await asyncio.to_thread(fetch_url_content_sync, url)
+def fetch_github_repo_docs(org: str, repo: str) -> List[str]:
+    """Lister les fichiers docs/README*.md d'un dépôt GitHub (API publique non authentifiée).
+
+    On utilise l'API git trees recursive pour récupérer les chemins, puis
+    on convertit en URLs GitHub blob pour traitement.
+    """
+    base = f"https://api.github.com/repos/{org}/{repo}/git/trees/HEAD?recursive=1"
+    try:
+        r = requests.get(base, timeout=30, headers={"Accept": "application/vnd.github+json"})
+        if r.status_code != 200:
+            return []
+        data = r.json()
+        urls: List[str] = []
+        for item in data.get("tree", []):
+            path = item.get("path", "")
+            if not isinstance(path, str):
+                continue
+            if path.lower().endswith(('.md', '.mdx')) and (
+                'readme' in path.lower() or '/docs/' in path.lower() or path.lower().startswith('docs/')
+            ):
+                urls.append(f"https://github.com/{org}/{repo}/blob/main/{path}")
+        return urls
+    except Exception:
+        return []
+
+def clear_existing_records() -> bool:
+    """Effacer les enregistrements MCP existants de la table `site_pages` (synchrone)."""
+    try:
+        supabase.table("site_pages").delete().eq("metadata->>source", "mcp_docs").execute()
         print("Enregistrements MCP existants effacés")
         return True
     except Exception as e:
@@ -1104,11 +1271,7 @@ async def clear_existing_records() -> bool:
 def clear_existing_records_sync() -> bool:
     """Version synchrone pour effacer les enregistrements MCP existants."""
     try:
-        # Créer un nouvel événement loop pour exécuter la fonction asynchrone
-        loop = asyncio.new_event_loop()
-        result = loop.run_until_complete(clear_existing_records())
-        loop.close()
-        return result
+        return clear_existing_records()
     except Exception as e:
         print(f"Erreur lors de l'effacement synchrone des enregistrements: {e}")
         return False
@@ -1116,6 +1279,8 @@ def clear_existing_records_sync() -> bool:
 async def main(tracker: Optional[CrawlProgressTracker] = None) -> bool:
     """Fonction principale du crawler MCP."""
     try:
+        # Initialiser les clients (Ollama + Supabase) quand l'environnement est chargé
+        init_clients()
         # Démarrer le tracker
         if tracker:
             tracker.start()
@@ -1123,7 +1288,7 @@ async def main(tracker: Optional[CrawlProgressTracker] = None) -> bool:
         # Effacer les enregistrements existants
         if tracker:
             tracker.log("Effacement des enregistrements MCP existants...")
-        await clear_existing_records()
+        clear_existing_records()
         
         # Obtenir les URLs
         if tracker:

@@ -19,18 +19,16 @@ import threading
 import atexit
 import httpx
 import logfire
+from logging.handlers import RotatingFileHandler
 from typing import Dict, Any, Optional, Union, List, Tuple
 from contextlib import asynccontextmanager
 from dotenv import load_dotenv
-from openai import AsyncOpenAI
 
-# Configure logger
+from archon.utils.utils import configure_logging, get_bool_env
+
+# Configure logging centrally
+_log_summary = configure_logging()
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
-handler = logging.StreamHandler(sys.stderr)
-formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-handler.setFormatter(formatter)
-logger.addHandler(handler)
 
 class LoggingHTTPClient(httpx.AsyncClient):
     """HTTP client with request/response logging"""
@@ -92,8 +90,11 @@ from typing_extensions import TypedDict
 # Simple OpenRouter Configuration
 logging.info("🔧 Simple OpenRouter Configuration")
 
-# Logger Configuration
-logger = logging.getLogger(__name__)
+rag_flag = get_bool_env('RAG_ENABLED', False)
+logger.info(
+    f"🔧 Logging configured | console={_log_summary.get('console')} file={_log_summary.get('file')}"
+    f" path={_log_summary.get('file_path')} json={_log_summary.get('json')} | RAG_ENABLED={rag_flag}"
+)
 
 # Configure Logfire
 try:
@@ -113,30 +114,59 @@ advisor: Optional['AIAgent'] = None
 coder: Optional['AIAgent'] = None
 
 # Unified LLM Provider Import
-import sys
-import os
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'archon'))
-from llm import LLMProvider, LLMConfig
+from archon.llm import LLMProvider, LLMConfig
 
 # Pydantic AI Compatibility Imports
-from pydantic_ai import RunContext, Agent as PydanticAgent, ModelRetry
-from pydantic_ai.models.openai import OpenAIModel
-from pydantic_ai.settings import ModelSettings
+try:
+    from pydantic_ai import RunContext, Agent as PydanticAgent, ModelRetry
+    from pydantic_ai.settings import ModelSettings
+except ImportError:
+    # Provide minimal shims so module import doesn't fail when optional deps are absent
+    class RunContext:  # type: ignore
+        pass
+    class PydanticAgent:  # type: ignore
+        def __init__(self, *args, **kwargs):
+            pass
+        async def run(self, *args, **kwargs):
+            return type("_Res", (), {"data": ""})
+        def system_prompt(self, fn):
+            return fn
+    class ModelRetry(Exception):  # type: ignore
+        pass
+    class ModelSettings:  # type: ignore
+        pass
 import httpx
 
-from pydantic_ai.messages import (
-    ModelMessage,
-    ModelMessagesTypeAdapter,
-    ModelRequest,
-    ModelResponse,
-    TextPart,
-    SystemPromptPart,
-    UserPromptPart
-)
+try:
+    from pydantic_ai.messages import (
+        ModelMessage,
+        ModelMessagesTypeAdapter,
+        ModelRequest,
+        ModelResponse,
+        TextPart,
+        SystemPromptPart,
+        UserPromptPart
+    )
+except ImportError:
+    # Minimal fallbacks when pydantic_ai is not installed
+    class ModelMessage:  # type: ignore
+        pass
+    class ModelMessagesTypeAdapter:  # type: ignore
+        pass
+    class ModelRequest:  # type: ignore
+        pass
+    class ModelResponse:  # type: ignore
+        pass
+    class TextPart:  # type: ignore
+        pass
+    class SystemPromptPart:  # type: ignore
+        pass
+    class UserPromptPart:  # type: ignore
+        pass
 
 
 
-async def _ensure_ollama_model_is_pulled(openai_client: AsyncOpenAI, model_name: str):
+async def _ensure_ollama_model_is_pulled(openai_client: Any, model_name: str):
     """Helper function to check if an Ollama model exists and pull it if not."""
     try:
         logger.debug(f"Checking if Ollama model '{model_name}' exists...")
@@ -162,8 +192,9 @@ async def get_llm_instance(provider: str, model_name: str, config: Dict[str, Any
     logger.info(f"Configuring LLM instance for provider: {provider} with model: {model_name}")
 
     try:
-        from openai import AsyncOpenAI
-        from pydantic_ai.models.openai import OpenAIModel
+        # Lazy import optional deps only when needed
+        from openai import AsyncOpenAI  # type: ignore
+        from pydantic_ai.models.openai import OpenAIModel  # type: ignore
 
         http_client = LoggingHTTPClient(timeout=60.0, limits=httpx.Limits(max_connections=100, max_keepalive_connections=20))
         client_kwargs = {"http_client": http_client}
@@ -236,7 +267,7 @@ except ImportError as e:
 
 # Prompt Imports
 try:
-    from archon.agent_prompts import (
+    from archon.archon.agent_prompts import (
         prompt_refiner_agent_prompt, advisor_prompt, coder_prompt_with_examples, reasoner_prompt
     )
 except ImportError:
@@ -356,10 +387,10 @@ async def advisor_with_examples(state: AgentState, config: dict) -> AgentState:
         
         # Get LLM configuration
         llm_config = config.get("configurable", {}).get("llm_config", {})
-        model_name = llm_config.get("PRIMARY_MODEL")
+        model_name = llm_config.get("ADVISOR_MODEL")
         provider = llm_config.get("LLM_PROVIDER")
         
-        logger.info(f"💡 ADVISOR - Provider: {provider} | Model: {model_name}")
+        logger.info(f"💡 ADVISOR - Provider: {provider} | Model: {model_name} (ADVISOR_MODEL)")
         logger.info(f"💡 ADVISOR - Scope: {state['scope'][:200]}...")
 
         # Initialize the advisor agent
@@ -393,6 +424,9 @@ async def advisor_with_examples(state: AgentState, config: dict) -> AgentState:
             'content': error_msg
         })
         return state
+
+from archon.archon.pydantic_ai_coder import create_pydantic_ai_coder
+from archon.utils.utils import get_clients, get_bool_env, validate_rag_env
 
 async def coder_agent(state: AgentState, config: dict) -> AgentState:
     """Generates the final code using the coder agent based on the active profile."""
@@ -428,11 +462,9 @@ async def coder_agent(state: AgentState, config: dict) -> AgentState:
         logger.info(f"⚡ CODER - Scope: {state['scope'][:200]}...")
         logger.info(f"⚡ CODER - Advisor Output: {state['advisor_output'][:200]}...")
 
-        # Initialize the coder agent
-        coder = PydanticAgent(
-            await get_llm_instance(provider, model_name, llm_config),
-            system_prompt=coder_prompt_with_examples
-        )
+        # Initialize LLM model instance and coder agent
+        llm_model = await get_llm_instance(provider, model_name, llm_config)
+        coder = create_pydantic_ai_coder(custom_model=llm_model)
         
         # Prepare the instruction with context
         instruction = (
@@ -440,9 +472,22 @@ async def coder_agent(state: AgentState, config: dict) -> AgentState:
             f"## Advisor Output\n{state['advisor_output']}"
         )
         
+        # Prepare deps and conditionally enable RAG clients
+        deps = {
+            'reasoner_output': state['scope'],
+            'advisor_output': state['advisor_output'],
+        }
+        if get_bool_env('RAG_ENABLED', default=False) and validate_rag_env():
+            embedding_client, supabase_client, _neo4j = get_clients()
+            if embedding_client and supabase_client:
+                deps.update({
+                    'supabase': supabase_client,
+                    'embedding_client': embedding_client,
+                })
+
         # Generate code
         logger.info("⚡ CODER - Sending request to coder...")
-        result = await coder.run(instruction)
+        result = await coder.run(instruction, deps=deps)
         code_text = result.data if hasattr(result, 'data') else str(result)
 
         # Update state with results

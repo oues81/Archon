@@ -4,8 +4,8 @@ import sys
 import os
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from archon.crawl_pydantic_ai_docs import start_crawl_with_requests, clear_existing_records
-from archon.crawl_mcp_docs import start_crawl_with_requests as start_mcp_crawl, clear_existing_records as clear_mcp_records
+from archon.archon.crawl_pydantic_ai_docs import start_crawl_with_requests, clear_existing_records
+from archon.archon.crawl_mcp_docs import start_crawl_with_requests as start_mcp_crawl, clear_existing_records as clear_mcp_records
 from utils.utils import get_env_var, create_new_tab_button
 
 def documentation_tab(supabase_client):
@@ -264,14 +264,14 @@ def documentation_tab(supabase_client):
                             st.code("Aucun log disponible pour le moment...")
                     
                     # Show completion message
-                    if status and not status["is_running"] and status["end_time"]:
+                    if status and not status.get("is_running", False) and status.get("end_time"):
                         if status["urls_failed"] == 0:
                             st.success("✅ Processus de crawling terminé avec succès!")
                         else:
                             st.warning(f"⚠️ Processus de crawling terminé avec {status['urls_failed']} URLs échouées.")
                 
                 # Auto-refresh while crawling is in progress
-                if not status or status["is_running"]:
+                if not status or status.get("is_running", False):
                     st.rerun()
             
             # Display database statistics
