@@ -333,25 +333,6 @@ def _process_mcp_payload(data: Dict[str, Any]) -> Dict[str, Any]:
                 },
             },
             {
-                "name": "create_thread",
-                "description": "Create a new Archon conversation thread and return its ID.",
-                "inputSchema": {"type": "object", "properties": {}, "additionalProperties": False},
-            },
-            {
-                "name": "run_agent",
-                "description": "Run the Archon agent with user input in a given thread.",
-                "inputSchema": {
-                    "type": "object",
-                    "properties": {
-                        "thread_id": {"type": "string"},
-                        "user_input": {"type": "string"},
-                        "profile_name": {"type": "string"},
-                    },
-                    "required": ["thread_id", "user_input"],
-                    "additionalProperties": False,
-                },
-            },
-            {
                 "name": "list_profiles",
                 "description": "List available Archon profiles.",
                 "inputSchema": {"type": "object", "properties": {}, "additionalProperties": False},
@@ -361,14 +342,79 @@ def _process_mcp_payload(data: Dict[str, Any]) -> Dict[str, Any]:
                 "description": "Get the currently active Archon profile.",
                 "inputSchema": {"type": "object", "properties": {}, "additionalProperties": False},
             },
+            {
+                "name": "create_thread",
+                "description": "Create a new Archon conversation thread and return its ID.",
+                "inputSchema": {"type": "object", "properties": {}, "additionalProperties": False},
+            },
+            {
+                "name": "run_agentic_flow_archon_meta_agents_creator",
+                "description": "Run the Archon Meta‑Agents Creator (generic agentic flow). Requires a general profile.",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "thread_id": {"type": "string"},
+                        "user_input": {"type": "string"},
+                        "profile_name": {"type": "string"},
+                        "config": {"type": "object"}
+                    },
+                    "required": ["thread_id", "user_input"],
+                    "additionalProperties": False,
+                },
+            },
+            {
+                "name": "run_agentic_flow_docs_maintainer",
+                "description": "Execute the DocsMaintainer agentic flow (uses dedicated profile).",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "thread_id": {"type": "string"},
+                        "user_input": {"type": "string"},
+                        "profile_name": {"type": "string"},
+                        "config": {"type": "object"}
+                    },
+                    "required": ["thread_id", "user_input"],
+                    "additionalProperties": False
+                }
+            },
+            {
+                "name": "run_agentic_flow_content_restructurer",
+                "description": "Execute the ContentRestructurer agentic flow (uses dedicated profile).",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "thread_id": {"type": "string"},
+                        "user_input": {"type": "string"},
+                        "profile_name": {"type": "string"},
+                        "config": {"type": "object"}
+                    },
+                    "required": ["thread_id", "user_input"],
+                    "additionalProperties": False
+                }
+            },
+            # (aliases removed from discovery to avoid confusion)
+            # (moved list_profiles & get_active_profile to top)
         ]
         response["result"] = {"tools": tools, "nextCursor": None}
     # Tool invocation
-    elif method in {"tools/call", "callTool"}:
+    elif method in {"tools/call", "callTool", "call_tool", "call-tool"}:
         params = data.get("params") or {}
         tool_name = params.get("name") if isinstance(params, dict) else None
         tool_args = params.get("arguments") if isinstance(params, dict) else None
         logger.info(f"Handling tool call: name={tool_name}, args={tool_args}")
+        # Map aliases to canonical tool names
+        alias_map = {
+            # Legacy dotted aliases
+            "content.restructure": "run_agentic_flow_content_restructurer",
+            "docs.maintain": "run_agentic_flow_docs_maintainer",
+            # Legacy canonical names
+            "run_agent": "run_agentic_flow_archon_meta_agents_creator",
+            "run_docs_maintainer": "run_agentic_flow_docs_maintainer",
+            "run_content_restructurer": "run_agentic_flow_content_restructurer",
+            # (underscore aliases removed)
+        }
+        if tool_name in alias_map:
+            tool_name = alias_map[tool_name]
         if not tool_name:
             response["error"] = {"code": -32602, "message": "Missing 'name' for tool call"}
         else:
@@ -398,7 +444,7 @@ def _process_mcp_payload(data: Dict[str, Any]) -> Dict[str, Any]:
                 tid = str(uuid.uuid4())
                 active_threads[tid] = []
                 response["result"] = {"content": [{"type": "text", "text": tid}]}
-            elif tool_name == "run_agent":
+            elif tool_name in {"run_agentic_flow_archon_meta_agents_creator", "run_agent"}:
                 # Validate arguments
                 if not isinstance(tool_args, dict):
                     response["error"] = {"code": -32602, "message": "Invalid arguments for run_agent"}
@@ -406,21 +452,513 @@ def _process_mcp_payload(data: Dict[str, Any]) -> Dict[str, Any]:
                     tid = tool_args.get("thread_id")
                     user_input = tool_args.get("user_input")
                     profile_name = tool_args.get("profile_name")
+                    user_config = tool_args.get("config") if isinstance(tool_args.get("config"), dict) else None
                     if not tid or not user_input:
                         response["error"] = {"code": -32602, "message": "'thread_id' and 'user_input' are required"}
                     else:
-                        # Ensure thread bucket exists
-                        if tid not in active_threads:
-                            active_threads[tid] = []
-                        config = {"configurable": {"thread_id": tid}}
+                        # Guardrail: refuse using run_agent for specialized flows
+                        flow_req = None
                         try:
-                            result = _make_request(tid, user_input, config, profile_name)
-                            active_threads[tid].append(user_input)
-                            # Expecting {'response': str}
-                            text_resp = result.get("response") if isinstance(result, dict) else str(result)
-                            response["result"] = {"content": [{"type": "text", "text": text_resp}]}
-                        except Exception as e:
-                            response["error"] = {"code": -32003, "message": f"run_agent failed: {e}"}
+                            ucfg = user_config.get("configurable", user_config) if isinstance(user_config, dict) else None
+                            if isinstance(ucfg, dict):
+                                flow_req = ucfg.get("flow")
+                        except Exception:
+                            flow_req = None
+                        if flow_req in {"ContentRestructurer", "DocsMaintainer", "ScriptsRestructurer"}:
+                            response["error"] = {
+                                "code": -32007,
+                                "message": "Flow requires dedicated tool. Use run_content_restructurer or run_docs_maintainer instead of run_agent.",
+                            }
+                        else:
+                            # Ensure thread bucket exists
+                            if tid not in active_threads:
+                                active_threads[tid] = []
+                            # Enforce general profiles for run_agent (avoid specialized flows via ambient profile)
+                            try:
+                                effective_profile = profile_name or (get_current_profile() if _profiles_available else None)
+                            except Exception:
+                                effective_profile = profile_name
+                            specialized_profiles = {"DocsMaintainer", "ContentRestructurer", "ScriptsRestructurer"}
+                            if effective_profile in specialized_profiles:
+                                response["error"] = {
+                                    "code": -32008,
+                                    "message": "run_agent requires a general profile (e.g., openai_default, ollama_default, openrouter_default). Use dedicated tools for DocsMaintainer/ContentRestructurer/ScriptsRestructurer or pass a general profile_name."
+                                }
+                            else:
+                                # Merge caller config but ensure thread_id inside configurable
+                                base_cfg = {"configurable": {"thread_id": tid}}
+                                if user_config and isinstance(user_config, dict):
+                                    # Merge shallowly; configurable merged separately if provided
+                                    cfg = base_cfg.get("configurable", {}).copy()
+                                    ucfg = user_config.get("configurable", user_config)
+                                    if isinstance(ucfg, dict):
+                                        cfg.update(ucfg)
+                                    config = {"configurable": cfg}
+                                else:
+                                    config = base_cfg
+                                # Sanitize: remove any flow leakage in run_agent
+                                try:
+                                    cfg_conf = (config.get("configurable", {}) or {})
+                                    cfg_conf.pop("flow", None)
+                                    config["configurable"] = cfg_conf
+                                except Exception:
+                                    pass
+                                # Emit start progress event
+                                try:
+                                    _mcp_response_queue.put_nowait({
+                                        "jsonrpc": "2.0",
+                                        "method": "tool_progress",
+                                        "params": {
+                                            "status": "started",
+                                            "tool": tool_name,
+                                            "thread_id": tid,
+                                            "flow": (config.get("configurable", {}) or {}).get("flow")
+                                        }
+                                    })
+                                except Exception:
+                                    pass
+                                # Perform work and emit finished/failed
+                                import time as _time
+                                _t0 = _time.time()
+                                try:
+                                    logger.info(
+                                        "[MCP] start",
+                                        extra={
+                                            "tool": tool_name,
+                                            "thread_id": tid,
+                                            "flow": (config.get("configurable", {}) or {}).get("flow"),
+                                            "profile": profile_name or get_current_profile() if _profiles_available else profile_name,
+                                            "prompt": (user_input or "")[:500],
+                                            "config": {
+                                                "source_dir": (config.get("configurable", {}) or {}).get("source_dir"),
+                                                "dry_run": (config.get("configurable", {}) or {}).get("dry_run"),
+                                                "apply_moves": (config.get("configurable", {}) or {}).get("apply_moves"),
+                                                "backups_root": (config.get("configurable", {}) or {}).get("backups_root"),
+                                                "filters": (config.get("configurable", {}) or {}).get("filters"),
+                                            },
+                                        },
+                                    )
+                                except Exception:
+                                    pass
+                                try:
+                                    result = _make_request(tid, user_input, config, profile_name)
+                                    active_threads[tid].append(user_input)
+                                    # Relay per-step details if provided by Graph
+                                    try:
+                                        steps = result.get("steps") if isinstance(result, dict) else None
+                                    except Exception:
+                                        steps = None
+                                    if isinstance(steps, list):
+                                        for _st in steps:
+                                            try:
+                                                logger.info(
+                                                    "[MCP] step",
+                                                    extra={
+                                                        "tool": tool_name,
+                                                        "thread_id": tid,
+                                                        "flow": (config.get("configurable", {}) or {}).get("flow"),
+                                                        "profile": profile_name or get_current_profile() if _profiles_available else profile_name,
+                                                        "agent": (_st or {}).get("agent"),
+                                                        "model": (_st or {}).get("model"),
+                                                        "status": (_st or {}).get("status"),
+                                                        "duration_ms": (_st or {}).get("duration_ms"),
+                                                        "node": (_st or {}).get("node"),
+                                                    },
+                                                )
+                                            except Exception:
+                                                pass
+                                            try:
+                                                _mcp_response_queue.put_nowait({
+                                                    "jsonrpc": "2.0",
+                                                    "method": "tool_progress",
+                                                    "params": {
+                                                        "status": "step",
+                                                        "tool": tool_name,
+                                                        "thread_id": tid,
+                                                        "flow": (config.get("configurable", {}) or {}).get("flow"),
+                                                        "step": _st,
+                                                    }
+                                                })
+                                            except Exception:
+                                                pass
+                                    # Expecting {'response': str}
+                                    text_resp = result.get("response") if isinstance(result, dict) else str(result)
+                                    response["result"] = {"content": [{"type": "text", "text": text_resp}]}
+                                    try:
+                                        _dt = int(( _time.time() - _t0) * 1000)
+                                        _preview = (text_resp or "")[:500]
+                                        logger.info(
+                                            "[MCP] finished",
+                                            extra={
+                                                "tool": tool_name,
+                                                "thread_id": tid,
+                                                "flow": (config.get("configurable", {}) or {}).get("flow"),
+                                                "profile": profile_name or get_current_profile() if _profiles_available else profile_name,
+                                                "duration_ms": _dt,
+                                                "summary": (text_resp or "")[:240],
+                                                "prompt": (user_input or "")[:500],
+                                                "preview": _preview,
+                                                "config": {
+                                                    "source_dir": (config.get("configurable", {}) or {}).get("source_dir"),
+                                                    "dry_run": (config.get("configurable", {}) or {}).get("dry_run"),
+                                                    "apply_moves": (config.get("configurable", {}) or {}).get("apply_moves"),
+                                                    "backups_root": (config.get("configurable", {}) or {}).get("backups_root"),
+                                                    "filters": (config.get("configurable", {}) or {}).get("filters"),
+                                                },
+                                            },
+                                        )
+                                    except Exception:
+                                        pass
+                                    try:
+                                        _mcp_response_queue.put_nowait({
+                                            "jsonrpc": "2.0",
+                                            "method": "tool_progress",
+                                            "params": {
+                                                "status": "finished",
+                                                "tool": tool_name,
+                                                "thread_id": tid,
+                                                "flow": (config.get("configurable", {}) or {}).get("flow"),
+                                                "summary": text_resp[:400],
+                                                "prompt": (user_input or "")[:500],
+                                                "preview": (text_resp or "")[:500],
+                                                "config": {
+                                                    "source_dir": (config.get("configurable", {}) or {}).get("source_dir"),
+                                                    "dry_run": (config.get("configurable", {}) or {}).get("dry_run"),
+                                                    "apply_moves": (config.get("configurable", {}) or {}).get("apply_moves"),
+                                                    "backups_root": (config.get("configurable", {}) or {}).get("backups_root"),
+                                                    "filters": (config.get("configurable", {}) or {}).get("filters"),
+                                                }
+                                            }
+                                        })
+                                    except Exception:
+                                        pass
+                                except Exception as e:
+                                    response["error"] = {"code": -32003, "message": f"run_agent failed: {e}"}
+                                    try:
+                                        _dt = int(( _time.time() - _t0) * 1000)
+                                        logger.info(
+                                            "[MCP] failed",
+                                            extra={
+                                                "tool": tool_name,
+                                                "thread_id": tid,
+                                                "flow": (config.get("configurable", {}) or {}).get("flow"),
+                                                "profile": profile_name or get_current_profile() if _profiles_available else profile_name,
+                                                "duration_ms": _dt,
+                                                "error": str(e),
+                                            },
+                                        )
+                                    except Exception:
+                                        pass
+                                    try:
+                                        _mcp_response_queue.put_nowait({
+                                            "jsonrpc": "2.0",
+                                            "method": "tool_progress",
+                                            "params": {
+                                                "status": "failed",
+                                                "tool": tool_name,
+                                                "thread_id": tid,
+                                                "flow": (config.get("configurable", {}) or {}).get("flow"),
+                                                "error": str(e)
+                                            }
+                                        })
+                                    except Exception:
+                                        pass
+            elif tool_name in {"run_agentic_flow_docs_maintainer", "run_docs_maintainer"}:
+                # Dedicated flow: DocsMaintainer
+                if not isinstance(tool_args, dict):
+                    response["error"] = {"code": -32602, "message": "Invalid arguments for run_docs_maintainer"}
+                else:
+                    tid = tool_args.get("thread_id") or str(uuid.uuid4())
+                    user_input = tool_args.get("user_input") or ""
+                    profile_name = tool_args.get("profile_name") or "DocsMaintainer"
+                    user_config = tool_args.get("config") if isinstance(tool_args.get("config"), dict) else None
+                    if tid not in active_threads:
+                        active_threads[tid] = []
+                    # Build config with enforced flow
+                    base_cfg = {"configurable": {"thread_id": tid, "flow": "DocsMaintainer"}}
+                    if user_config and isinstance(user_config, dict):
+                        cfg = base_cfg.get("configurable", {}).copy()
+                        ucfg = user_config.get("configurable", user_config)
+                        if isinstance(ucfg, dict):
+                            cfg.update(ucfg)
+                        config = {"configurable": cfg}
+                    else:
+                        config = base_cfg
+                    # Progress events
+                    import time as _time
+                    _t0 = _time.time()
+                    try:
+                        logger.info(
+                            "[MCP] start",
+                            extra={
+                                "tool": tool_name,
+                                "thread_id": tid,
+                                "flow": "DocsMaintainer",
+                                "profile": profile_name,
+                                "prompt": (user_input or "")[:500],
+                                "config": {
+                                    "source_dir": (config.get("configurable", {}) or {}).get("source_dir"),
+                                    "dry_run": (config.get("configurable", {}) or {}).get("dry_run"),
+                                    "apply_moves": (config.get("configurable", {}) or {}).get("apply_moves"),
+                                    "backups_root": (config.get("configurable", {}) or {}).get("backups_root"),
+                                    "filters": (config.get("configurable", {}) or {}).get("filters"),
+                                },
+                            },
+                        )
+                    except Exception:
+                        pass
+                    try:
+                        _mcp_response_queue.put_nowait({
+                            "jsonrpc": "2.0",
+                            "method": "tool_progress",
+                            "params": {
+                                "status": "started",
+                                "tool": tool_name,
+                                "thread_id": tid,
+                                "flow": "DocsMaintainer",
+                                "prompt": (user_input or "")[:500],
+                                "config": {
+                                    "source_dir": (config.get("configurable", {}) or {}).get("source_dir"),
+                                    "dry_run": (config.get("configurable", {}) or {}).get("dry_run"),
+                                    "apply_moves": (config.get("configurable", {}) or {}).get("apply_moves"),
+                                    "backups_root": (config.get("configurable", {}) or {}).get("backups_root"),
+                                    "filters": (config.get("configurable", {}) or {}).get("filters"),
+                                }
+                            }
+                        })
+                    except Exception:
+                        pass
+                    try:
+                        result = _make_request(tid, user_input, config, profile_name)
+                        active_threads[tid].append(user_input)
+                        # Relay per-step details if provided by Graph
+                        try:
+                            steps = result.get("steps") if isinstance(result, dict) else None
+                        except Exception:
+                            steps = None
+                        if isinstance(steps, list):
+                            for _st in steps:
+                                try:
+                                    logger.info(
+                                        "[MCP] step",
+                                        extra={
+                                            "tool": tool_name,
+                                            "thread_id": tid,
+                                            "flow": "DocsMaintainer",
+                                            "profile": profile_name,
+                                            "agent": (_st or {}).get("agent"),
+                                            "model": (_st or {}).get("model"),
+                                            "status": (_st or {}).get("status"),
+                                            "duration_ms": (_st or {}).get("duration_ms"),
+                                            "node": (_st or {}).get("node"),
+                                        },
+                                    )
+                                except Exception:
+                                    pass
+                                try:
+                                    _mcp_response_queue.put_nowait({
+                                        "jsonrpc": "2.0",
+                                        "method": "tool_progress",
+                                        "params": {"status": "step", "tool": tool_name, "thread_id": tid, "flow": "DocsMaintainer", "step": _st}
+                                    })
+                                except Exception:
+                                    pass
+                        text_resp = result.get("response") if isinstance(result, dict) else str(result)
+                        response["result"] = {"content": [{"type": "text", "text": text_resp}]}
+                        try:
+                            _dt = int(( _time.time() - _t0) * 1000)
+                            _preview = (text_resp or "")[:500]
+                            logger.info(
+                                "[MCP] finished",
+                                extra={
+                                    "tool": tool_name,
+                                    "thread_id": tid,
+                                    "flow": "DocsMaintainer",
+                                    "profile": profile_name,
+                                    "duration_ms": _dt,
+                                    "summary": (text_resp or "")[:240],
+                                    "prompt": (user_input or "")[:500],
+                                    "preview": _preview,
+                                    "config": {
+                                        "source_dir": (config.get("configurable", {}) or {}).get("source_dir"),
+                                        "dry_run": (config.get("configurable", {}) or {}).get("dry_run"),
+                                        "apply_moves": (config.get("configurable", {}) or {}).get("apply_moves"),
+                                        "backups_root": (config.get("configurable", {}) or {}).get("backups_root"),
+                                        "filters": (config.get("configurable", {}) or {}).get("filters"),
+                                    },
+                                },
+                            )
+                        except Exception:
+                            pass
+                        try:
+                            _mcp_response_queue.put_nowait({
+                                "jsonrpc": "2.0",
+                                "method": "tool_progress",
+                                "params": {
+                                    "status": "finished",
+                                    "tool": tool_name,
+                                    "thread_id": tid,
+                                    "flow": "DocsMaintainer",
+                                    "summary": text_resp[:400],
+                                    "prompt": (user_input or "")[:500],
+                                    "preview": (text_resp or "")[:500],
+                                    "config": {
+                                        "source_dir": (config.get("configurable", {}) or {}).get("source_dir"),
+                                        "dry_run": (config.get("configurable", {}) or {}).get("dry_run"),
+                                        "apply_moves": (config.get("configurable", {}) or {}).get("apply_moves"),
+                                        "backups_root": (config.get("configurable", {}) or {}).get("backups_root"),
+                                        "filters": (config.get("configurable", {}) or {}).get("filters"),
+                                    }
+                                }
+                            })
+                        except Exception:
+                            pass
+                    except Exception as e:
+                        response["error"] = {"code": -32009, "message": f"run_docs_maintainer failed: {e}"}
+                        try:
+                            _dt = int(( _time.time() - _t0) * 1000)
+                            logger.info(
+                                "[MCP] failed",
+                                extra={
+                                    "tool": tool_name,
+                                    "thread_id": tid,
+                                    "flow": "DocsMaintainer",
+                                    "profile": profile_name,
+                                    "duration_ms": _dt,
+                                    "error": str(e),
+                                },
+                            )
+                        except Exception:
+                            pass
+                        try:
+                            _mcp_response_queue.put_nowait({
+                                "jsonrpc": "2.0",
+                                "method": "tool_progress",
+                                "params": {"status": "failed", "tool": tool_name, "thread_id": tid, "flow": "DocsMaintainer", "error": str(e)}
+                            })
+                        except Exception:
+                            pass
+            elif tool_name in {"run_agentic_flow_content_restructurer", "run_content_restructurer"}:
+                # Dedicated flow: ContentRestructurer
+                if not isinstance(tool_args, dict):
+                    response["error"] = {"code": -32602, "message": "Invalid arguments for run_content_restructurer"}
+                else:
+                    tid = tool_args.get("thread_id") or str(uuid.uuid4())
+                    user_input = tool_args.get("user_input") or ""
+                    profile_name = tool_args.get("profile_name") or "ContentRestructurer"
+                    user_config = tool_args.get("config") if isinstance(tool_args.get("config"), dict) else None
+                    if tid not in active_threads:
+                        active_threads[tid] = []
+                    # Build config with enforced flow
+                    base_cfg = {"configurable": {"thread_id": tid, "flow": "ContentRestructurer"}}
+                    if user_config and isinstance(user_config, dict):
+                        cfg = base_cfg.get("configurable", {}).copy()
+                        ucfg = user_config.get("configurable", user_config)
+                        if isinstance(ucfg, dict):
+                            cfg.update(ucfg)
+                        config = {"configurable": cfg}
+                    else:
+                        config = base_cfg
+                    # Progress events
+                    try:
+                        _mcp_response_queue.put_nowait({
+                            "jsonrpc": "2.0",
+                            "method": "tool_progress",
+                            "params": {
+                                "status": "started",
+                                "tool": tool_name,
+                                "thread_id": tid,
+                                "flow": "ContentRestructurer",
+                                "prompt": (user_input or "")[:500],
+                                "config": {
+                                    "source_dir": (config.get("configurable", {}) or {}).get("source_dir"),
+                                    "dry_run": (config.get("configurable", {}) or {}).get("dry_run"),
+                                    "apply_moves": (config.get("configurable", {}) or {}).get("apply_moves"),
+                                    "backups_root": (config.get("configurable", {}) or {}).get("backups_root"),
+                                    "filters": (config.get("configurable", {}) or {}).get("filters"),
+                                }
+                            }
+                        })
+                    except Exception:
+                        pass
+                    try:
+                        result = _make_request(tid, user_input, config, profile_name)
+                        active_threads[tid].append(user_input)
+                        text_resp = result.get("response") if isinstance(result, dict) else str(result)
+                        response["result"] = {"content": [{"type": "text", "text": text_resp}]}
+                        try:
+                            _dt = int(( _time.time() - _t0) * 1000)
+                            _preview = (text_resp or "")[:500]
+                            logger.info(
+                                "[MCP] finished",
+                                extra={
+                                    "tool": tool_name,
+                                    "thread_id": tid,
+                                    "flow": "ContentRestructurer",
+                                    "profile": profile_name,
+                                    "duration_ms": _dt,
+                                    "summary": (text_resp or "")[:240],
+                                    "prompt": (user_input or "")[:500],
+                                    "preview": _preview,
+                                    "config": {
+                                        "source_dir": (config.get("configurable", {}) or {}).get("source_dir"),
+                                        "dry_run": (config.get("configurable", {}) or {}).get("dry_run"),
+                                        "apply_moves": (config.get("configurable", {}) or {}).get("apply_moves"),
+                                        "backups_root": (config.get("configurable", {}) or {}).get("backups_root"),
+                                        "filters": (config.get("configurable", {}) or {}).get("filters"),
+                                    },
+                                },
+                            )
+                        except Exception:
+                            pass
+                        try:
+                            _mcp_response_queue.put_nowait({
+                                "jsonrpc": "2.0",
+                                "method": "tool_progress",
+                                "params": {
+                                    "status": "finished",
+                                    "tool": tool_name,
+                                    "thread_id": tid,
+                                    "flow": "ContentRestructurer",
+                                    "summary": text_resp[:400],
+                                    "prompt": (user_input or "")[:500],
+                                    "preview": (text_resp or "")[:500],
+                                    "config": {
+                                        "source_dir": (config.get("configurable", {}) or {}).get("source_dir"),
+                                        "dry_run": (config.get("configurable", {}) or {}).get("dry_run"),
+                                        "apply_moves": (config.get("configurable", {}) or {}).get("apply_moves"),
+                                        "backups_root": (config.get("configurable", {}) or {}).get("backups_root"),
+                                        "filters": (config.get("configurable", {}) or {}).get("filters"),
+                                    }
+                                }
+                            })
+                        except Exception:
+                            pass
+                    except Exception as e:
+                        response["error"] = {"code": -32010, "message": f"run_content_restructurer failed: {e}"}
+                        try:
+                            _dt = int(( _time.time() - _t0) * 1000)
+                            logger.info(
+                                "[MCP] failed",
+                                extra={
+                                    "tool": tool_name,
+                                    "thread_id": tid,
+                                    "flow": "ContentRestructurer",
+                                    "profile": profile_name,
+                                    "duration_ms": _dt,
+                                    "error": str(e),
+                                },
+                            )
+                        except Exception:
+                            pass
+                        try:
+                            _mcp_response_queue.put_nowait({
+                                "jsonrpc": "2.0",
+                                "method": "tool_progress",
+                                "params": {"status": "failed", "tool": tool_name, "thread_id": tid, "flow": "ContentRestructurer", "error": str(e)}
+                            })
+                        except Exception:
+                            pass
             elif tool_name == "list_profiles":
                 if not _profiles_available:
                     response["error"] = {"code": -32001, "message": "Profile utilities unavailable"}
@@ -461,7 +999,22 @@ async def handle_mcp(request: Request):
 @app.post("/messages")
 async def mcp_messages(request: Request):
     try:
-        data = await request.json()
+        raw = await request.body()
+        if not raw:
+            raise ValueError("Empty request body")
+        # Decode to text and normalize
+        try:
+            text = raw.decode("utf-8", errors="strict")
+        except Exception:
+            # Fallback with replacement to avoid hard crash
+            text = raw.decode("utf-8", errors="replace")
+        text = text.lstrip("\ufeff").strip()
+        logger.debug(f"/messages raw body: {text}")
+        try:
+            data = json.loads(text)
+        except Exception as je:
+            logger.error(f"Invalid JSON body (text): {text!r} error={je}")
+            raise
         logger.info(f"Received MCP message: {json.dumps(data, indent=2)}")
         resp = _process_mcp_payload(data)
         # Enqueue for SSE stream consumers

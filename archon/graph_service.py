@@ -38,6 +38,8 @@ except ImportError:
     logging.warning("Module api.profiles non disponible")
 
 from archon.archon.archon_graph import get_agentic_flow
+from archon.archon.docs_maintainer_graph import get_docs_flow
+from archon.archon.content_restructurer_graph import get_content_flow
 from archon.utils.utils import write_to_log
 from archon.llm import get_llm_provider
 
@@ -141,15 +143,56 @@ async def invoke_agent(request: InvokeRequest):
         logger.error(f"Error loading profile: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Failed to load profile {request.profile_name}: {str(e)}")
 
-    # Prepare configuration for the agentic flow
-    config = {
-        "configurable": {
-            "thread_id": request.thread_id,
-            "llm_config": llm_config
-        }
-    }
+    # Prepare configuration for the agentic flow (and approval controls if provided)
+    # Merge the full caller-provided configurable, but enforce thread_id and llm_config.
+    base_cfg = {"thread_id": request.thread_id, "llm_config": llm_config}
+    caller_cfg = {}
+    try:
+        caller_cfg = (request.config or {}).get("configurable", {}) if isinstance(request.config, dict) else {}
+        if not isinstance(caller_cfg, dict):
+            caller_cfg = {}
+    except Exception:
+        caller_cfg = {}
+    merged_cfg = {**caller_cfg, **base_cfg}
+    # Inject timestamped run_id and output_root if not provided
+    try:
+        if not merged_cfg.get("run_id"):
+            ts = datetime.now().strftime("%Y%m%d-%H%M%S")
+            merged_cfg["run_id"] = f"{ts}_{request.thread_id}"
+        if not merged_cfg.get("output_root"):
+            merged_cfg["output_root"] = str(Path("generated") / "sessions" / merged_cfg["run_id"])
+    except Exception:
+        pass
+    config = {"configurable": merged_cfg}
 
-    logger.info(f"Starting invoke_agent for thread {request.thread_id} with profile {request.profile_name or 'default'}")
+    # Structured request log with profile + models + effective config snapshot
+    try:
+        provider_name = llm_config.get('LLM_PROVIDER')
+        profile_used = request.profile_name or getattr(getattr(get_llm_provider(), 'config', None), 'profile_name', None) or 'default'
+        models = {
+            'PRIMARY_MODEL': llm_config.get('PRIMARY_MODEL'),
+            'REASONER_MODEL': llm_config.get('REASONER_MODEL'),
+            'ADVISOR_MODEL': llm_config.get('ADVISOR_MODEL'),
+            'CODER_MODEL': llm_config.get('CODER_MODEL'),
+        }
+        cfg_snap = {
+            'delegate_to': merged_cfg.get('delegate_to'),
+            'requested_action': merged_cfg.get('requested_action'),
+            'targets': (merged_cfg.get('targets') or [])[:5],
+            'include_ext': (merged_cfg.get('include_ext') or [])[:10],
+            'max_files': merged_cfg.get('max_files'),
+            'allow_directory_moves': merged_cfg.get('allow_directory_moves'),
+        }
+        # Pretty banner and model/profile summary
+        logger.info("\n" +
+                    "✨================================ INVOKE START ================================✨\n"
+                    f"🧵 thread={request.thread_id}  |  👤 profile={request.profile_name}  |  ☁️ provider={provider_name}\n"
+                    f"🤖 models: PRIMARY={llm_config.get('PRIMARY_MODEL')} | REASONER={llm_config.get('REASONER_MODEL')} | ADVISOR={llm_config.get('ADVISOR_MODEL')} | CODER={llm_config.get('CODER_MODEL')}\n"
+                    f"🛠️  effective_cfg={cfg_snap}\n"
+                    f"📂 run_id={merged_cfg.get('run_id')} | output_root={merged_cfg.get('output_root')}\n"
+                    "==============================================================================")
+    except Exception:
+        logger.info(f"Starting invoke_agent for thread {request.thread_id} with profile {request.profile_name or 'default'}")
     
     # Optional output size cap from caller config, with env fallback
     max_response_chars: Optional[int] = None
@@ -174,6 +217,34 @@ async def invoke_agent(request: InvokeRequest):
 
     response = ""
     final_state = None
+    steps_out: List[Dict[str, Any]] = []
+    node_started_at: Dict[str, float] = {}
+    
+    def _summarize_json_text(txt: str, max_len: int = 500) -> str:
+        try:
+            data = json.loads(txt)
+            if isinstance(data, dict):
+                keys = list(data.keys())
+                # include lightweight hints
+                summary = {
+                    "type": "object",
+                    "keys": keys[:10],
+                    "size": len(keys),
+                }
+                # common known fields
+                for k in ("count", "clusters", "unassigned", "notes", "limits", "model"):
+                    if k in data:
+                        summary[k] = data.get(k)
+                # items length hint
+                if "items" in data and isinstance(data["items"], list):
+                    summary["items_len"] = len(data["items"])
+                return json.dumps(summary)[:max_len]
+            if isinstance(data, list):
+                head = data[:1]
+                return json.dumps({"type": "array", "len": len(data), "head": head})[:max_len]
+        except Exception:
+            pass
+        return (txt or "")[:max_len]
     
     # This is the original, correct logic for handling the agent state
     # Prepare the initial state for the agentic flow
@@ -198,21 +269,218 @@ async def invoke_agent(request: InvokeRequest):
     input_for_flow = initial_state
 
     try:
-        flow = get_agentic_flow()
+        # Choose flow by profile_name (or optional config flag), else default
+        flow = None
+        try:
+            # Delegation has highest precedence
+            delegate_to = None
+            cfg = (request.config or {}) if isinstance(request.config, dict) else {}
+            if isinstance(cfg, dict):
+                delegate_to = (cfg.get("configurable", {}) or {}).get("delegate_to")
+
+            if isinstance(delegate_to, str) and delegate_to.strip():
+                name = delegate_to.strip()
+                if name == "DocsMaintainer":
+                    flow = get_docs_flow()
+                elif name == "ContentRestructurer":
+                    flow = get_content_flow()
+
+            # If no delegation, select by profile_name
+            if flow is None and request.profile_name:
+                name = request.profile_name.strip()
+                if name == "DocsMaintainer":
+                    flow = get_docs_flow()
+                elif name == "ContentRestructurer":
+                    flow = get_content_flow()
+
+            # Optional explicit flow hint in config
+            if flow is None and isinstance(cfg, dict):
+                flow_hint = (cfg.get("configurable", {}) or {}).get("flow")
+                if isinstance(flow_hint, str):
+                    name = flow_hint.strip()
+                    if name == "DocsMaintainer":
+                        flow = get_docs_flow()
+                    elif name == "ContentRestructurer":
+                        flow = get_content_flow()
+        except Exception:
+            flow = None
+
+        flow_name = "default"
+        if flow is None:
+            flow = get_agentic_flow()
+        else:
+            flow_name = "DocsMaintainer" if flow is get_docs_flow() else ("ContentRestructurer" if flow is get_content_flow() else "custom")
+        logger.info(f"🗺️  flow_selected: {flow_name}  |  thread={request.thread_id}")
+        logger.info("📌 graph_plan: ensure_dirs ▶ inventory ▶ semantic ▶ plan ▶ analysis_report ▶ assistant_brief ▶ approval ▶ apply_moves ▶ final_report")
         logger.debug(f"About to start flow.astream with input: {input_for_flow}")
         logger.debug(f"Config: {config}")
-        
+
         iteration_count = 0
+        # Stage milestone flags to avoid duplicate logs
+        s_inventory = s_semantic = s_plan = s_analysis_report = s_approval = s_apply = s_report = False
+        STAGE_MODULES = {
+            "inventory": "archon.archon.content_nodes.inventory:run_inventory",
+            "semantic": "archon.archon.content_nodes.semantic:run_semantic",
+            "plan": "archon.archon.content_nodes.plan:run_plan",
+            "analysis_report": "archon.archon.content_nodes.analysis_report:run",
+            "assistant_brief": "archon.archon.graph_service:assistant_brief",
+            "approval": "archon.archon.graph_service:approval_gate",
+            "apply_moves": "archon.archon.restruct_common.git_apply:apply_moves",
+            "final_report": "archon.archon.graph_service:final_report",
+        }
         async for state_update in flow.astream(input_for_flow, config, stream_mode="values"):
             iteration_count += 1
             logger.debug(f"Iteration {iteration_count}, state_update: {state_update}")
             final_state = state_update
+            # Emit stage-aligned logs when keys appear in state
+            try:
+                for node in STAGE_MODULES:
+                    if not locals()[f"s_{node}"] and (state_update.get(node) or state_update.get(f"{node}_path") or state_update.get(f"{node}_count") is not None):
+                        mod = STAGE_MODULES.get(node, "<unknown>")
+                        # Compute step duration if we have a start
+                        try:
+                            now_ts = datetime.now().timestamp()
+                            if node not in node_started_at:
+                                node_started_at[node] = now_ts
+                        except Exception:
+                            now_ts = None
+                        if node == "inventory":
+                            count = (state_update.get("inventory_count") or state_update.get("count") or 0)
+                            inv_path = state_update.get("inventory_path") or "generated/restruct/global_inventory.json"
+                            logger.info(f"✅ [{node}_done] module={mod} | thread={request.thread_id} | count={count} | out={inv_path}")
+                        elif node == "semantic":
+                            insight_path = state_update.get("insights_path") or state_update.get("content_insights_root") or "generated/restruct/content_insights_root.json"
+                            clusters = state_update.get("clusters") if isinstance(state_update.get("clusters"), int) else "?"
+                            logger.info(f"✅ [{node}_done] module={mod} | thread={request.thread_id} | clusters={clusters} | out={insight_path}")
+                        elif node == "plan":
+                            moves = (state_update.get("planned_moves") or state_update.get("moves") or 0)
+                            plan_path = state_update.get("plan_path") or "generated/restruct/rename_move_plan.json"
+                            logger.info(f"✅ [{node}_done] module={mod} | thread={request.thread_id} | moves={moves} | out={plan_path}")
+                        elif node == "analysis_report":
+                            logger.info(f"✅ [analysis_report_done] module={mod} | thread={request.thread_id} | summary={state_update.get('analysis_summary_path')}")
+                        elif node == "assistant_brief":
+                            logger.info(f"📝 [report_done] module={mod} | thread={request.thread_id} | brief={state_update.get('assistant_brief_path')} | report={state_update.get('final_report_path')}")
+                        elif node == "approval":
+                            logger.info(f"🧪 [approval_gate] module={mod} | thread={request.thread_id} | preflight={bool(state_update.get('preflight_ok'))}")
+                        elif node == "apply_moves":
+                            logger.info(
+                                f"🪄 [apply] module={mod} | thread={request.thread_id} | applied={state_update.get('applied',0)} | will_apply={state_update.get('will_apply',0)} | conflicts={state_update.get('conflicts',0)}"
+                            )
+                            s_approval = True
+                        # Append standardized step record with preview + metrics
+                        try:
+                            start_ts = node_started_at.get(node)
+                            dur_ms = int((now_ts - start_ts) * 1000) if (now_ts and start_ts) else None
+                        except Exception:
+                            dur_ms = None
+                        preview = ""
+                        metrics: Dict[str, Any] = {}
+                        artifacts: Dict[str, Any] = {}
+                        # Node-specific preview/metrics from state_update and artifacts
+                        try:
+                            if node == "inventory":
+                                inv_path = state_update.get("inventory_path")
+                                count = state_update.get("inventory_count") or state_update.get("count")
+                                metrics = {"count": count}
+                                if inv_path:
+                                    artifacts["inventory_path"] = inv_path
+                                if isinstance(inv_path, str) and Path(inv_path).exists():
+                                    # Read small slice
+                                    txt = Path(inv_path).read_text(encoding="utf-8")
+                                    preview = _summarize_json_text(txt)
+                                else:
+                                    preview = f"inventory_count={count}"
+                            elif node == "semantic":
+                                insight_path = state_update.get("insights_path") or state_update.get("content_insights_root")
+                                clusters = state_update.get("clusters")
+                                unassigned = state_update.get("unassigned")
+                                metrics = {
+                                    "clusters": clusters if isinstance(clusters, int) else None,
+                                    "unassigned": unassigned if isinstance(unassigned, int) else None,
+                                }
+                                if insight_path:
+                                    artifacts["insights_path"] = insight_path
+                                if isinstance(insight_path, str) and Path(insight_path).exists():
+                                    txt = Path(insight_path).read_text(encoding="utf-8")
+                                    preview = _summarize_json_text(txt)
+                                    # Try refine model from file
+                                    try:
+                                        data = json.loads(txt)
+                                        model_from_file = data.get("model")
+                                    except Exception:
+                                        model_from_file = None
+                                else:
+                                    model_from_file = None
+                            elif node == "plan":
+                                plan_path = state_update.get("plan_path") or state_update.get("rename_move_plan")
+                                planned = state_update.get("planned_moves") or state_update.get("moves")
+                                metrics = {"planned_moves": planned}
+                                if plan_path:
+                                    artifacts["plan_path"] = plan_path
+                                if isinstance(plan_path, str) and Path(plan_path).exists():
+                                    txt = Path(plan_path).read_text(encoding="utf-8")
+                                    preview = _summarize_json_text(txt)
+                                else:
+                                    preview = f"planned_moves={planned}"
+                            elif node == "analysis_report":
+                                rpt = state_update.get('analysis_summary_path')
+                                if rpt:
+                                    artifacts["analysis_summary_path"] = rpt
+                                if isinstance(rpt, str) and Path(rpt).exists():
+                                    txt = Path(rpt).read_text(encoding="utf-8")
+                                    preview = txt[:500]
+                            elif node == "assistant_brief":
+                                brief = state_update.get('assistant_brief_path')
+                                if brief:
+                                    artifacts["assistant_brief_path"] = brief
+                                if isinstance(brief, str) and Path(brief).exists():
+                                    txt = Path(brief).read_text(encoding="utf-8")
+                                    preview = txt[:500]
+                            elif node == "approval":
+                                metrics = {"preflight_ok": bool(state_update.get('preflight_ok'))}
+                                preview = "preflight_ok=" + str(metrics["preflight_ok"]).lower()
+                            elif node == "apply_moves":
+                                applied = state_update.get('applied', 0)
+                                will_apply = state_update.get('will_apply', 0)
+                                conflicts = state_update.get('conflicts', 0)
+                                metrics = {"applied": applied, "will_apply": will_apply, "conflicts": conflicts}
+                                preview = f"applied={applied} will_apply={will_apply} conflicts={conflicts}"
+                            elif node == "final_report":
+                                final_path = state_update.get("final_report_path")
+                                if final_path:
+                                    artifacts["final_report_path"] = final_path
+                                if isinstance(final_path, str) and Path(final_path).exists():
+                                    txt = Path(final_path).read_text(encoding="utf-8")
+                                    preview = txt[:500]
+                        except Exception:
+                            preview = preview or ""
+                        try:
+                            step_model = (locals().get('model_from_file') if 'model_from_file' in locals() else None) or llm_config.get('PRIMARY_MODEL')
+                        except Exception:
+                            step_model = llm_config.get('PRIMARY_MODEL')
+                        try:
+                            steps_out.append({
+                                "agent": mod,
+                                "model": step_model,
+                                "status": "finished",
+                                "duration_ms": dur_ms,
+                                "node": node,
+                                "prompt": (request.message or "")[:500],
+                                "preview": (preview or "")[:500],
+                                "metrics": metrics or {},
+                                "artifacts": artifacts or {},
+                            })
+                        except Exception:
+                            pass
+                        locals()[f"s_{node}"] = True
+            except Exception:
+                pass
         
-        logger.debug(f"Flow completed after {iteration_count} iterations")
-
+        logger.info(f"🏁 INVOKE DONE | thread={request.thread_id} | iterations={iteration_count}")
+        logger.info(f"WORKFLOW_OK | run_id={merged_cfg.get('run_id')} | output_root={merged_cfg.get('output_root')} | iterations={iteration_count}")
+        logger.info("✨================================ INVOKE END ==================================✨")
         if final_state:
             generated_content = final_state.get("generated_code")
-
             # Case 1: Content is an error message from the agent
             if isinstance(generated_content, str) and generated_content.strip().startswith("Error:"):
                 logger.warning(f"Agent returned an error: {generated_content}")
@@ -222,13 +490,29 @@ async def invoke_agent(request: InvokeRequest):
                 response = generated_content
             # Case 3: No content was generated, check for an error in the state
             else:
-                error_message = final_state.get("error")
-                if error_message:
-                    logger.warning(f"Agent finished with an error state: {error_message}")
-                    response = f"Error: {error_message}"
+                # Prefer returning report artifacts if present
+                brief_path = final_state.get("assistant_brief_path")
+                final_report_path = final_state.get("final_report_path")
+                if isinstance(final_report_path, str) and Path(final_report_path).exists():
+                    try:
+                        response = Path(final_report_path).read_text(encoding="utf-8")
+                        logger.info("Returning final_report.json content (%s chars)", len(response))
+                    except Exception:
+                        response = f"Report available at {final_report_path}"
+                elif isinstance(brief_path, str) and Path(brief_path).exists():
+                    try:
+                        response = Path(brief_path).read_text(encoding="utf-8")
+                        logger.info("Returning assistant_brief.md content (%s chars)", len(response))
+                    except Exception:
+                        response = f"Assistant brief available at {brief_path}"
                 else:
-                    logger.warning("No generated content and no error message in final state.")
-                    response = "Error: The agent finished its work but did not produce any output."
+                    error_message = final_state.get("error")
+                    if error_message:
+                        logger.warning(f"Agent finished with an error state: {error_message}")
+                        response = f"Error: {error_message}"
+                    else:
+                        logger.warning("No generated content and no error message in final state.")
+                        response = "Error: The agent finished its work but did not produce any output."
         else:
             logger.error("Agent workflow finished without a final state.")
             response = "Error: The agent workflow failed to complete."
@@ -258,7 +542,7 @@ async def invoke_agent(request: InvokeRequest):
             )
             response = response[:max_response_chars] + "\n[TRUNCATED]"
 
-        return {"response": response}
+        return {"response": response, "steps": steps_out}
 
     except Exception as e:
         logger.error(f"Exception in invoke_agent: {e}", exc_info=True)

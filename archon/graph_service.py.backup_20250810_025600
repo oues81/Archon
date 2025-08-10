@@ -1,0 +1,466 @@
+import traceback
+import sys
+import os
+import json
+import logging
+import asyncio
+import dataclasses
+from datetime import datetime
+from pathlib import Path
+
+from archon.utils.utils import configure_logging
+
+_log_summary = configure_logging()
+logger = logging.getLogger(__name__)
+logger.info(
+    f"🚀 API startup | console={_log_summary.get('console')} file={_log_summary.get('file')}"
+    f" path={_log_summary.get('file_path')} json={_log_summary.get('json')}"
+)
+
+# Appliquer le correctif pour TypedDict
+try:
+    from patch_typing import *
+except ImportError:
+    pass
+
+from fastapi import FastAPI, HTTPException
+from pydantic import BaseModel, Field
+from typing_extensions import TypedDict
+from typing import Optional, Dict, Any, List
+
+# Import du router des profils
+try:
+    from api.profiles import router as profiles_router
+    profiles_available = True
+except ImportError:
+    profiles_router = None
+    profiles_available = False
+    logging.warning("Module api.profiles non disponible")
+
+from archon.archon.archon_graph import get_agentic_flow
+from archon.archon.docs_maintainer_graph import get_docs_flow
+from archon.archon.content_restructurer_graph import get_content_flow
+from archon.utils.utils import write_to_log
+from archon.llm import get_llm_provider
+
+try:
+    from langgraph.types import Command
+except ImportError:
+    # Fallback implementation if langgraph.types.Command is not available
+    class Command:
+        """Dummy implementation of Command for compatibility"""
+        pass
+    
+app = FastAPI()
+
+# --- Helpers ---
+def sanitize_output(text: str) -> str:
+    """Remove common 'thinking' or meta wrappers that some models leak into final output.
+
+    Keeps this conservative: only strips known markers at the start/end without altering content in-between.
+    """
+    if not isinstance(text, str) or not text:
+        return text
+    t = text.strip()
+    # Remove common XML-like think blocks at the boundaries
+    if t.lower().startswith("<think>") and t.lower().endswith("</think>"):
+        return t[7:-8].strip()
+    # Remove leading labels often used by some models
+    for prefix in ("Thinking:", "Think:", "Thought:", "Analysis:"):
+        if t.startswith(prefix):
+            return t[len(prefix):].lstrip()
+    # Strip surrounding triple backtick fences, with or without language tag
+    if t.startswith("```") and t.endswith("```"):
+        inner = t[3:-3].strip()
+        # If a language tag is present at the start of inner, remove first line
+        if "\n" in inner:
+            first_line, rest = inner.split("\n", 1)
+            if first_line.strip().lower() in ("json", "markdown", "md", "text", "yaml", "yml", "toml"):
+                return rest.strip()
+        return inner
+    return text
+
+# Montage du router des profils s'il est disponible
+if profiles_available and profiles_router:
+    app.include_router(profiles_router, prefix="/api")
+    logging.info("✅ Router des profils monte avec succes")
+else:
+    logging.warning("⚠️ Router des profils non disponible")
+
+class InvokeRequest(BaseModel):
+    message: str
+    thread_id: str
+    is_first_message: bool = False
+    config: Optional[Dict[str, Any]] = None
+    profile_name: Optional[str] = None  # Ajout du nom du profil
+
+@app.get("/health")
+async def health_check():
+    """Health check endpoint"""
+    return {"status": "ok"}    
+
+@app.head("/health")
+async def health_head():
+    """HEAD variant for health checks (no body)."""
+    return {"status": "ok"}
+
+@app.post("/invoke")
+async def invoke_agent(request: InvokeRequest):
+    """
+    Process a message through the agentic flow. This endpoint can dynamically
+    apply a configuration profile for the duration of the request.
+    """
+    try:
+        # Get the singleton instance of the LLM provider
+        provider = get_llm_provider()
+
+        # Reload the provider with the requested profile if specified
+        if request.profile_name:
+            if not provider.reload_profile(request.profile_name):
+                raise ValueError(f"Failed to load configuration for profile '{request.profile_name}'")
+
+        if not provider.config:
+            raise ValueError("LLM provider configuration is not loaded.")
+
+        # Build the configuration dictionary from the provider's config
+        llm_config = {
+            'LLM_PROVIDER': provider.config.provider,
+            'REASONER_MODEL': provider.config.reasoner_model,
+            'PRIMARY_MODEL': provider.config.primary_model,
+            'CODER_MODEL': provider.config.coder_model,
+            'ADVISOR_MODEL': provider.config.advisor_model,
+            'OLLAMA_BASE_URL': provider.config.base_url
+        }
+
+        # Add the API key with the expected name for compatibility
+        if provider.config.api_key:
+            llm_config['LLM_API_KEY'] = provider.config.api_key
+            if provider.config.provider == 'openrouter':
+                llm_config['OPENROUTER_API_KEY'] = provider.config.api_key
+            elif provider.config.provider == 'openai':
+                llm_config['OPENAI_API_KEY'] = provider.config.api_key
+    except Exception as e:
+        logger.error(f"Error loading profile: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Failed to load profile {request.profile_name}: {str(e)}")
+
+    # Prepare configuration for the agentic flow (and approval controls if provided)
+    config = {
+        "configurable": {
+            "thread_id": request.thread_id,
+            "llm_config": llm_config
+        }
+    }
+    try:
+        req_cfg = (request.config or {}).get("configurable", {}) if isinstance(request.config, dict) else {}
+        if isinstance(req_cfg, dict):
+            if "requested_action" in req_cfg:
+                config["configurable"]["requested_action"] = req_cfg.get("requested_action")
+            if "approval_token" in req_cfg:
+                config["configurable"]["approval_token"] = req_cfg.get("approval_token")
+    except Exception:
+        pass
+
+    logger.info(f"Starting invoke_agent for thread {request.thread_id} with profile {request.profile_name or 'default'}")
+    
+    # Optional output size cap from caller config, with env fallback
+    max_response_chars: Optional[int] = None
+    try:
+        if request.config and isinstance(request.config, dict):
+            cfg = request.config.get("configurable", {})
+            if isinstance(cfg, dict) and cfg.get("max_response_chars") is not None:
+                max_response_chars = int(cfg.get("max_response_chars"))
+    except Exception:
+        max_response_chars = None
+    # Environment fallback if not provided in request
+    if max_response_chars is None:
+        try:
+            env_val = os.environ.get("MAX_RESPONSE_CHARS") or os.environ.get("MCP_MAX_RESPONSE_CHARS")
+            if env_val is not None:
+                max_response_chars = int(env_val)
+            else:
+                # Default sensible cap for responsiveness
+                max_response_chars = 3500
+        except Exception:
+            max_response_chars = 3500
+
+    response = ""
+    final_state = None
+    
+    # This is the original, correct logic for handling the agent state
+    # Prepare the initial state for the agentic flow
+    # The key is to provide the user's message as the 'latest_user_message'
+    # and ensure the scope is initialized with the user's request
+    initial_state = {
+        "latest_user_message": request.message,
+        "next_user_message": "",
+        "messages": [{
+            "role": "user",
+            "content": request.message
+        }],
+        "scope": request.message,  # Pass the user's message as the initial scope
+        "advisor_output": "",
+        "file_list": [],
+        "refined_prompt": "",
+        "refined_tools": "",
+        "refined_agent": "",
+        "generated_code": None,
+        "error": None
+    }
+    input_for_flow = initial_state
+
+    try:
+        # Choose flow by profile_name (or optional config flag), else default
+        flow = None
+        try:
+            flow_hint = None
+            if request.profile_name:
+                flow_hint = request.profile_name
+            elif isinstance(request.config, dict):
+                flow_hint = (request.config.get("configurable", {}) or {}).get("flow")
+
+            if isinstance(flow_hint, str):
+                name = flow_hint.strip()
+                if name == "DocsMaintainer":
+                    flow = get_docs_flow()
+                elif name == "ContentRestructurer":
+                    flow = get_content_flow()
+        except Exception:
+            flow = None
+
+        if flow is None:
+            flow = get_agentic_flow()
+        logger.debug(f"About to start flow.astream with input: {input_for_flow}")
+        logger.debug(f"Config: {config}")
+        
+        iteration_count = 0
+        async for state_update in flow.astream(input_for_flow, config, stream_mode="values"):
+            iteration_count += 1
+            logger.debug(f"Iteration {iteration_count}, state_update: {state_update}")
+            final_state = state_update
+        
+        logger.debug(f"Flow completed after {iteration_count} iterations")
+
+        if final_state:
+            generated_content = final_state.get("generated_code")
+
+            # Case 1: Content is an error message from the agent
+            if isinstance(generated_content, str) and generated_content.strip().startswith("Error:"):
+                logger.warning(f"Agent returned an error: {generated_content}")
+                response = generated_content
+            # Case 2: Content is valid code
+            elif generated_content:
+                response = generated_content
+            # Case 3: No content was generated, check for an error in the state
+            else:
+                error_message = final_state.get("error")
+                if error_message:
+                    logger.warning(f"Agent finished with an error state: {error_message}")
+                    response = f"Error: {error_message}"
+                else:
+                    logger.warning("No generated content and no error message in final state.")
+                    response = "Error: The agent finished its work but did not produce any output."
+        else:
+            logger.error("Agent workflow finished without a final state.")
+            response = "Error: The agent workflow failed to complete."
+
+        # Sanitize stray meta/thinking markers before truncation
+        if isinstance(response, str):
+            response = sanitize_output(response)
+
+        # Optional detailed logging of model response prior to truncation
+        try:
+            verbose = str(os.getenv("LOG_VERBOSE_RESPONSES", "false")).lower() in {"1", "true", "yes", "on"}
+            max_log = int(os.getenv("LOG_RESPONSE_LOG_CHARS", "1000"))
+        except Exception:
+            verbose = False
+            max_log = 1000
+        if isinstance(response, str):
+            if verbose:
+                logger.info(f"📄 Full response (pre-trunc): {response}")
+            else:
+                snippet = response if len(response) <= max_log else response[:max_log] + " …[snip]"
+                logger.debug(f"📄 Response snippet (pre-trunc {max_log}c): {snippet}")
+
+        # Apply optional truncation just before returning
+        if isinstance(response, str) and max_response_chars is not None and len(response) > max_response_chars:
+            logger.info(
+                f"Truncating response for thread {request.thread_id} to {max_response_chars} chars"
+            )
+            response = response[:max_response_chars] + "\n[TRUNCATED]"
+
+        return {"response": response}
+
+    except Exception as e:
+        logger.error(f"Exception in invoke_agent: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post('/test')
+async def test_provider(request: InvokeRequest):
+    """Endpoint dédié aux tests de fournisseurs
+    - Honore `profile_name` si fourni (sinon profil actif par défaut)
+    - Sanitize + troncature optionnelle (max_response_chars)
+    - Retourne un JSON strict et concis avec métadonnées
+    """
+    try:
+        start_ts = datetime.now()
+
+        # Préparer le provider et charger le profil demandé
+        provider = get_llm_provider()
+        profile_used = None
+        if request.profile_name:
+            ok = provider.reload_profile(request.profile_name)
+            if not ok:
+                raise HTTPException(status_code=400, detail=f"Invalid or unavailable profile: {request.profile_name}")
+            profile_used = request.profile_name
+        else:
+            # Meilleur effort pour rapporter le profil actif
+            profile_used = getattr(getattr(provider, 'config', None), 'profile_name', None) or os.environ.get("LLM_PROFILE") or "default"
+
+        # Déterminer le provider effectif (best-effort)
+        provider_name = None
+        cfg = getattr(provider, 'config', None)
+        if cfg and isinstance(cfg, dict):
+            provider_name = cfg.get('provider') or cfg.get('name')
+        if not provider_name:
+            env_name = os.environ.get("LLM_PROVIDER", "")
+            provider_name = env_name if env_name else "unknown"
+
+        # Construire le flux et la requête de test
+        agentic_flow = get_agentic_flow()
+        test_prompt = f"Test de connexion avec le fournisseur: {request.message}"
+
+        # Extraire max_response_chars s'il est fourni
+        max_chars = None
+        try:
+            if request.config and isinstance(request.config, dict):
+                conf = request.config.get("configurable") or {}
+                if isinstance(conf, dict):
+                    mrc = conf.get("max_response_chars")
+                    if isinstance(mrc, int) and mrc > 0:
+                        max_chars = mrc
+        except Exception:
+            pass
+        # Fallback via env
+        if max_chars is None:
+            try:
+                env_val = os.environ.get("MCP_MAX_RESPONSE_CHARS") or os.environ.get("MAX_RESPONSE_CHARS")
+                if env_val:
+                    ival = int(env_val)
+                    if ival > 0:
+                        max_chars = ival
+            except Exception:
+                max_chars = None
+
+        inputs = {
+            "messages": [{"content": test_prompt, "type": "human"}],
+            "thread_id": request.thread_id,
+            "configurable": {
+                "thread_id": request.thread_id,
+                "checkpoint_ns": "test",
+                "checkpoint_id": f"test-{datetime.now().isoformat()}"
+            }
+        }
+        config = {"configurable": inputs["configurable"]}
+
+        # Appel
+        result = await agentic_flow.ainvoke(inputs, config)
+
+        # Extraire un échantillon texte concis depuis le résultat
+        def to_text(data: Any) -> str:
+            try:
+                if isinstance(data, str):
+                    return data
+                if isinstance(data, dict):
+                    for key in ("response", "generated_code", "advisor_output", "scope"):
+                        val = data.get(key)
+                        if isinstance(val, str) and val.strip():
+                            return val
+                    # messages -> dernier contenu texte
+                    msgs = data.get("messages")
+                    if isinstance(msgs, list) and msgs:
+                        last = msgs[-1]
+                        if isinstance(last, dict):
+                            c = last.get("content")
+                            if isinstance(c, str) and c.strip():
+                                return c
+                # fallback generic
+                return str(data)
+            except Exception:
+                return str(data)
+
+        response_text = to_text(result)
+        if isinstance(response_text, str):
+            response_text = sanitize_output(response_text)
+
+        truncated = False
+        if isinstance(response_text, str) and max_chars is not None and len(response_text) > max_chars:
+            response_text = response_text[:max_chars]
+            truncated = True
+
+        latency_ms = max(0, int((datetime.now() - start_ts).total_seconds() * 1000))
+
+        return {
+            "status": "success",
+            "provider": provider_name,
+            "profile_used": profile_used,
+            "latency_ms": latency_ms,
+            "truncated": truncated,
+            "response_sample": response_text,
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Exception in test_provider: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+def configure_app():
+    """Configure and return the FastAPI application"""
+    try:
+        # Add startup event
+        @app.on_event("startup")
+        async def startup_event():
+            logger.info("🚀 Starting Archon Graph Service...")
+            try:
+                # Initialize any required services here
+                logger.info("✅ Services initialized successfully")
+            except Exception as e:
+                logger.critical(f"❌ Failed to initialize services: {e}", exc_info=True)
+                raise
+        
+        # Add shutdown event
+        @app.on_event("shutdown")
+        async def shutdown_event():
+            logger.info("🛑 Shutting down Archon Graph Service...")
+            
+        return app
+        
+    except Exception as e:
+        logger.critical(f"❌ Failed to configure application: {e}", exc_info=True)
+        raise
+
+if __name__ == "__main__":
+    import uvicorn
+    
+    try:
+        # Configure the application
+        app = configure_app()
+        
+        # Configure Uvicorn
+        config = uvicorn.Config(
+            app=app,
+            host="0.0.0.0",
+            port=8110,
+            log_level="info",
+            reload=True,
+            reload_dirs=[str(Path(__file__).parent)],
+            workers=1
+        )
+        
+        # Create and run the server
+        server = uvicorn.Server(config)
+        logger.info(f"🌐 Starting server on http://{config.host}:{config.port}")
+        server.run()
+        
+    except Exception as e:
+        logger.critical(f"❌ Fatal error: {e}", exc_info=True)
+        sys.exit(1)

@@ -1,0 +1,181 @@
+---
+description: Archon specialized flows — DocsMaintainer and ScriptsRestructurer (API → Flow → Nodes) with strict approval gates and guardrails
+---
+
+# Archon Specialized Agent Flows
+
+This document provides Mermaid sequence diagrams for two specialized agents implemented as LangGraph flows:
+- DocsMaintainer (documentation restructuring)
+- ScriptsRestructurer (scripts/directory restructuring)
+
+Both share the same 2-phase, approval‑gated pattern and profile-based model selection.
+
+---
+
+## DocsMaintainer — Full Flow (Part 1 → Gate → Part 2)
+
+%%{init: {"theme": "dark", "sequence": {"mirrorActors": false, "showSequenceNumbers": true}} }%%
+sequenceDiagram
+    autonumber
+    actor User as Client
+    participant API as graph_service.invoke_agent (graph_service.py)
+    participant Provider as LLMProvider (llm/*)
+    participant Flow as get_docs_flow (docs_maintainer_graph.py)
+    participant Graph as LangGraph StateGraph
+    participant N0 as ensure_dirs (restruct_common/ensure_dirs.py)
+    participant N1 as inventory_and_heads (docs_nodes/inventory.py)
+    participant N2 as link_check_internal (docs_nodes/links.py)
+    participant N3 as diataxis_classify (docs_nodes/taxonomy.py)
+    participant N4 as frontmatter_plan (docs_nodes/frontmatter.py)
+    participant N5 as structure_toc_proposals (docs_nodes/structure.py)
+    participant N6 as assistant_brief (docs_nodes/report.py)
+    participant Gate as await_approval (restruct_common/approval.py)
+    participant N7 as apply_moves_git_mv (restruct_common/git_apply.py)
+    participant N8 as apply_frontmatter_with_backups (restruct_common/backups.py + docs_nodes/frontmatter.py)
+    participant N9 as revalidate_links_inventory (docs_nodes/links.py + inventory.py)
+    participant N10 as final_report (docs_nodes/report.py)
+    participant LLM as get_llm_instance
+    participant HTTP as AsyncOpenAI/httpx | Ollama
+
+    User->>API: POST /invoke {message, requested_action, approval_token?, profile_name: "DocsMaintainer"}
+    API->>Provider: get_llm_provider(); (optional) reload_profile("DocsMaintainer")
+    Provider-->>API: provider.config (models, base_url, keys)
+    API->>Flow: get_docs_flow()
+    Flow-->>API: compiled graph (cached)
+    API-->>Graph: flow.astream(state0, config={configurable:{profile, thread_id}})
+
+    Graph->>N0: run(state, config)
+    N0-->>Graph: artifacts_dir/backups ensured
+
+    Graph->>N1: run(state, config)
+    Note over N1: outputs inventory.json (paths, headings, fm presence)
+    N1-->>Graph: state.inventory_path
+
+    Graph->>N2: run(state, config)
+    Note over N2: outputs links_report.json (internal/relative only)
+    N2-->>Graph: state.links_report_path
+
+    Graph->>N3: run(state, config)
+    Note over N3: outputs taxonomy_map.json (Diátaxis)
+    N3-->>Graph: state.taxonomy_map_path
+
+    Graph->>N4: run(state, config)
+    Note over N4: outputs frontmatter_plan.json (normalize proposals)
+    N4-->>Graph: state.frontmatter_plan_path
+
+    Graph->>N5: run(state, config)
+    Note over N5: outputs rename_move_plan.json, toc_proposals/*.yml
+    N5-->>Graph: state.move_plan_path, state.toc_proposals_dir
+
+    Graph->>N6: run(state, config)
+    Note over N6: outputs assistant_brief.md (summary, risks)
+    N6-->>Graph: state.assistant_brief_path
+
+    Graph->>Gate: run(state, config)
+    alt requested_action == "part1"
+      Gate-->>API: return state (read-only artifacts)
+      API-->>User: artifacts under generated/docs_reorg/*
+    else requested_action == "part2" and approval_token missing
+      Gate-->>API: needs_approval=true
+      API-->>User: provide approval_token to proceed
+    else requested_action == "part2" and approval_token present
+      Gate-->>Graph: continue to apply phase
+    end
+
+    Graph->>N7: run(state, config)
+    Note over N7: apply rename_move_plan via `git mv`; conflicts -> ".dup"; no deletes
+    N7-->>Graph: moves_applied summary
+
+    Graph->>N8: run(state, config)
+    Note over N8: backup originals (generated/backups/docs_reorg/<ts>/), then merge frontmatter
+    N8-->>Graph: fm_apply_result
+
+    Graph->>N9: run(state, config)
+    Note over N9: fast revalidation; outputs apply_report.json (delta)
+    N9-->>Graph: state.apply_report_path
+
+    Graph->>N10: run(state, config)
+    Note over N10: aggregate summary → state.apply_summary
+    N10-->>API: final_state
+
+    API-->>User: {artifacts, apply_summary | needs_approval | error}
+
+---
+
+## ScriptsRestructurer — Full Flow (Part 1 → Gate → Part 2)
+
+%%{init: {"theme": "dark", "sequence": {"mirrorActors": false, "showSequenceNumbers": true}} }%%
+sequenceDiagram
+    autonumber
+    actor User as Client
+    participant API as graph_service.invoke_agent (graph_service.py)
+    participant Provider as LLMProvider (llm/*)
+    participant Flow as get_scripts_flow (scripts_restructurer_graph.py)
+    participant Graph as LangGraph StateGraph
+    participant M0 as ensure_dirs (restruct_common/ensure_dirs.py)
+    participant M1 as inventory (scripts_nodes/inventory.py)
+    participant M2 as semantic_grouping (scripts_nodes/semantic.py)
+    participant M3 as plan (scripts_nodes/plan.py)
+    participant M4 as decision_log (scripts_nodes/report.py)
+    participant M5 as assistant_brief (scripts_nodes/report.py)
+    participant Gate as await_approval (restruct_common/approval.py)
+    participant M6 as apply_moves_git_mv (restruct_common/git_apply.py)
+    participant M7 as revalidate_inventory (scripts_nodes/inventory.py)
+    participant M8 as final_report (scripts_nodes/report.py)
+    participant LLM as get_llm_instance
+    participant HTTP as AsyncOpenAI/httpx | Ollama
+
+    User->>API: POST /invoke {message, requested_action, approval_token?, profile_name: "ScriptsRestructurer"}
+    API->>Provider: get_llm_provider(); (optional) reload_profile("ScriptsRestructurer")
+    Provider-->>API: provider.config (models, base_url, keys)
+    API->>Flow: get_scripts_flow()
+    Flow-->>API: compiled graph (cached)
+    API-->>Graph: flow.astream(state0, config={configurable:{profile, thread_id}})
+
+    Graph->>M0: run(state, config)
+    M0-->>Graph: artifacts_dir/backups ensured
+
+    Graph->>M1: run(state, config)
+    Note over M1: outputs global_inventory.json (map by ext/size/path)
+    M1-->>Graph: state.inventory_path
+
+    Graph->>M2: run(state, config)
+    Note over M2: outputs content_insights_root.json (clusters: cli/utils/ops/dev/tests/docs)
+    M2-->>Graph: state.insights_path
+
+    Graph->>M3: run(state, config)
+    Note over M3: outputs rename_move_plan.json (source→target + rationale)
+    M3-->>Graph: state.move_plan_path
+
+    Graph->>M4: run(state, config)
+    Note over M4: outputs semantic_review_root.md (rationales)
+    M4-->>Graph: state.decision_log_path
+
+    Graph->>M5: run(state, config)
+    Note over M5: outputs assistant_brief.md
+    M5-->>Graph: state.assistant_brief_path
+
+    Graph->>Gate: run(state, config)
+    alt requested_action == "part1"
+      Gate-->>API: return state (read-only artifacts)
+      API-->>User: artifacts under generated/restruct/*
+    else requested_action == "part2" and approval_token missing
+      Gate-->>API: needs_approval=true
+      API-->>User: provide approval_token to proceed
+    else requested_action == "part2" and approval_token present
+      Gate-->>Graph: continue to apply phase
+    end
+
+    Graph->>M6: run(state, config)
+    Note over M6: apply rename_move_plan via `git mv`; conflicts -> ".dup"; no deletes
+    M6-->>Graph: moves_applied summary
+
+    Graph->>M7: run(state, config)
+    Note over M7: re-scan; outputs apply_report.json (delta after moves)
+    M7-->>Graph: state.apply_report_path
+
+    Graph->>M8: run(state, config)
+    Note over M8: aggregate summary → state.apply_summary
+    M8-->>API: final_state
+
+    API-->>User: {artifacts, apply_summary | needs_approval | error}
