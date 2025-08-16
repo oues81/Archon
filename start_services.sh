@@ -22,6 +22,26 @@ mkdir -p "$LOG_DIR"
 export LOG_LEVEL="${LOG_LEVEL:-INFO}"
 export UVICORN_LOG_LEVEL="${UVICORN_LOG_LEVEL:-info}"
 
+# Mode d'exécution (prod par défaut)
+ARCHON_MODE="${ARCHON_MODE:-prod}"
+echo "ARCHON_MODE: ${ARCHON_MODE}"
+
+# Préparer les options de reload uniquement en mode dev
+RELOAD_ARGS=""
+if [ "$ARCHON_MODE" = "dev" ]; then
+    echo "⚙️  Dev mode: uvicorn --reload activé (scope restreint)"
+    RELOAD_ARGS="\
+        --reload \
+        --reload-dir /app/src/archon/archon \
+        --reload-include '*.py' \
+        --reload-exclude 'generated/*' \
+        --reload-exclude 'tests/*' \
+        --reload-exclude '**/__pycache__/*' \
+        --reload-exclude 'logs/*'"
+else
+    echo "🚀 Prod mode: uvicorn sans reload"
+fi
+
 # Chemin vers le fichier de configuration des profils
 ENV_VARS_FILE="/app/src/archon/workbench/env_vars.json"
 
@@ -157,12 +177,11 @@ python -c "import sys; print('\n'.join(sys.path))"
 
 # Utiliser le chemin correct pour graph_service
 uvicorn archon.archon.graph_service:app \
-        --reload-dir /app/src/archon \
         --host 0.0.0.0 \
         --port 8110 \
-        --reload \
         --log-level info \
         --log-config uvicorn_logging_no_watchfiles.ini \
+        $RELOAD_ARGS \
         > "$LOG_DIR/uvicorn_stdout.log" 2> "$LOG_DIR/uvicorn_stderr.log" &
 UVICORN_PID=$!
 
