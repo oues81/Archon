@@ -553,25 +553,29 @@ def get_clients() -> Tuple[Any, Optional[Any], Optional[Any]]:
         else:
             logger.debug("Supabase configuration incomplete or Client not available")
         
-        # Neo4j client setup
+        # Neo4j client setup (opt-in via NEO4J_ENABLED)
         neo4j_client = None
-        neo4j_uri = get_env_var("NEO4J_URI")
-        neo4j_user = get_env_var("NEO4J_USER")
-        neo4j_password = get_env_var("NEO4J_PASSWORD")
-        
-        if neo4j_uri and neo4j_user and neo4j_password and Neo4jClient is not None:
-            try:
-                # Neo4jClient(uri, user, password)
-                neo4j_client = Neo4jClient(
-                    neo4j_uri,
-                    neo4j_user,
-                    neo4j_password,
-                )
-                logger.debug(f"Neo4j client initialized successfully at {neo4j_uri}")
-            except Exception as e:
-                logger.error(f"Failed to initialize Neo4j: {e}")
+        neo4j_enabled = get_bool_env("NEO4J_ENABLED", False)
+        if not neo4j_enabled:
+            logger.debug("Neo4j disabled via NEO4J_ENABLED=false (default)")
         else:
-            logger.debug("Neo4j configuration incomplete or Neo4jClient not available")
+            neo4j_uri = get_env_var("NEO4J_URI")
+            neo4j_user = get_env_var("NEO4J_USER")
+            neo4j_password = get_env_var("NEO4J_PASSWORD")
+
+            if neo4j_uri and neo4j_user and neo4j_password and Neo4jClient is not None:
+                try:
+                    # Neo4jClient(uri, user, password)
+                    neo4j_client = Neo4jClient(
+                        neo4j_uri,
+                        neo4j_user,
+                        neo4j_password,
+                    )
+                    logger.debug(f"Neo4j client initialized successfully at {neo4j_uri}")
+                except Exception as e:
+                    logger.error(f"Failed to initialize Neo4j: {e}")
+            else:
+                logger.debug("Neo4j configuration incomplete or Neo4jClient not available")
 
         return embedding_client, supabase, neo4j_client
     

@@ -4,6 +4,9 @@
 from neo4j import GraphDatabase
 import logging
 from typing import Dict, List, Any, Optional
+import os
+import time
+import socket
 
 logger = logging.getLogger(__name__)
 
@@ -11,15 +14,52 @@ class Neo4jClient:
     def __init__(self, uri: str, user: str, password: str, database: str = "neo4j"):
         self.uri = uri
         self.database = database
-        try:
-            self.driver = GraphDatabase.driver(uri, auth=(user, password))
-            # Test a simple query to confirm connectivity
-            with self.driver.session(database=self.database) as session:
-                session.run("RETURN 1")
-            logger.info("Successfully connected to Neo4j.")
-        except Exception as e:
-            logger.error(f"Failed to connect to Neo4j: {e}")
+        # Gate behind env flag to avoid startup failures when Neo4j is not used
+        enabled = os.environ.get("NEO4J_ENABLED", "false").lower() in {"1", "true", "yes"}
+        if not enabled:
+            logger.info("Neo4j disabled by NEO4J_ENABLED env; skipping connection")
             self.driver = None
+            return
+
+        # Optional: resolve host to IPv4 to avoid DNS/IPv6 issues in some Docker networks
+        uri_to_use = uri
+        try:
+            if uri.startswith("bolt://") or uri.startswith("neo4j://"):
+                scheme, rest = uri.split("://", 1)
+                host_port = rest
+                host, port = (host_port.split(":", 1) + ["7687"])[:2]
+                # Resolve IPv4 first
+                infos = socket.getaddrinfo(host, port, family=socket.AF_INET, type=socket.SOCK_STREAM)
+                if infos:
+                    ipv4 = infos[0][4][0]
+                    uri_to_use = f"{scheme}://{ipv4}:{port}"
+                    logger.debug(f"Neo4j URI resolved to IPv4 {ipv4}")
+        except Exception as e:
+            logger.debug(f"IPv4 resolution skipped: {e}")
+
+        # Retry with backoff to handle transient DNS/resolve issues
+        self.driver = None
+        attempts = int(os.environ.get("NEO4J_CONNECT_ATTEMPTS", "3"))
+        delay = float(os.environ.get("NEO4J_CONNECT_BACKOFF_SECS", "1.5"))
+        last_err: Optional[Exception] = None
+        for i in range(1, attempts + 1):
+            try:
+                self.driver = GraphDatabase.driver(uri_to_use, auth=(user, password))
+                with self.driver.session(database=self.database) as session:
+                    session.run("RETURN 1")
+                logger.info("Connected to Neo4j (attempt %d) using %s", i, uri_to_use)
+                last_err = None
+                break
+            except Exception as e:
+                last_err = e
+                logger.warning(f"Neo4j connect attempt {i}/{attempts} failed: {e}")
+                time.sleep(delay)
+        if self.driver is None:
+            logger.error(
+                "Neo4j disabled after failed connects: %s | Hints: verify NEO4J_URI, container DNS/network, and that the host is resolvable from this service. "
+                "If using Docker, try using the service name or container IP, and ensure bolt port 7687 is exposed.",
+                last_err,
+            )
 
     def close(self):
         if self.driver is not None:

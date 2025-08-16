@@ -174,6 +174,9 @@ def ensure_clients() -> None:
             if base_url:
                 try:
                     _embedding_client = AsyncOpenAI(base_url=base_url, api_key=api_key)
+                    # Hint for Ollama users if using root path (some deployments expect /v1)
+                    if "ollama" in base_url and not base_url.rstrip("/").endswith("/v1"):
+                        logger.debug("Embedding base URL does not end with /v1; if you see no traffic, try appending /v1")
                     logger.debug("Embedding client initialized")
                 except Exception as e:
                     logger.warning(f"Failed to init embedding client: {e}")
@@ -238,18 +241,38 @@ async def get_title_and_summary_llm(chunk: str, url: str) -> Optional[Tuple[str,
         return None
     try:
         system_prompt = (
-            "You extract a short, informative title and a precise, helpful summary for a documentation chunk. "
-            "Return JSON with keys 'title' and 'summary'. The summary should capture the main points, "
-            "be specific (bullet-like sentences if useful), and stay under ~3 sentences."
+            "You are a documentation summarizer. Generate a concise, content-focused title and summary for the provided snippet. "
+            "Rules: 1) Title <= 70 chars, no branding, no breadcrumbs, no navigation words, no code/markdown artifacts. "
+            "2) Summary = 2-3 crisp sentences capturing the main points of the snippet only (no menu items, no site nav). "
+            "3) Output strict JSON with keys exactly 'title' and 'summary'."
         )
         model_name = os.environ.get("PRIMARY_MODEL") or "gpt-4o-mini"
         # Preprocess snippet to remove boilerplate/logo lines before sending to the LLM
-        content_snippet = preprocess_markdown(chunk)[:1600]
+        cleaned = preprocess_markdown(chunk)
+        # Extract a short page context: top 3 headings after cleaning
+        try:
+            headings = []
+            for m in re.finditer(r"^\s*#{1,3}\s+(.+)$", cleaned, flags=re.MULTILINE):
+                h = m.group(1).strip()
+                h = re.sub(r"[`*_#>]+", " ", h)
+                h = re.sub(r"\s+", " ", h).strip()
+                if h:
+                    headings.append(h)
+                if len(headings) >= 3:
+                    break
+        except Exception:
+            headings = []
+        # Give the model more context (up to ~3k chars)
+        content_snippet = cleaned[:3000]
         resp = await _llm_client.chat.completions.create(
             model=model_name,
             messages=[
                 {"role": "system", "content": system_prompt},
-                {"role": "user", "content": f"URL: {url}\n\nContent:\n{content_snippet}"},
+                {"role": "user", "content": (
+                    "URL: " + url + "\n\n" +
+                    ("Page context:\n- " + "\n- ".join(headings) + "\n\n" if headings else "") +
+                    "Content:\n" + content_snippet
+                )},
             ],
             response_format={"type": "json_object"},
         )
@@ -292,7 +315,12 @@ def extract_title_from_markdown(content: str, url: str) -> str:
     if not m:
         m = re.search(r"^\s*##\s+(.+)$", content, flags=re.MULTILINE)
     if m:
-        return _sanitize_zerowidth(m.group(1).strip())
+        cand = _sanitize_zerowidth(m.group(1).strip())
+        # Drop breadcrumb-like or nav-like titles
+        if any(k in cand.lower() for k in ["navigation", "windsurf docs", "home page", "support", "blog", "discord"]):
+            pass
+        else:
+            return cand
     def _strip_md(s: str) -> str:
         # Remove images and links and leftover markdown
         s = re.sub(r"!\[[^\]]*\]\([^\)]*\)", " ", s)  # images
@@ -309,6 +337,9 @@ def extract_title_from_markdown(content: str, url: str) -> str:
             continue
         cleaned = _strip_md(line)
         if not cleaned or cleaned.startswith("<!doctype") or cleaned.startswith("<html"):
+            continue
+        # Avoid breadcrumb-like single words
+        if any(k in cleaned.lower() for k in ["navigation", "support", "blog", "discord"]):
             continue
         return _sanitize_zerowidth(cleaned[:100])
     # URL-based fallback
@@ -385,74 +416,120 @@ def fetch_url_content_sync(url: str, timeout: int = 30) -> Optional[str]:
 
 
 def is_allowed_url(url: str) -> bool:
-    allow = [
-        # Windsurf docs sections
-        "https://docs.windsurf.com/windsurf/cascade/",
-        "https://docs.windsurf.com/windsurf/cascade",
-        "https://docs.windsurf.com/windsurf/mcp",
-        "https://docs.windsurf.com/windsurf/memories",
-        "https://docs.windsurf.com/windsurf/models",
-        "https://docs.windsurf.com/windsurf/terminal",
-        "https://docs.windsurf.com/windsurf/getting-started",
-        "https://docs.windsurf.com/context-awareness/",
-        "https://docs.windsurf.com/best-practices/",
-        "https://docs.windsurf.com/llms.txt",
+    allow_prefixes = [
+        # Allow the entire Windsurf docs site (we filter assets elsewhere)
+        "https://docs.windsurf.com/",
         # Context engineering community repo
         "https://github.com/coleam00/context-engineering-intro",
         "https://github.com/coleam00/context-engineering-intro/",
         "https://raw.githubusercontent.com/coleam00/context-engineering-intro/",
+        # Optionally include Windsurf org repos if referenced
+        "https://github.com/windsurf-ai/",
+        "https://raw.githubusercontent.com/windsurf-ai/",
         # High-signal prompt/context engineering guides
-        "https://platform.openai.com/docs/guides/prompt-engineering",
+        "https://platform.openai.com/docs/",
         "https://docs.anthropic.com/",
         # Vector DB & AI pipelines (for indexing context)
-        "https://supabase.com/docs/guides/ai",
+        "https://supabase.com/docs/",
         # LlamaIndex conceptual docs
         "https://docs.llamaindex.ai/",
     ]
-    return any(url.startswith(p) for p in allow)
+    if not any(url.startswith(p) for p in allow_prefixes):
+        return False
+    # Quick asset filter here too (defense in depth)
+    if any(ext in url for ext in ["/assets/", ".svg", ".png", ".jpg", ".css", ".js", ".ico", ".gif"]):
+        return False
+    return True
 
 
 def get_windsurf_urls() -> List[str]:
+    # Keep the core seeds minimal and reliable; rely on sitemap/llms.txt for breadth
     seeds: List[str] = [
-        # Cascade — Core/Workflows/Planning/Web search/Memories
+        # Core Windsurf sections we know exist
         "https://docs.windsurf.com/windsurf/cascade/cascade",
         "https://docs.windsurf.com/windsurf/cascade/workflows",
         "https://docs.windsurf.com/windsurf/cascade/planning-mode",
         "https://docs.windsurf.com/windsurf/cascade/web-search",
-        "https://docs.windsurf.com/windsurf/cascade/memories",
-        # Windsurf — Memories (global)
         "https://docs.windsurf.com/windsurf/memories",
-        # MCP
-        "https://docs.windsurf.com/windsurf/cascade/mcp",
         "https://docs.windsurf.com/windsurf/mcp",
-        # Context awareness & indexing
         "https://docs.windsurf.com/context-awareness/overview",
         "https://docs.windsurf.com/context-awareness/local-indexing",
-        # Prompting & best practices
         "https://docs.windsurf.com/best-practices/prompt-engineering",
-        # Models/Terminal/Getting started
         "https://docs.windsurf.com/windsurf/models",
         "https://docs.windsurf.com/windsurf/terminal",
         "https://docs.windsurf.com/windsurf/getting-started",
-        # Index list (useful for discovery)
+        # Discovery indices (parsed below)
         "https://docs.windsurf.com/llms.txt",
-        # Context Engineering resources (community/open)
+        "https://docs.windsurf.com/sitemap.xml",
+        # Community repo
         "https://github.com/coleam00/context-engineering-intro",
         "https://github.com/coleam00/context-engineering-intro/blob/main/README.md",
-        "https://github.com/coleam00/context-engineering-intro/blob/main/INITIAL_EXAMPLE.md",
-        # Broader prompt engineering & context resources
-        "https://platform.openai.com/docs/guides/prompt-engineering",
-        "https://docs.anthropic.com/en/docs/build-with-claude/prompt-engineering",
-        # Vector DB usage for AI assistants
-        "https://supabase.com/docs/guides/ai",
-        # LlamaIndex concepts for context mgmt
-        "https://docs.llamaindex.ai/en/stable/getting_started/concepts.html",
     ]
 
     # Deduplicate, enforce allowlist
     seeds = [u for u in dict.fromkeys(seeds)]
     urls = [u for u in seeds if is_allowed_url(u)]
-    return urls
+
+    # Expand via sitemap if available
+    try:
+        site = "https://docs.windsurf.com/sitemap.xml"
+        r = requests.get(site, timeout=6, headers={"User-Agent": "ArchonCrawler/1.0", "Accept": "application/xml,text/xml;q=0.9,*/*;q=0.1"})
+        if r.status_code == 200:
+            # Extract <loc> URLs
+            locs = re.findall(r"<loc>(.*?)</loc>", r.text)
+            for u in locs:
+                if is_allowed_url(u):
+                    urls.append(u)
+    except Exception as e:
+        logger.debug(f"Sitemap expansion failed: {e}")
+
+    # Expand via llms.txt if available (one URL per line)
+    try:
+        idx = "https://docs.windsurf.com/llms.txt"
+        r2 = requests.get(idx, timeout=4, headers={"User-Agent": "ArchonCrawler/1.0", "Accept": "text/plain,*/*;q=0.1"})
+        if r2.status_code == 200:
+            for line in r2.text.splitlines():
+                u = line.strip()
+                if u.startswith("http") and is_allowed_url(u):
+                    urls.append(u)
+    except Exception as e:
+        logger.debug(f"llms.txt expansion failed: {e}")
+
+    # Final dedupe and filter out non-content pages quickly
+    deduped = []
+    seen = set()
+    for u in urls:
+        if u in seen:
+            continue
+        seen.add(u)
+        # Drop obvious non-content
+        if any(x in u for x in ["/assets/", ".svg", ".png", ".jpg", ".css", ".js"]):
+            continue
+        deduped.append(u)
+    # Live validation: keep only URLs that respond quickly with text content
+    validated: List[str] = []
+    rejected = 0
+    for u in deduped:
+        try:
+            h = requests.head(u, timeout=3, allow_redirects=True, headers={"User-Agent": "ArchonCrawler/1.0"})
+            code = h.status_code
+            ctype = h.headers.get("Content-Type", "").lower()
+            # Some servers don’t return useful HEAD; fallback to GET with small timeout
+            if code >= 400 or not any(t in ctype for t in ["text/html", "text/plain", "application/xhtml+xml"]):
+                g = requests.get(u, timeout=4, stream=True, headers={"User-Agent": "ArchonCrawler/1.0"})
+                code = g.status_code
+                ctype = g.headers.get("Content-Type", "").lower()
+                g.close()
+            if code < 400 and any(t in ctype for t in ["text/html", "text/plain", "application/xhtml+xml"]):
+                validated.append(u)
+            else:
+                rejected += 1
+        except Exception:
+            rejected += 1
+            continue
+    if rejected:
+        logger.info(f"URL validation rejected {rejected} non-text or unreachable pages; keeping {len(validated)}")
+    return validated
 
 
 # ---------------------------- Processing pipeline ---------------------------
@@ -542,24 +619,35 @@ def extract_summary_from_chunk(text: str) -> Optional[str]:
             continue
         if 'logo.svg' in low:
             continue
-        # Remove common Mintlify/Windsurf nav keywords even if concatenated
-        if re.search(r"ask\s*ai", low) or re.search(r"feature\s*request", low) or re.search(r"download", low) or re.search(r"search", low):
+        if re.search(r"^search", low) or '⌘k' in low or re.search(r"search\s*…?", low):
             continue
         cleaned_lines.append(line)
     text = "\n".join(cleaned_lines)
     text_no_headers = re.sub(r'^#{1,6}\s+.+?\s*$', '', text, flags=re.MULTILINE)
-    clean = ' '.join(text_no_headers.split())
+    clean = re.sub(r"[`*_#>]+", " ", text_no_headers)
+    clean = re.sub(r"\s+", " ", clean).strip()
     if not clean:
         return None
-    summary_length = min(200, len(clean))
-    summary = clean[:summary_length]
-    if summary_length < len(clean):
-        last_period = summary.rfind('.')
-        if last_period > 0 and last_period + 1 < summary_length:
-            summary = summary[:last_period + 1]
-        else:
+    # Pick first 2-3 sentences up to ~350 chars
+    sentences = re.split(r"(?<=[.!?])\s+", clean)
+    picked: List[str] = []
+    total_len = 0
+    for s in sentences:
+        s = s.strip()
+        if not s:
+            continue
+        if any(k in s.lower() for k in ["navigation", "windsurf docs", "home page", "discord", "support", "blog"]):
+            continue
+        picked.append(s)
+        total_len += len(s) + 1
+        if len(picked) >= 3 or total_len >= 350:
+            break
+    summary = " ".join(picked).strip()
+    if len(summary) > 350:
+        summary = summary[:350].rstrip()
+        if not summary.endswith('.'):
             summary += '...'
-    return summary
+    return summary or None
 
 def get_title_and_summary_heuristic(chunk: str, url: str, chunk_number: int = 0) -> Tuple[str, str]:
     try:
@@ -621,15 +709,38 @@ def insert_chunk_sync(chunk: ProcessedChunk) -> bool:
             supabase.table("site_pages").delete().eq("url", chunk.url).eq("chunk_number", chunk.chunk_number).execute()
         except Exception as del_e:
             logger.debug(f"Pre-delete failed (may be fine): {del_e}")
+
         response = supabase.table("site_pages").insert(data).execute()
 
-        if hasattr(response, "data") and response.data:
+        # Success path
+        if getattr(response, "data", None):
             logger.info(f"Inserted '{chunk.title}' for {chunk.url} (chunk {chunk.chunk_number})")
             return True
-        logger.warning(f"Insert/upsert returned without data confirmation: {response}")
-        return True
+
+        # Inspect response for diagnostics
+        try:
+            resp_info = {
+                "type": type(response).__name__,
+                "dict": getattr(response, "__dict__", {}),
+                "repr": repr(response),
+            }
+        except Exception:
+            resp_info = {"repr": repr(response)}
+        logger.warning(f"Insert returned without data; response details: {resp_info}")
+        return True  # PostgREST may omit echo; treat as best-effort success
     except Exception as e:
-        logger.error(f"Supabase insert error: {e}")
+        # Try to extract HTTP payload from exception (if available)
+        extra = None
+        try:
+            resp = getattr(e, "response", None)
+            if resp is not None:
+                extra = getattr(resp, "text", None) or getattr(resp, "data", None)
+        except Exception:
+            pass
+        if extra:
+            logger.error(f"Supabase insert error: {e} | payload: {extra}")
+        else:
+            logger.error(f"Supabase insert error: {e}")
         return False
 
 
@@ -726,19 +837,21 @@ def preprocess_markdown(text: str) -> str:
         # Drop common Mintlify/Windsurf nav and boilerplate
         if low.startswith('[windsurf docs home page'):
             continue
-        if low.startswith('!['):  # image lines
+        if low.startswith('!['):
             continue
         if 'logo.svg' in low:
             continue
-        if re.search(r"ask\s*ai", low):
-            continue
-        if re.search(r"feature\s*request", low):
+        if any(x in low for x in [
+            'windsurf docs home page', 'navigation', 'discord community', 'windsurf blog', 'support',
+            'getting started', 'models', 'code lenses', 'tab', 'command', 'terminal', 'sitemap',
+            'mintlify', 'googletagmanager', 'search', '⌘k'
+        ]):
             continue
         if re.search(r"^search", low) or '⌘k' in low or re.search(r"search\s*…?", low):
             continue
         if re.search(r"download", low):
             continue
-        if 'sitemap' in low:
+        if re.search(r"^sitemap", low):
             continue
         if 'googletagmanager' in low or 'mintlify-assets' in low:
             continue
