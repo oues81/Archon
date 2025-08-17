@@ -2,6 +2,9 @@ import traceback
 import sys
 import os
 import json
+import time
+import base64
+import hashlib
 import logging
 import asyncio
 import dataclasses
@@ -23,7 +26,7 @@ try:
 except ImportError:
     pass
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from pydantic import BaseModel, Field
 from typing_extensions import TypedDict
 from typing import Optional, Dict, Any, List
@@ -41,7 +44,10 @@ from archon.archon.archon_graph import get_agentic_flow
 from archon.archon.docs_maintainer_graph import get_docs_flow
 from archon.archon.content_restructurer_graph import get_content_flow
 from archon.utils.utils import write_to_log
+from archon.archon.logging_utils import redact_pii
 from archon.llm import get_llm_provider
+from archon.archon.security.hmac import verify as verify_hmac
+import requests
 
 try:
     from langgraph.types import Command
@@ -80,6 +86,16 @@ def sanitize_output(text: str) -> str:
         return inner
     return text
 
+def _log_safe(msg: str, **fields: Any) -> None:
+    """PII-safe logging: only log metadata like correlation_id, tool, durations, statuses.
+
+    Redacts any unexpected content using redact_pii() as a defense-in-depth measure.
+    """
+    whitelist = {"correlation_id", "tool", "duration_ms", "status", "http", "resume_hash", "latency_ms", "status_code", "endpoint"}
+    safe_raw = {k: v for k, v in fields.items() if k in whitelist}
+    safe = redact_pii(safe_raw)
+    logger.info(f"{msg} | {json.dumps(safe, ensure_ascii=False)}")
+
 # Montage du router des profils s'il est disponible
 if profiles_available and profiles_router:
     app.include_router(profiles_router, prefix="/api")
@@ -94,6 +110,40 @@ class InvokeRequest(BaseModel):
     config: Optional[Dict[str, Any]] = None
     profile_name: Optional[str] = None  # Ajout du nom du profil
 
+# --- Advisor Ingestion Schemas ---
+class AdvisorIngestRequest(BaseModel):
+    # Mode direct
+    filename: Optional[str] = None
+    file_base64: Optional[str] = None
+    # Mode SharePoint
+    share_url: Optional[str] = None
+    site_id: Optional[str] = None
+    drive_id: Optional[str] = None
+    item_id: Optional[str] = None
+    pages: Optional[str] = None
+    # Contrôles
+    consent: bool = True
+    policy_id: Optional[str] = None
+    profile: Optional[str] = None
+    privacy_mode: Optional[str] = Field(default="local", pattern=r"^(local|cloud_guarded)$")
+    metadata: Optional[Dict[str, Any]] = None
+    # Options PR-4
+    do_export: Optional[bool] = False
+    export_format: Optional[str] = Field(default="json", pattern=r"^(json|csv|md)$")
+    do_search: Optional[bool] = False
+    search_query: Optional[str] = None
+    top_k: Optional[int] = Field(default=5, ge=1, le=50)
+
+class AdvisorIngestResponse(BaseModel):
+    parsed: Dict[str, Any]
+    score: Dict[str, Any]
+    anonymized: Optional[Dict[str, Any]] = None
+    index_ref: Dict[str, Any]
+    logs_ref: Dict[str, Any]
+    correlation_id: Optional[str] = None
+    export_ref: Optional[Dict[str, Any]] = None
+    search_results: Optional[List[Dict[str, Any]]] = None
+
 @app.get("/health")
 async def health_check():
     """Health check endpoint"""
@@ -103,6 +153,335 @@ async def health_check():
 async def health_head():
     """HEAD variant for health checks (no body)."""
     return {"status": "ok"}
+
+@app.post("/advisor/ingest_cv")
+async def advisor_ingest_cv(req: Request, payload: AdvisorIngestRequest) -> AdvisorIngestResponse:
+    """Advisor-first ingestion endpoint (skeleton).
+
+    - Verifies HMAC if HMAC_SECRET is set
+    - Validates mutually exclusive modes: (filename+file_base64) XOR (share reference)
+    - Propagates X-Correlation-Id
+    - Returns a minimal structured response (no MCP calls yet)
+    """
+    start_t = time.time()
+    try:
+        raw_body = await req.body()
+        auth = req.headers.get("Authorization")
+        ts = req.headers.get("X-Timestamp")
+        corr_id = req.headers.get("X-Correlation-Id") or ""
+        x_source = (req.headers.get("X-Source") or "").strip().lower()
+        recursion_guard = x_source == "rhcv"
+        if recursion_guard:
+            _log_safe("recursion_guard", endpoint="/advisor/ingest_cv", correlation_id=corr_id, status="active")
+
+        # Enforce HMAC only if secret is configured
+        hmac_required = bool(os.getenv("HMAC_SECRET"))
+        ok, msg = verify_hmac(auth, ts, raw_body, required=hmac_required)
+        if not ok:
+            raise HTTPException(status_code=401, detail=f"HMAC verification failed: {msg}")
+
+        # Validate mode selection
+        has_file = bool(payload.filename and payload.file_base64)
+        has_sp = bool(payload.share_url) or bool(payload.site_id and payload.drive_id and payload.item_id)
+        if has_file == has_sp:
+            # Either both or neither provided
+            raise HTTPException(status_code=400, detail="Provide exactly one input mode: (filename+file_base64) OR (share_url | site_id+drive_id+item_id)")
+
+        # Basic MIME/size guard for direct mode (lightweight check; full check to be added later)
+        if has_file:
+            # Filename extension guard
+            allowed_ext = {".pdf", ".doc", ".docx"}
+            try:
+                ext = Path(payload.filename).suffix.lower()
+            except Exception:
+                ext = ""
+            if ext not in allowed_ext:
+                raise HTTPException(status_code=415, detail=f"Unsupported file type: {ext}")
+            # Size guard (decoded)
+            try:
+                max_bytes = int(os.getenv("ARCHON_MAX_UPLOAD_BYTES", str(10 * 1024 * 1024)))
+            except Exception:
+                max_bytes = 10 * 1024 * 1024
+            try:
+                decoded = base64.b64decode((payload.file_base64 or "").encode("utf-8"), validate=False)
+                if len(decoded) > max_bytes:
+                    raise HTTPException(status_code=413, detail=f"File too large. Max {max_bytes} bytes")
+            except HTTPException:
+                raise
+            except Exception:
+                # If decode fails here, parsing step will handle; don't double-raise
+                pass
+
+        # SharePoint pages validation (if provided)
+        if has_sp and (payload.pages or "").strip():
+            import re as _re
+            pages = (payload.pages or "").strip()
+            pattern = r"^\d+(\s*-\s*\d+)?(\s*,\s*\d+(\s*-\s*\d+)?)*$"
+            if not _re.match(pattern, pages):
+                raise HTTPException(status_code=400, detail="Invalid pages format. Use e.g. '1-3,5'")
+
+        # --- PR-3: idempotence hash (stateless for now) ---
+        def _sha256_hex(b: bytes) -> str:
+            h = hashlib.sha256()
+            h.update(b or b"")
+            return h.hexdigest()
+
+        resume_hash = None
+        try:
+            if has_file and payload.file_base64:
+                resume_hash = _sha256_hex(base64.b64decode(payload.file_base64.encode('utf-8'), validate=False))
+            elif has_sp:
+                meta = json.dumps({
+                    "share_url": payload.share_url,
+                    "site_id": payload.site_id,
+                    "drive_id": payload.drive_id,
+                    "item_id": payload.item_id,
+                    "pages": payload.pages,
+                }, sort_keys=True).encode('utf-8')
+                resume_hash = _sha256_hex(meta)
+        except Exception:
+            resume_hash = None
+
+        # --- Helper to call MCP tools via JSON-RPC ---
+        # Prefer explicit ARCHON_MCP_URL, else fallback to MCP_SERVER_URL (docker-compose env),
+        # else default to localhost for bare-metal runs.
+        MCP_URL = (os.getenv("ARCHON_MCP_URL") or os.getenv("MCP_SERVER_URL") or "http://localhost:8100").rstrip('/')
+        CV_API_URL = os.getenv("CV_API_URL")
+
+        def _mcp_call(tool_name: str, arguments: Dict[str, Any]) -> Dict[str, Any]:
+            rpc = {
+                "jsonrpc": "2.0",
+                "id": f"{int(time.time()*1000)}-{tool_name}",
+                "method": "tools/call",
+                "params": {
+                    "name": tool_name,
+                    "arguments": arguments
+                }
+            }
+            hdrs = {"Content-Type": "application/json", "X-Source": "archon"}
+            if corr_id:
+                hdrs["X-Correlation-Id"] = corr_id
+            # minimal retry on 429/504
+            delays = [0, 1.5]
+            last_exc = None
+            started = time.time()
+            for d in delays:
+                if d:
+                    time.sleep(d)
+                try:
+                    r = requests.post(f"{MCP_URL}/mcp", json=rpc, headers=hdrs, timeout=int(os.getenv("ARCHON_HTTP_TIMEOUT", "120")))
+                    if r.status_code in (200, 304):
+                        _log_safe("mcp_call_ok", correlation_id=corr_id, tool=tool_name, duration_ms=int((time.time()-started)*1000), http=r.status_code, status="ok")
+                        return r.json()
+                    if r.status_code not in (429, 504):
+                        _log_safe("mcp_call_fail_status", correlation_id=corr_id, tool=tool_name, duration_ms=int((time.time()-started)*1000), http=r.status_code, status="fail")
+                        break
+                except Exception as e:
+                    last_exc = e
+            _log_safe("mcp_call_error", correlation_id=corr_id, tool=tool_name, duration_ms=int((time.time()-started)*1000), status="error")
+            if last_exc:
+                raise last_exc
+            raise HTTPException(status_code=502, detail=f"MCP call failed for {tool_name}: HTTP {r.status_code}")
+
+        def _extract_or_raise(tool: str, resp: Dict[str, Any]) -> Dict[str, Any]:
+            """Extract JSON result.content[0].json or map JSON-RPC error to HTTP.
+            Known mappings:
+            - 429: Too Many Requests
+            - 504: Gateway Timeout
+            - 413: Payload Too Large (if reported upstream)
+            - 409: Conflict (e.g., index exists when upsert=False)
+            - -32602: Invalid params -> 400
+            - -32052: SharePoint parse failure -> 501 (graceful degradation)
+            - Others -> 502
+            """
+            if not isinstance(resp, dict):
+                raise HTTPException(status_code=502, detail=f"Invalid MCP response for {tool}")
+            if "error" in resp and resp["error"]:
+                err = resp["error"] or {}
+                code = err.get("code")
+                message = err.get("message") or f"{tool} failed"
+                # Direct HTTP code passthrough when applicable
+                if isinstance(code, int) and code in (409, 413, 429, 504):
+                    raise HTTPException(status_code=code, detail=message)
+                # JSON-RPC style mappings
+                if code == -32602:
+                    raise HTTPException(status_code=400, detail=message)
+                if code == -32052 and tool == "cv_parse_sharepoint":
+                    raise HTTPException(status_code=501, detail=message)
+                # Default
+                raise HTTPException(status_code=502, detail=message)
+            try:
+                return (((resp or {}).get("result") or {}).get("content") or [{}])[0].get("json") or {}
+            except Exception:
+                raise HTTPException(status_code=502, detail=f"Malformed MCP result for {tool}")
+
+        # --- PR-4: Orchestration using existing MCP tools ---
+        # 1) Health check (best-effort)
+        try:
+            _ = _mcp_call("cv_health_check", {"api_url": CV_API_URL, "correlation_id": corr_id})
+        except Exception:
+            pass
+
+        # 2) Parse
+        parsed: Dict[str, Any] = {}
+        if has_file:
+            args = {"filename": payload.filename, "file_base64": payload.file_base64}
+            if CV_API_URL:
+                args["api_url"] = CV_API_URL
+            _log_safe("tool_start", correlation_id=corr_id, tool="cv_parse_v2", status="start")
+            _t_parse = time.time()
+            pr = _mcp_call("cv_parse_v2", args)
+        else:
+            sp_args: Dict[str, Any] = {}
+            if payload.share_url:
+                sp_args["share_url"] = payload.share_url
+            else:
+                sp_args.update({"site_id": payload.site_id, "drive_id": payload.drive_id, "item_id": payload.item_id})
+            if payload.pages:
+                sp_args["pages"] = payload.pages
+            if CV_API_URL:
+                sp_args["api_url"] = CV_API_URL
+            _log_safe("tool_start", correlation_id=corr_id, tool="cv_parse_sharepoint", status="start")
+            _t_parse = time.time()
+            pr = _mcp_call("cv_parse_sharepoint", sp_args)
+        parsed = _extract_or_raise("cv_parse_v2" if has_file else "cv_parse_sharepoint", pr)
+        try:
+            _log_safe("tool_done", correlation_id=corr_id, tool=("cv_parse_v2" if has_file else "cv_parse_sharepoint"), duration_ms=int((time.time()-_t_parse)*1000), status="ok")
+        except Exception:
+            pass
+
+        # 3) Score
+        score: Dict[str, Any] = {}
+        try:
+            _log_safe("tool_start", correlation_id=corr_id, tool="cv_score", status="start")
+            _t_score = time.time()
+            sc = _mcp_call("cv_score", {"parsed": parsed, "profile_id": (payload.metadata or {}).get("profile_id") if payload.metadata else None})
+            score = _extract_or_raise("cv_score", sc)
+            try:
+                _log_safe("tool_done", correlation_id=corr_id, tool="cv_score", duration_ms=int((time.time()-_t_score)*1000), status="ok")
+            except Exception:
+                pass
+        except HTTPException:
+            raise
+        except Exception:
+            score = {}
+
+        # 4) Anonymize if privacy/policy requires before export/index
+        anonymized: Optional[Dict[str, Any]] = None
+        need_anon = (payload.privacy_mode == "cloud_guarded") or (payload.consent is False) or bool(payload.policy_id)
+        if need_anon:
+            try:
+                _log_safe("tool_start", correlation_id=corr_id, tool="cv_anonymize", status="start")
+                _t_anon = time.time()
+                an = _mcp_call("cv_anonymize", {"parsed": parsed})
+                anonymized = _extract_or_raise("cv_anonymize", an)
+                try:
+                    _log_safe("tool_done", correlation_id=corr_id, tool="cv_anonymize", duration_ms=int((time.time()-_t_anon)*1000), status="ok")
+                except Exception:
+                    pass
+                if not anonymized:
+                    # Treat empty/malformed anonymization as failure when required
+                    anonymized = None
+            except HTTPException:
+                raise
+            except Exception:
+                anonymized = None
+
+        # 5) Index (skip if consent=false or privacy=local)
+        index_ref: Dict[str, Any] = {"skipped": True}
+        may_index = payload.consent and (payload.privacy_mode != "local")
+        if may_index:
+            try:
+                content_for_index = anonymized or parsed
+                _log_safe("tool_start", correlation_id=corr_id, tool="cv_index", status="start")
+                _t_index = time.time()
+                ix = _mcp_call("cv_index", {"doc_id": resume_hash or None, "content": content_for_index, "metadata": {"resume_hash": resume_hash, "source": "advisor_ingest"}, "upsert": True})
+                index_ref = _extract_or_raise("cv_index", ix)
+                try:
+                    _log_safe("tool_done", correlation_id=corr_id, tool="cv_index", duration_ms=int((time.time()-_t_index)*1000), status="ok")
+                except Exception:
+                    pass
+            except HTTPException as he:
+                # Bubble up 409/413/429/504 etc.
+                raise he
+            except Exception:
+                index_ref = {"error": "index_failed"}
+
+        # 6) Optional export
+        export_ref: Optional[Dict[str, Any]] = None
+        if bool(getattr(payload, "do_export", False)):
+            try:
+                # If anonymization is required but failed or empty, do not export raw data
+                if need_anon and not anonymized:
+                    raise HTTPException(status_code=502, detail="Anonymization required for export but failed")
+                exp_args: Dict[str, Any] = {"parsed": anonymized or parsed, "format": (payload.export_format or "json")}
+                _log_safe("tool_start", correlation_id=corr_id, tool="cv_export", status="start")
+                _t_export = time.time()
+                ex = _mcp_call("cv_export", exp_args)
+                export_ref = _extract_or_raise("cv_export", ex)
+                try:
+                    _log_safe("tool_done", correlation_id=corr_id, tool="cv_export", duration_ms=int((time.time()-_t_export)*1000), status="ok")
+                except Exception:
+                    pass
+            except HTTPException:
+                raise
+            except Exception:
+                export_ref = {"error": "export_failed"}
+
+        # 7) Optional search
+        search_results: Optional[List[Dict[str, Any]]] = None
+        if bool(getattr(payload, "do_search", False)) and (payload.search_query or "").strip():
+            try:
+                sq = (payload.search_query or "").strip()
+                top_k = payload.top_k or 5
+                _log_safe("tool_start", correlation_id=corr_id, tool="cv_search", status="start")
+                _t_search = time.time()
+                sr = _mcp_call("cv_search", {"query": sq, "top_k": top_k})
+                data = _extract_or_raise("cv_search", sr)
+                # Expect either {results: [...]} or list directly
+                if isinstance(data, dict) and isinstance(data.get("results"), list):
+                    search_results = data.get("results")
+                elif isinstance(data, list):
+                    search_results = data
+                else:
+                    search_results = []
+                try:
+                    _log_safe("tool_done", correlation_id=corr_id, tool="cv_search", duration_ms=int((time.time()-_t_search)*1000), status="ok")
+                except Exception:
+                    pass
+            except HTTPException:
+                raise
+            except Exception:
+                search_results = []
+
+        resp = AdvisorIngestResponse(
+            parsed=parsed or {"status": "empty"},
+            score=score or {"status": "empty"},
+            anonymized=anonymized,
+            index_ref=index_ref,
+            logs_ref={"correlation_id": corr_id or None, "resume_hash": resume_hash},
+            correlation_id=corr_id or None,
+            export_ref=export_ref,
+            search_results=search_results,
+        )
+        _log_safe("ingest_latency", endpoint="/advisor/ingest_cv", latency_ms=int((time.time()-start_t)*1000), status_code=200, correlation_id=corr_id, resume_hash=resume_hash)
+        return resp
+    except HTTPException as he:
+        try:
+            # Best-effort latency log on errors
+            corr_id = req.headers.get("X-Correlation-Id") or ""
+            _log_safe("ingest_latency", endpoint="/advisor/ingest_cv", latency_ms=int((time.time()-start_t)*1000), status_code=he.status_code, correlation_id=corr_id)
+        except Exception:
+            pass
+        raise
+    except Exception as e:
+        logger.error(f"Exception in advisor_ingest_cv: {e}", exc_info=True)
+        try:
+            corr_id = req.headers.get("X-Correlation-Id") or ""
+            _log_safe("ingest_latency", endpoint="/advisor/ingest_cv", latency_ms=int((time.time()-start_t)*1000), status_code=500, correlation_id=corr_id)
+        except Exception:
+            pass
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/invoke")
 async def invoke_agent(request: InvokeRequest):

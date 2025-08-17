@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import base64
+import logging
 import os
+import time
 from typing import Any, Dict, List, Optional, Tuple
 
 import httpx
@@ -9,6 +11,14 @@ from pydantic import BaseModel, Field, ValidationError
 
 
 DEFAULT_API_URL = os.getenv("CV_API_URL", "http://192.168.28.245:8000")
+
+# HTTP hardening knobs (env-configurable)
+HTTP_TIMEOUT_SEC = float(os.getenv("CV_HTTP_TIMEOUT_SEC", os.getenv("REQUEST_TIMEOUT_SEC", "240")))
+HTTP_GET_TIMEOUT_SEC = float(os.getenv("CV_HTTP_GET_TIMEOUT_SEC", "30"))
+HTTP_RETRIES = int(os.getenv("CV_HTTP_RETRIES", "2"))
+HTTP_RETRY_BACKOFF_SEC = float(os.getenv("CV_HTTP_RETRY_BACKOFF_SEC", "5"))
+
+logger = logging.getLogger(__name__)
 
 
 class ParseRequest(BaseModel):
@@ -56,13 +66,73 @@ class CVAnalyzerArgs(BaseModel):
         return ("files" if has_files else "inline", self.files if has_files else (self.filename, self.text_base64))
 
 
-async def _post_json(client: httpx.AsyncClient, url: str, data: Dict[str, Any], headers: Optional[Dict[str, str]] = None) -> Dict[str, Any]:
-    resp = await client.post(url, json=data, headers=headers, timeout=60)
-    resp.raise_for_status()
-    return resp.json()
+async def _post_json(
+    client: httpx.AsyncClient,
+    url: str,
+    data: Dict[str, Any],
+    headers: Optional[Dict[str, str]] = None,
+    timeout: Optional[float] = None,
+) -> Dict[str, Any]:
+    """POST JSON with retries and detailed logging.
 
-async def _get_json(client: httpx.AsyncClient, url: str, headers: Optional[Dict[str, str]] = None) -> Dict[str, Any]:
-    resp = await client.get(url, headers=headers, timeout=20)
+    Retries on connection errors and timeouts. On HTTP error codes, the error is raised
+    with response content preserved by httpx.
+    """
+    t = HTTP_TIMEOUT_SEC if timeout is None else timeout
+    attempts = HTTP_RETRIES + 1
+    last_exc: Optional[Exception] = None
+    corr = headers.get("X-Correlation-Id") if headers else None
+    for i in range(1, attempts + 1):
+        try:
+            logger.debug(
+                "POST %s (attempt %s/%s, timeout=%ss, cid=%s)", url, i, attempts, t, corr
+            )
+            resp = await client.post(url, json=data, headers=headers, timeout=t)
+            resp.raise_for_status()
+            return resp.json()
+        except (httpx.ConnectError, httpx.ReadTimeout, httpx.WriteError, httpx.PoolTimeout) as e:
+            last_exc = e
+            logger.warning(
+                "POST failed (attempt %s/%s) url=%s timeout=%s cid=%s err=%s",
+                i,
+                attempts,
+                url,
+                t,
+                corr,
+                repr(e),
+            )
+            if i < attempts:
+                time.sleep(HTTP_RETRY_BACKOFF_SEC)
+        except httpx.HTTPStatusError as e:
+            # Surface body for easier debugging
+            body = e.response.text if e.response is not None else "<no-response>"
+            logger.error(
+                "HTTP %s on POST %s cid=%s body=%s",
+                e.response.status_code if e.response is not None else "<n/a>",
+                url,
+                corr,
+                body[:500],
+            )
+            raise
+        except Exception as e:  # unexpected
+            last_exc = e
+            logger.exception("Unexpected error during POST %s cid=%s", url, corr)
+            break
+    # If we get here, retries exhausted
+    msg = f"Failed POST {url} after {attempts} attempts (timeout={t}s, cid={corr}): {last_exc!r}"
+    raise httpx.ConnectError(msg) if isinstance(last_exc, httpx.ConnectError) else RuntimeError(msg)
+
+async def _get_json(
+    client: httpx.AsyncClient,
+    url: str,
+    headers: Optional[Dict[str, str]] = None,
+    timeout: Optional[float] = None,
+) -> Dict[str, Any]:
+    """GET JSON with logging and modest timeout."""
+    t = HTTP_GET_TIMEOUT_SEC if timeout is None else timeout
+    corr = headers.get("X-Correlation-Id") if headers else None
+    logger.debug("GET %s (timeout=%ss, cid=%s)", url, t, corr)
+    resp = await client.get(url, headers=headers, timeout=t)
     resp.raise_for_status()
     return resp.json()
 
@@ -76,6 +146,8 @@ def _build_headers(correlation_id: Optional[str] = None) -> Dict[str, str]:
     headers: Dict[str, str] = {}
     if correlation_id:
         headers["X-Correlation-Id"] = correlation_id
+    # Identify caller to prevent accidental recursion and improve tracing
+    headers["X-Source"] = "archon"
     api_key = os.getenv("CV_API_KEY") or os.getenv("RH_CV_API_KEY")
     if api_key:
         headers["Authorization"] = f"Bearer {api_key}"
@@ -129,10 +201,20 @@ async def analyze(
                     fn, b64 = _b64_of_file(path)
                     if pages:
                         req = ParsePagesRequest(filename=fn, file_base64=b64, pages=pages)
-                        raw = await _post_json(client, parse_pages_url, req.model_dump(), headers=_build_headers())
+                        raw = await _post_json(
+                            client,
+                            parse_pages_url,
+                            req.model_dump(),
+                            headers=_build_headers(),
+                        )
                     else:
                         req = ParseRequest(filename=fn, file_base64=b64)
-                        raw = await _post_json(client, parse_url, req.model_dump(), headers=_build_headers())
+                        raw = await _post_json(
+                            client,
+                            parse_url,
+                            req.model_dump(),
+                            headers=_build_headers(),
+                        )
                     results.append({"filename": fn, "response": raw, "ok": True, "error": None})
                 except Exception as e:
                     results.append({"filename": os.path.basename(path), "response": None, "ok": False, "error": str(e)})
@@ -143,10 +225,20 @@ async def analyze(
             try:
                 if pages:
                     req = ParsePagesRequest(filename=fn, file_base64=b64, pages=pages)
-                    raw = await _post_json(client, parse_pages_url, req.model_dump(), headers=_build_headers())
+                    raw = await _post_json(
+                        client,
+                        parse_pages_url,
+                        req.model_dump(),
+                        headers=_build_headers(),
+                    )
                 else:
                     req = ParseRequest(filename=fn, file_base64=b64)
-                    raw = await _post_json(client, parse_url, req.model_dump(), headers=_build_headers())
+                    raw = await _post_json(
+                        client,
+                        parse_url,
+                        req.model_dump(),
+                        headers=_build_headers(),
+                    )
                 results.append({"filename": fn, "response": raw, "ok": True, "error": None})
             except Exception as e:
                 results.append({"filename": fn, "response": None, "ok": False, "error": str(e)})
@@ -211,7 +303,7 @@ async def get_openapi(api_url: Optional[str] = None, correlation_id: Optional[st
 async def get_version(api_url: Optional[str] = None, correlation_id: Optional[str] = None) -> Dict[str, Any]:
     base_url = (api_url or DEFAULT_API_URL).rstrip("/")
     url = f"{base_url}/version"
-    headers = {"X-Correlation-Id": correlation_id} if correlation_id else None
+    headers = _build_headers(correlation_id)
     async with httpx.AsyncClient() as client:
         try:
             data = await _get_json(client, url, headers=headers)
@@ -223,7 +315,7 @@ async def get_version(api_url: Optional[str] = None, correlation_id: Optional[st
 async def get_profiles_version(api_url: Optional[str] = None, correlation_id: Optional[str] = None) -> Dict[str, Any]:
     base_url = (api_url or DEFAULT_API_URL).rstrip("/")
     url = f"{base_url}/profiles/version"
-    headers = {"X-Correlation-Id": correlation_id} if correlation_id else None
+    headers = _build_headers(correlation_id)
     async with httpx.AsyncClient() as client:
         try:
             data = await _get_json(client, url, headers=headers)

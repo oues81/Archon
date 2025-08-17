@@ -200,28 +200,38 @@ except Exception as _e:
     logging.getLogger(__name__).warning(f"OpenAI compat client unavailable: {_e}")
 
 # Profile and provider utilities
-try:
-    from archon.utils.utils import (
-        get_all_profiles,
-        get_current_profile,
-        set_current_profile,
-    )
-    from archon.llm import get_llm_provider
-    _profiles_available = True
-except Exception as _e:
-    logging.getLogger(__name__).warning(f"Profile utilities unavailable: {_e}")
-    _profiles_available = False
+_profiles_available = False
+_disable_profiles = os.environ.get("DISABLE_PROFILES", "0") == "1"
+if not _disable_profiles:
+    try:
+        from archon.utils.utils import (
+            get_all_profiles,
+            get_current_profile,
+            set_current_profile,
+        )
+        from archon.llm import get_llm_provider
+        _profiles_available = True
+    except Exception as _e:
+        logging.getLogger(__name__).warning(f"Profile utilities unavailable: {_e}")
+        _profiles_available = False
+else:
+    logging.getLogger(__name__).info("Profiles utilities import disabled via DISABLE_PROFILES=1")
 
 # Advisor agent availability (optional import)
-try:
-    from archon.archon.advisor_agent import (
-        get_default_agent as _get_advisor_agent,
-        AdvisorDeps as _AdvisorDeps,
-    )
-    _advisor_available = True
-except Exception as _e:
-    _advisor_available = False
-    logging.getLogger(__name__).warning(f"Advisor agent unavailable: {_e}")
+_advisor_available = False
+_disable_advisor = os.environ.get("DISABLE_ADVISOR", "0") == "1"
+if not _disable_advisor:
+    try:
+        from archon.archon.advisor_agent import (
+            get_default_agent as _get_advisor_agent,
+            AdvisorDeps as _AdvisorDeps,
+        )
+        _advisor_available = True
+    except Exception as _e:
+        _advisor_available = False
+        logging.getLogger(__name__).warning(f"Advisor agent unavailable: {_e}")
+else:
+    logging.getLogger(__name__).info("Advisor agent import disabled via DISABLE_ADVISOR=1")
 
 # Configuration du logging
 logging.basicConfig(
@@ -468,6 +478,58 @@ async def health_head():
         "version": "1.0.0"
     }
 
+# Lightweight async warmup to initialize providers/profiles without blocking startup
+_warmup_started = False
+
+def _do_warmup(correlation_id: Optional[str] = None) -> None:
+    try:
+        # Ensure env from profile and attempt dynamic import of provider utils
+        _ensure_env_from_profile()
+        try:
+            # Dynamic import to bypass module-level DISABLE_PROFILES gating
+            from archon.llm import get_llm_provider as _dyn_get_llm_provider  # type: ignore
+            provider = _dyn_get_llm_provider()
+            # Attempt to load default/active profile
+            try:
+                if hasattr(provider, "reload_profile"):
+                    provider.reload_profile(os.environ.get("ACTIVE_PROFILE") or os.environ.get("PROFILE_NAME") or "default")
+            except Exception:
+                pass
+        except Exception as _e:
+            logger.info(f"Warmup: provider init skipped/unavailable: {_e}")
+        # Prefetch RHCV profiles cache if possible
+        try:
+            # Import RH-CV analyzer helpers lazily to avoid import cost on startup
+            from archon.archon.cv_analyzer import get_version as _cv_get_version, get_profiles_version as _cv_get_profiles_version  # type: ignore
+            api_url = os.environ.get("CV_API_URL")
+            ver = _run_async(_cv_get_version(api_url))  # type: ignore[arg-type]
+            etag = None
+            try:
+                pv = _run_async(_cv_get_profiles_version(api_url))  # type: ignore[arg-type]
+                etag = (pv or {}).get("data", {}).get("sha1") if (pv or {}).get("ok") else None
+            except Exception:
+                etag = None
+            _ = _fetch_profiles_json_with_cache(api_url, correlation_id, etag)
+        except Exception as _e:
+            logger.info(f"Warmup: RHCV profiles cache prefetch skipped: {_e}")
+    except Exception as e:
+        logger.warning(f"Warmup routine error: {e}")
+
+@app.post("/warmup")
+async def warmup(request: Request):
+    global _warmup_started
+    cid = request.headers.get("X-Correlation-Id") or str(uuid.uuid4())
+    if _warmup_started:
+        return {"status": "already_started", "correlation_id": cid}
+    _warmup_started = True
+    try:
+        t = Thread(target=_do_warmup, args=(cid,), daemon=True)
+        t.start()
+        return {"status": "started", "correlation_id": cid}
+    except Exception as e:
+        _warmup_started = False
+        raise HTTPException(status_code=500, detail=str(e))
+
 # Endpoint pour lister les ressources
 @app.get("/resources")
 async def list_resources():
@@ -709,6 +771,8 @@ def _process_mcp_payload(data: Dict[str, Any]) -> Dict[str, Any]:
             {
                 "name": "cv_score",
                 "description": "Score a parsed CV or raw document (schema TBD).",
+                "group": "RHCV",
+                "tags": ["cv", "rhcv"],
                 "inputSchema": {
                     "type": "object",
                     "properties": {
@@ -725,6 +789,8 @@ def _process_mcp_payload(data: Dict[str, Any]) -> Dict[str, Any]:
             {
                 "name": "cv_anonymize",
                 "description": "Anonymize PII from a CV (schema TBD).",
+                "group": "RHCV",
+                "tags": ["cv", "rhcv"],
                 "inputSchema": {
                     "type": "object",
                     "properties": {
@@ -741,6 +807,8 @@ def _process_mcp_payload(data: Dict[str, Any]) -> Dict[str, Any]:
             {
                 "name": "cv_export",
                 "description": "Export parsed CV to a target format (schema TBD).",
+                "group": "RHCV",
+                "tags": ["cv", "rhcv"],
                 "inputSchema": {
                     "type": "object",
                     "properties": {
@@ -758,6 +826,8 @@ def _process_mcp_payload(data: Dict[str, Any]) -> Dict[str, Any]:
             {
                 "name": "cv_index",
                 "description": "Index a CV/document into a store (schema TBD).",
+                "group": "RHCV",
+                "tags": ["cv", "rhcv"],
                 "inputSchema": {
                     "type": "object",
                     "properties": {
@@ -774,6 +844,8 @@ def _process_mcp_payload(data: Dict[str, Any]) -> Dict[str, Any]:
             {
                 "name": "cv_search",
                 "description": "Search indexed CVs/documents (schema TBD).",
+                "group": "RHCV",
+                "tags": ["cv", "rhcv"],
                 "inputSchema": {
                     "type": "object",
                     "properties": {
@@ -790,6 +862,8 @@ def _process_mcp_payload(data: Dict[str, Any]) -> Dict[str, Any]:
             {
                 "name": "cv_analyzer",
                 "description": "Parse CVs via RH CV Parser API (direct call).",
+                "group": "RHCV",
+                "tags": ["cv", "rhcv"],
                 "inputSchema": {
                     "type": "object",
                     "properties": {
@@ -806,6 +880,8 @@ def _process_mcp_payload(data: Dict[str, Any]) -> Dict[str, Any]:
             {
                 "name": "cv_parse_v2",
                 "description": "Proxy to RH CV Parser API /parse_v2 (filename + file_base64).",
+                "group": "RHCV",
+                "tags": ["cv", "rhcv"],
                 "inputSchema": {
                     "type": "object",
                     "properties": {
@@ -824,6 +900,8 @@ def _process_mcp_payload(data: Dict[str, Any]) -> Dict[str, Any]:
             {
                 "name": "cv_health_check",
                 "description": "Preflight: ping, openapi(/parse_v2), version and profiles/version checks.",
+                "group": "RHCV",
+                "tags": ["cv", "rhcv"],
                 "inputSchema": {
                     "type": "object",
                     "properties": {
@@ -839,6 +917,8 @@ def _process_mcp_payload(data: Dict[str, Any]) -> Dict[str, Any]:
             {
                 "name": "cv_parse_sharepoint",
                 "description": "Parse a CV by SharePoint reference via RHCV (POST /parse_sharepoint). Input one-of: {site_id, drive_id, item_id, pages?} or {share_url, pages?}. Optional: api_url, correlation_id.",
+                "group": "RHCV",
+                "tags": ["cv", "rhcv", "sharepoint"],
                 "inputSchema": {
                     "type": "object",
                     "properties": {
@@ -1340,7 +1420,7 @@ def _process_mcp_payload(data: Dict[str, Any]) -> Dict[str, Any]:
                         except Exception:
                             pass
                     except Exception as e:
-                        response["error"] = {"code": -32042, "message": f"cv_health_check failed: {e}"}
+                        response["error"] = {"code": -32052, "message": f"cv_parse_sharepoint failed: {e}"}
                         try:
                             _dt = int((_time.time() - _t0) * 1000)
                             _mcp_response_queue.put_nowait({
