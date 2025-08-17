@@ -317,15 +317,61 @@ class LLMProvider:
                 except httpx.HTTPStatusError as e:
                     raise RuntimeError(f"Erreur d'API OpenRouter: {str(e)}")
             else:
-                # Ollama (OpenAI-compatible route)
+                # Ollama: prefer native API /api/chat (non-stream); fallback to OpenAI-compatible /v1/chat/completions
                 import requests
-                base_url = self.config.base_url
-                headers = {"Authorization": f"Bearer {self.config.api_key}", "Content-Type": "application/json"}
-                url = f"{base_url}/chat/completions"
-                resp = requests.post(url, json=payload, headers=headers, timeout=self.config.timeout)
-                resp.raise_for_status()
-                data = resp.json()
-                return data.get("choices", [{}])[0].get("message", {}).get("content", "")
+                base_url = (self.config.base_url or '').rstrip('/')
+                headers = {"Content-Type": "application/json"}
+                # Native Ollama chat format
+                native_payload = {"model": mdl, "messages": messages, "stream": False}
+                try:
+                    url_native = f"{base_url}/api/chat"
+                    resp = requests.post(url_native, json=native_payload, headers=headers, timeout=self.config.timeout)
+                    if resp.status_code == 404:
+                        raise requests.HTTPError("Not Found", response=resp)
+                    resp.raise_for_status()
+                    data = resp.json() or {}
+                    # Expected: { "message": {"content": "..."}, ... }
+                    msg = data.get("message") or {}
+                    content = msg.get("content") if isinstance(msg, dict) else None
+                    if content:
+                        return content
+                    # Some proxies may return OpenAI-like
+                    return data.get("choices", [{}])[0].get("message", {}).get("content", "")
+                except (requests.HTTPError, requests.Timeout, requests.ConnectionError, requests.RequestException):
+                    # Fallback: OpenAI-compatible path commonly exposed by proxies
+                    try:
+                        url_compat = f"{base_url}/v1/chat/completions"
+                        compat_payload = {"model": mdl, "messages": messages}
+                        resp2 = requests.post(url_compat, json=compat_payload, headers=headers, timeout=self.config.timeout)
+                        resp2.raise_for_status()
+                        data2 = resp2.json() or {}
+                        return data2.get("choices", [{}])[0].get("message", {}).get("content", "")
+                    except (requests.HTTPError, requests.Timeout, requests.ConnectionError, requests.RequestException):
+                        # Final fallback: legacy Ollama /api/generate with aggregated prompt
+                        try:
+                            url_gen = f"{base_url}/api/generate"
+                            # Aggregate messages into a single prompt
+                            prompt_parts = []
+                            for m in messages:
+                                if isinstance(m, dict):
+                                    role = m.get("role") or "user"
+                                    content = m.get("content") or ""
+                                    prompt_parts.append(f"[{role}] {content}")
+                                else:
+                                    prompt_parts.append(str(m))
+                            prompt = "\n".join(prompt_parts)
+                            gen_payload = {"model": mdl, "prompt": prompt, "stream": False}
+                            resp3 = requests.post(url_gen, json=gen_payload, headers=headers, timeout=self.config.timeout)
+                            resp3.raise_for_status()
+                            data3 = resp3.json() or {}
+                            # Response formats vary: prefer 'response', else choices-like
+                            return (
+                                data3.get("response")
+                                or data3.get("choices", [{}])[0].get("message", {}).get("content", "")
+                                or ""
+                            )
+                        except Exception as e:
+                            raise RuntimeError(f"Ollama generation failed: {e}")
 
     def get_available_models(self, source: str = 'both') -> dict:
         """Retourne les modèles disponibles.

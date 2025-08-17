@@ -512,6 +512,17 @@ def _do_warmup(correlation_id: Optional[str] = None) -> None:
             _ = _fetch_profiles_json_with_cache(api_url, correlation_id, etag)
         except Exception as _e:
             logger.info(f"Warmup: RHCV profiles cache prefetch skipped: {_e}")
+        # Emit a clear completion log for observability
+        try:
+            logger.info(
+                (
+                    "Warmup complete: providers initialized, profiles cache prefetched. "
+                    f"correlation_id={correlation_id or 'n/a'}"
+                )
+            )
+        except Exception:
+            # Logging failure should never break warmup
+            pass
     except Exception as e:
         logger.warning(f"Warmup routine error: {e}")
 
