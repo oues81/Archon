@@ -1,10 +1,6 @@
 import streamlit as st
-import sys
-import os
-
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from utils.utils import (
-    get_env_var, save_env_var, reload_archon_graph, 
+from archon.utils.utils import (
+    get_env_var, save_env_var, reload_archon_graph,
     get_current_profile, set_current_profile, get_all_profiles,
     create_profile, delete_profile, get_profile_env_vars
 )

@@ -1,9 +1,6 @@
 import streamlit as st
-import sys
 import os
-
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from utils.utils import get_env_var
+from archon.utils.utils import get_env_var
 
 @st.cache_data
 def load_sql_template():
@@ -60,6 +57,7 @@ def database_tab(supabase):
     """Display the database configuration interface"""
     st.header("Database Configuration")
     st.write("Set up and manage your Supabase database tables for Archon.")
+    st.caption(f"Supabase client status: {'OK' if supabase else 'None'}")
     
     # Check if Supabase is configured
     if not supabase:

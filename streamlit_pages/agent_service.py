@@ -7,8 +7,7 @@ import time
 import sys
 import os
 
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from utils.utils import reload_archon_graph
+from archon.utils.utils import reload_archon_graph
 
 def agent_service_tab():
     """Display the agent service interface for managing the graph service"""

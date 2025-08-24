@@ -1,5 +1,4 @@
 import os
-import sys
 import asyncio
 import threading
 import subprocess
@@ -16,9 +15,7 @@ from openai import AsyncOpenAI
 import re
 import html2text
 
-# Add the parent directory to sys.path to allow importing from the parent directory
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from utils.utils import get_env_var, get_clients
+from archon.utils.utils import get_env_var, get_clients
 
 # Optional import for crawl4ai - fallback to requests-only mode if not available
 try:

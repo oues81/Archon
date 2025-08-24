@@ -9,48 +9,8 @@ import os
 import pandas as pd
 from typing import Optional
 
-# Import des classes et fonctions nécessaires de manière conditionnelle pour éviter les erreurs
-try:
-    # Essayer d'abord en utilisant un chemin d'accès absolu
-    from utils.neo4j_client import Neo4jClient
-    from utils.utils import get_env_var, save_env_var as set_env_var, write_to_log
-    print("Import réussi via 'utils.*'")
-except ImportError:
-    try:
-        # Si ça échoue, essayer un autre chemin
-        sys_path_modified = False
-        import sys
-        if '/app/src' not in sys.path:
-            sys.path.append('/app/src')
-            sys_path_modified = True
-        
-        from utils.neo4j_client import Neo4jClient
-        from utils.utils import get_env_var, save_env_var as set_env_var, write_to_log
-        print("Import réussi après modification du sys.path")
-    except ImportError as e:
-        # Fallback avec message d'erreur
-        print(f"ERREUR D'IMPORT: {str(e)}")
-        
-        # Créer des versions stub des classes/fonctions manquantes pour éviter les erreurs fatales
-        class Neo4jClient:
-            def __init__(self, *args, **kwargs):
-                print("Neo4jClient (stub) initialisé")
-                self.connected = False
-            
-            def is_connected(self):
-                return False
-        
-        def get_env_var(name, default=None):
-            return os.environ.get(name, default)
-        
-        def set_env_var(name, value):
-            os.environ[name] = value
-        
-        def write_to_log(message, level="INFO"):
-            print(f"[{level}] {message}")
-        
-        print("Utilisation des versions stub des fonctions manquantes")
-        st.error("Impossible de charger les modules nécessaires pour Neo4j. Certaines fonctionnalités peuvent être limitées.")
+from archon.utils.neo4j_client import Neo4jClient
+from archon.utils.utils import get_env_var, save_env_var as set_env_var, write_to_log
 
 
 def neo4j_tab(neo4j_client: Optional[Neo4jClient] = None):

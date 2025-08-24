@@ -24,9 +24,16 @@ except ImportError:
     AsyncOpenAI = None
 
 try:
-    from supabase import Client  # Peut être absent
+    # Modern supabase-py v2
+    from supabase import create_client as _supabase_create_client  # type: ignore
 except ImportError:
-    Client = None
+    _supabase_create_client = None  # type: ignore
+
+try:
+    # Legacy style (may not exist in v2)
+    from supabase import Client as _SupabaseClient  # type: ignore
+except ImportError:
+    _SupabaseClient = None  # type: ignore
 
 try:
     from archon.utils.neo4j_client import Neo4jClient
@@ -443,10 +450,20 @@ def build_llm_config_from_active_profile(llm_overrides: Optional[Dict[str, Any]]
 
     return llm_config
 
-def reload_archon_graph():
+def reload_archon_graph(show_reload_success: bool = True):
     """
-    Reload the archon graph configuration
-    This is a placeholder function for compatibility with existing code
+    Reload the archon graph configuration.
+
+    Note: Kept as a lightweight placeholder for compatibility with callers
+    like `streamlit_pages/environment.py`, which may pass the optional
+    parameter `show_reload_success`.
+
+    Args:
+        show_reload_success (bool): Optional flag from UI callers; currently
+            ignored but accepted to maintain backward/forward compatibility.
+
+    Returns:
+        bool: Always True to indicate the reload hook executed.
     """
     logger.info("🔄 Reloading archon graph configuration")
     return True
@@ -645,14 +662,37 @@ def get_clients() -> Tuple[Any, Optional[Any], Optional[Any]]:
         supabase = None
         supabase_url = get_env_var("SUPABASE_URL")
         supabase_key = get_env_var("SUPABASE_SERVICE_KEY")
-        if supabase_url and supabase_key and Client is not None:
+
+        # Cross-profile fallback: if missing in current profile/env, scan all profiles
+        if (not supabase_url or not supabase_key):
             try:
-                supabase = Client(supabase_url, supabase_key)
-                logger.debug(f"Supabase client initialized successfully")
+                _env = load_env_vars()
+                for _pname, _pcfg in (_env.get("profiles") or {}).items():
+                    if not supabase_url:
+                        supabase_url = _pcfg.get("SUPABASE_URL") or supabase_url
+                    if not supabase_key:
+                        supabase_key = _pcfg.get("SUPABASE_SERVICE_KEY") or supabase_key
+                    if supabase_url and supabase_key:
+                        logger.debug(f"Supabase config found in profile '{_pname}' via fallback scan")
+                        break
+            except Exception as _e:
+                logger.debug(f"Supabase cross-profile scan skipped: {_e}")
+        if supabase_url and supabase_key:
+            try:
+                if _supabase_create_client is not None:
+                    # Preferred modern API
+                    supabase = _supabase_create_client(supabase_url, supabase_key)
+                    logger.debug("Supabase client (v2 create_client) initialized successfully")
+                elif _SupabaseClient is not None:
+                    # Fallback legacy constructor (if available)
+                    supabase = _SupabaseClient(supabase_url, supabase_key)
+                    logger.debug("Supabase client (legacy Client) initialized successfully")
+                else:
+                    logger.debug("Supabase package not providing create_client/Client; skipping init")
             except Exception as e:
                 logger.error(f"Failed to initialize Supabase: {e}")
         else:
-            logger.debug("Supabase configuration incomplete or Client not available")
+            logger.debug("Supabase configuration incomplete (missing URL or SERVICE_KEY)")
         
         # Neo4j client setup (opt-in via NEO4J_ENABLED)
         neo4j_client = None

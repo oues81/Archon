@@ -1104,20 +1104,81 @@ def _process_mcp_payload(data: Dict[str, Any]) -> Dict[str, Any]:
             elif tool_name == "advisor":
                 # Run the Advisor agent as a generalist tool
                 if not _advisor_available:
-                    # Attempt lazy import now in case environment was not ready at startup
-                    try:
-                        from archon.archon.advisor_agent import (
-                            get_default_agent as _get_advisor_agent,
-                            AdvisorDeps as _AdvisorDeps,
-                        )
-                        avail_err = None
-                    except Exception as _e:
-                        avail_err = str(_e)
-                        _get_advisor_agent = None  # type: ignore
-                        _AdvisorDeps = None  # type: ignore
-                    if _get_advisor_agent is None or _AdvisorDeps is None:
-                        response["error"] = {"code": -32011, "message": f"Advisor agent unavailable: {avail_err}"}
-                        return response
+                    # Delegate to graph service /invoke endpoint when local advisor is unavailable
+                    if not isinstance(tool_args, dict):
+                        response["error"] = {"code": -32602, "message": "Invalid arguments for advisor"}
+                    else:
+                        message = tool_args.get("message")
+                        if not message:
+                            response["error"] = {"code": -32602, "message": "'message' is required"}
+                        else:
+                            file_list = tool_args.get("file_list") or []
+                            profile_name = tool_args.get("profile_name")
+                            # Optionally hydrate environment/profile
+                            try:
+                                if profile_name and _profiles_available:
+                                    provider = get_llm_provider()
+                                    ok = provider.reload_profile(profile_name)
+                                    if ok:
+                                        try:
+                                            set_current_profile(profile_name)
+                                        except Exception as _e:
+                                            logger.warning(f"Selected profile reloaded but failed to persist active profile: {_e}")
+                                _ensure_env_from_profile()
+                            except Exception:
+                                pass
+                            # Emit started event for SSE clients
+                            try:
+                                _mcp_response_queue.put_nowait({
+                                    "jsonrpc": "2.0",
+                                    "method": "tool_progress",
+                                    "params": {"status": "started", "tool": tool_name, "prompt": (message or "")[:500]},
+                                })
+                            except Exception:
+                                pass
+                            import time as _time
+                            _t0 = _time.time()
+                            try:
+                                # Build a synthetic thread id if none exists to satisfy graph service API
+                                tid = str(uuid.uuid4())
+                                cfg: Dict[str, Any] = {"file_list": list(file_list) if isinstance(file_list, list) else []}
+                                result = _make_request(tid, message, cfg, profile_name=profile_name)
+                                # Try common shapes, fallback to str
+                                try:
+                                    text_resp = (
+                                        result.get("response") if isinstance(result, dict) else str(result)
+                                    )
+                                except Exception:
+                                    text_resp = str(result)
+                                response["result"] = {"content": [{"type": "text", "text": text_resp}]}
+                                # Emit finished event
+                                try:
+                                    _dt = int((_time.time() - _t0) * 1000)
+                                    _mcp_response_queue.put_nowait({
+                                        "jsonrpc": "2.0",
+                                        "method": "tool_progress",
+                                        "params": {
+                                            "status": "finished",
+                                            "tool": tool_name,
+                                            "duration_ms": _dt,
+                                            "summary": (text_resp or "")[:400],
+                                            "prompt": (message or "")[:500],
+                                            "preview": (text_resp or "")[:500],
+                                        },
+                                    })
+                                except Exception:
+                                    pass
+                            except Exception as e:
+                                response["error"] = {"code": -32013, "message": f"advisor delegation failed: {e}"}
+                                try:
+                                    _dt = int((_time.time() - _t0) * 1000)
+                                    _mcp_response_queue.put_nowait({
+                                        "jsonrpc": "2.0",
+                                        "method": "tool_progress",
+                                        "params": {"status": "failed", "tool": tool_name, "duration_ms": _dt, "error": str(e)},
+                                    })
+                                except Exception:
+                                    pass
                 else:
                     if not isinstance(tool_args, dict):
                         response["error"] = {"code": -32602, "message": "Invalid arguments for advisor"}

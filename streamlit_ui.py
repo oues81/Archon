@@ -6,9 +6,13 @@ import os
 from pathlib import Path
 
 # Ajouter les chemins nécessaires au sys.path pour résoudre les problèmes d'importation
+# IMPORTANT: Garder '/app/src' en premier pour que le package top-level `archon` pointe vers '/app/src/archon'
 sys.path.insert(0, '/app')
 sys.path.insert(0, '/app/src')
-sys.path.insert(0, '/app/src/archon')
+# Ne pas insérer '/app/src/archon' en tête, cela masque le package top-level et casse 'archon.utils.utils'
+# Si nécessaire pour des imports relatifs avancés, on l'ajoutera en fin de sys.path
+if '/app/src/archon' not in sys.path:
+    sys.path.append('/app/src/archon')
 
 # Ajout d'une backup du dossier utils au niveau de /app/src
 utils_path = Path('/app/src/archon/utils')
@@ -45,8 +49,13 @@ st.set_page_config(
 )
 
 # Utilities and styles
-from utils.utils import get_clients
+# Prefer package-qualified import; fallback to backup copy in /app/src/utils
+try:
+    from archon.utils.utils import get_clients
+except ModuleNotFoundError:
+    from utils.utils import get_clients
 from streamlit_pages.styles import load_css
+from archon.utils.utils import load_env_vars  # for fallback Supabase discovery
 
 # Streamlit pages
 from streamlit_pages.intro import intro_tab
@@ -65,6 +74,36 @@ load_dotenv()
 # Initialize clients
 openai_client, supabase, neo4j_client = get_clients()
 
+# Fallback: if Supabase not initialized by get_clients(), try cross-profile discovery here
+if supabase is None:
+    try:
+        # Prefer modern supabase-py v2
+        try:
+            from supabase import create_client as _supabase_create_client  # type: ignore
+        except Exception:
+            _supabase_create_client = None  # type: ignore
+        if _supabase_create_client is not None:
+            env = load_env_vars() or {}
+            profiles = (env.get("profiles") or {})
+            supabase_url = None
+            supabase_key = None
+            # Search any profile for both credentials
+            for _pname, _pcfg in profiles.items():
+                if not supabase_url:
+                    supabase_url = _pcfg.get("SUPABASE_URL") or supabase_url
+                if not supabase_key:
+                    supabase_key = _pcfg.get("SUPABASE_SERVICE_KEY") or supabase_key
+                if supabase_url and supabase_key:
+                    break
+            if supabase_url and supabase_key:
+                try:
+                    supabase = _supabase_create_client(supabase_url, supabase_key)
+                    print("✅ Supabase fallback client initialized via streamlit_ui.py")
+                except Exception as e:
+                    print(f"⚠️ Supabase fallback init failed: {e}")
+    except Exception as _e:
+        print(f"⚠️ Supabase fallback probe error: {_e}")
+
 # Load custom CSS styles
 load_css()
 
@@ -81,7 +120,8 @@ async def main():
 
     # Add sidebar navigation
     with st.sidebar:
-        st.image("public/ArchonLightGrey.png", width=1000)
+        # Logo removed to avoid MediaFileStorageError when asset is not present in the image
+        st.caption("Archon UI")
         
         # Navigation options with vertical buttons
         st.write("### Navigation")

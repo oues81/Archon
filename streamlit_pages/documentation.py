@@ -1,16 +1,21 @@
 import streamlit as st
 import time
-import sys
 import os
 
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from archon.archon.crawl_pydantic_ai_docs import start_crawl_with_requests, clear_existing_records
-from archon.archon.crawl_mcp_docs import start_crawl_with_requests as start_mcp_crawl, clear_existing_records as clear_mcp_records
-from archon.archon.crawl_windsurf_workflows_docs import (
+# Use proper package imports (project is installed on PYTHONPATH=/app/src)
+from archon.archon.crawlers.crawl_pydantic_ai_docs import (
+    start_crawl_with_requests,
+    clear_existing_records,
+)
+from archon.archon.crawlers.crawl_mcp_docs import (
+    start_crawl_with_requests as start_mcp_crawl,
+    clear_existing_records as clear_mcp_records,
+)
+from archon.archon.crawlers.crawl_windsurf_workflows_docs import (
     start_crawl_with_requests as start_windsurf_crawl,
     clear_existing_records as clear_windsurf_records,
 )
-from utils.utils import get_env_var, create_new_tab_button
+from archon.utils.utils import get_env_var, create_new_tab_button
 
 def documentation_tab(supabase_client):
     """Display the documentation interface"""
@@ -34,11 +39,8 @@ def documentation_tab(supabase_client):
         This process may take several minutes depending on the number of pages.
         """)
         
-        # Check if the database is configured
-        supabase_url = get_env_var("SUPABASE_URL")
-        supabase_key = get_env_var("SUPABASE_SERVICE_KEY")
-        
-        if not supabase_url or not supabase_key:
+        # Check if the database is configured (prefer passed client)
+        if not supabase_client:
             st.warning("⚠️ Supabase is not configured. Please set up your environment variables first.")
             create_new_tab_button("Go to Environment Section", "Environment", key="goto_env_from_docs")
         else:
@@ -174,11 +176,8 @@ def documentation_tab(supabase_client):
         Ce processus peut prendre quelques minutes selon le nombre de pages.
         """)
         
-        # Check if the database is configured
-        supabase_url = get_env_var("SUPABASE_URL")
-        supabase_key = get_env_var("SUPABASE_SERVICE_KEY")
-        
-        if not supabase_url or not supabase_key:
+        # Check if the database is configured (prefer passed client)
+        if not supabase_client:
             st.warning("⚠️ Supabase n'est pas configuré. Veuillez d'abord configurer vos variables d'environnement.")
             create_new_tab_button("Aller à la section Environnement", "Environment", key="goto_env_from_mcp_docs")
         else:
@@ -312,10 +311,7 @@ def documentation_tab(supabase_client):
             """
         )
 
-        supabase_url = get_env_var("SUPABASE_URL")
-        supabase_key = get_env_var("SUPABASE_SERVICE_KEY")
-
-        if not supabase_url or not supabase_key:
+        if not supabase_client:
             st.warning("⚠️ Supabase is not configured. Please set up your environment variables first.")
             create_new_tab_button("Go to Environment Section", "Environment", key="goto_env_from_windsurf")
         else:

@@ -6,7 +6,6 @@ import logfire
 import asyncio
 import httpx
 import os
-import sys
 import json
 from typing import List
 from pydantic import BaseModel
@@ -14,10 +13,8 @@ from pydantic_ai import Agent, ModelRetry, RunContext
 from pydantic_ai.models.anthropic import AnthropicModel
 from archon.models.ollama_model import OllamaModel
 
-# Add the parent directory to sys.path to allow importing from the parent directory
-sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
-from utils.utils import get_env_var
-from archon.archon.agent_prompts import agent_refiner_prompt
+from archon.utils.utils import get_env_var
+from archon.archon.prompts.agent_prompts import agent_refiner_prompt
 from archon.agent_tools import (
     retrieve_relevant_documentation_tool,
     list_documentation_pages_tool,

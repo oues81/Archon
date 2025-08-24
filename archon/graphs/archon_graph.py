@@ -709,8 +709,8 @@ async def run_agent_workflow(initial_state: Optional[Dict[str, Any]] = None) -> 
     
     Args:
         initial_state: Optional initial state for the agent.
-                     If not provided, a default state will be used.
-                     
+                      If not provided, a default state will be used.
+                      
     Returns:
         Dict containing the final state of the agent.
     """
@@ -818,3 +818,28 @@ if __name__ == '__main__':
     except KeyboardInterrupt:
         print("\n🛑 Execution interrupted by user")
         sys.exit(0)
+
+# --- Backward-compatibility proxy to canonical implementation ---
+# Delegate public API to canonical graphs module to avoid duplication.
+# This keeps import paths stable while the real implementation lives under
+# `archon.archon.graphs.archon.app.graph`.
+try:
+    from archon.archon.graphs.archon.app.graph import (
+        get_agentic_flow as _canonical_get_agentic_flow,
+        run_agent_workflow as _canonical_run_agent_workflow,
+    )
+    get_agentic_flow = _canonical_get_agentic_flow  # type: ignore
+    run_agent_workflow = _canonical_run_agent_workflow  # type: ignore
+    __all__ = [
+        'get_agentic_flow',
+        'run_agent_workflow',
+    ]
+except Exception as _proxy_err:
+    # If canonical module isn't importable, keep legacy definitions.
+    # Log at debug level only to not spam in normal runs.
+    try:
+        logging.getLogger(__name__).debug(
+            f"Proxy to canonical graphs.archon failed: {_proxy_err}"
+        )
+    except Exception:
+        pass

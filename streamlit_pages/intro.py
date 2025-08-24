@@ -1,10 +1,5 @@
 import streamlit as st
-import sys
-import os
-
-# Add the parent directory to sys.path to allow importing from the parent directory
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from utils.utils import create_new_tab_button
+from archon.utils.utils import create_new_tab_button
 
 def intro_tab():
     """Display the introduction and setup guide for Archon"""    
