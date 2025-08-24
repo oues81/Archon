@@ -24,7 +24,7 @@ from typing import Dict, Any, Optional, Union, List, Tuple
 from contextlib import asynccontextmanager
 from dotenv import load_dotenv
 
-from archon.utils.utils import configure_logging, get_bool_env
+from archon.utils.utils import configure_logging, get_bool_env, build_llm_config_from_active_profile
 
 # Configure logging centrally
 _log_summary = configure_logging()
@@ -46,9 +46,27 @@ async def _with_retries(coro_factory, tries: int = 3, base_delay: float = 0.5):
             logger.warning(f"Retrying after error (attempt {attempt}/{tries}) in LLM call: {e} | sleeping {delay:.2f}s")
             await asyncio.sleep(delay)
 
-def _fallback_model(llm_config: Dict[str, Any], default: str = "phi4-mini:latest") -> str:
-    """Pick an Ollama fallback model from config or use a sensible default."""
-    return llm_config.get("OLLAMA_MODEL") or os.getenv("OLLAMA_MODEL") or default
+def _fallback_model(llm_config: Dict[str, Any]) -> str:
+    """Pick an Ollama fallback model strictly from profile config.
+
+    Raises if no fallback model is specified in the profile to avoid
+    non-profile defaults or environment fallbacks.
+    """
+    model = llm_config.get("OLLAMA_MODEL")
+    if not model:
+        raise ValueError("OLLAMA_MODEL missing in profile for fallback usage")
+    return model
+
+def _ollama_allowed(llm_config: Dict[str, Any]) -> bool:
+    """Whether Ollama usage is allowed by profile/config.
+
+    Centralized guard to prevent accidental Ollama calls in container runs
+    when user wants OpenRouter-only behavior.
+    """
+    try:
+        return bool(llm_config.get("ALLOW_OLLAMA_FALLBACK", False))
+    except Exception:
+        return False
 
 class LoggingHTTPClient(httpx.AsyncClient):
     """HTTP client with request/response logging"""
@@ -220,9 +238,11 @@ async def get_llm_instance(provider: str, model_name: str, config: Dict[str, Any
         client_kwargs = {"http_client": http_client}
 
         if provider == "ollama":
-            base_url = config.get("OLLAMA_BASE_URL") or os.getenv("OLLAMA_BASE_URL")
+            if not _ollama_allowed(config or {}):
+                raise ValueError("Ollama usage disabled by config: set ALLOW_OLLAMA_FALLBACK=True to enable")
+            base_url = config.get("OLLAMA_BASE_URL")
             if not base_url:
-                raise ValueError("OLLAMA_BASE_URL not found in profile or environment")
+                raise ValueError("OLLAMA_BASE_URL not found in profile")
             if not model_name:
                 raise ValueError("Model name is required for Ollama provider")
             # Normalize to ensure OpenAI-compatible endpoints under /v1
@@ -238,25 +258,38 @@ async def get_llm_instance(provider: str, model_name: str, config: Dict[str, Any
             model = OpenAIModel(model_name=model_name, openai_client=openai_client)
             
         elif provider == "openrouter":
-            api_key = config.get("LLM_API_KEY") or os.getenv("OPENROUTER_API_KEY")
+            api_key = config.get("LLM_API_KEY")
             if not api_key:
-                raise ValueError("OPENROUTER_API_KEY or LLM_API_KEY not found")
+                raise ValueError("Missing OpenRouter API key: set 'LLM_API_KEY' in profile")
+            base_url = (config.get("BASE_URL")).rstrip("/") if (config.get("BASE_URL")) else None
+            if not base_url:
+                raise ValueError("Missing OpenRouter BASE_URL: set 'BASE_URL' in profile")
             client_kwargs.update({
                 "api_key": api_key,
-                "base_url": "https://openrouter.ai/api/v1",
-                "default_headers": {
-                    "HTTP-Referer": config.get("OPENROUTER_REFERRER", "http://localhost:8110"),
-                    "X-Title": config.get("OPENROUTER_X_TITLE", "Archon")
-                }
+                "base_url": base_url,
             })
+            # Optional headers if provided in profile
+            ref = config.get("OPENROUTER_REFERRER")
+            xtitle = config.get("OPENROUTER_X_TITLE")
+            if ref or xtitle:
+                client_kwargs["default_headers"] = {}
+                if ref:
+                    client_kwargs["default_headers"]["HTTP-Referer"] = ref
+                if xtitle:
+                    client_kwargs["default_headers"]["X-Title"] = xtitle
+            logger.info(f"🔗 OpenRouter base_url set to: {base_url}")
             openai_client = AsyncOpenAI(**client_kwargs)
             model = OpenAIModel(model_name=model_name, openai_client=openai_client)
             
         elif provider == "openai":
-            api_key = config.get("LLM_API_KEY") or os.getenv("OPENAI_API_KEY")
+            api_key = config.get("LLM_API_KEY")
             if not api_key:
-                raise ValueError("OPENAI_API_KEY or LLM_API_KEY not found")
-            client_kwargs.update({"api_key": api_key})
+                raise ValueError("Missing OpenAI API key: set 'LLM_API_KEY' in profile")
+            base_url = (config.get("BASE_URL"))
+            if base_url:
+                client_kwargs.update({"api_key": api_key, "base_url": base_url})
+            else:
+                client_kwargs.update({"api_key": api_key})
             openai_client = AsyncOpenAI(**client_kwargs)
             model = OpenAIModel(model_name=model_name, openai_client=openai_client)
 
@@ -380,14 +413,16 @@ async def define_scope_with_reasoner(state: AgentState, config: dict) -> AgentSt
         try:
             result = await _with_retries(lambda: reasoner.run(user_message))
         except Exception as e:
-            # Fallback to Ollama if OpenRouter (or primary) fails
-            logger.warning(f"Reasoner failed, attempting fallback to Ollama: {e}")
-            try:
-                fb_model = _fallback_model(llm_config)
-                fb_llm = await get_llm_instance("ollama", fb_model, llm_config)
-                reasoner_fb = PydanticAgent(fb_llm, system_prompt=reasoner_prompt)
-                result = await _with_retries(lambda: reasoner_fb.run(user_message))
-            except Exception:
+            if _ollama_allowed(llm_config):
+                logger.warning(f"Reasoner failed, attempting fallback to Ollama: {e}")
+                try:
+                    fb_model = _fallback_model(llm_config)
+                    fb_llm = await get_llm_instance("ollama", fb_model, llm_config)
+                    reasoner_fb = PydanticAgent(fb_llm, system_prompt=reasoner_prompt)
+                    result = await _with_retries(lambda: reasoner_fb.run(user_message))
+                except Exception:
+                    raise
+            else:
                 raise
         scope_text = result.data if hasattr(result, 'data') else str(result)
 
@@ -441,13 +476,16 @@ async def advisor_with_examples(state: AgentState, config: dict) -> AgentState:
         try:
             result = await _with_retries(lambda: advisor.run(state['scope']))
         except Exception as e:
-            logger.warning(f"Advisor failed, attempting fallback to Ollama: {e}")
-            try:
-                fb_model = _fallback_model(llm_config)
-                fb_llm = await get_llm_instance("ollama", fb_model, llm_config)
-                advisor_fb = PydanticAgent(fb_llm, system_prompt=advisor_prompt)
-                result = await _with_retries(lambda: advisor_fb.run(state['scope']))
-            except Exception:
+            if _ollama_allowed(llm_config):
+                logger.warning(f"Advisor failed, attempting fallback to Ollama: {e}")
+                try:
+                    fb_model = _fallback_model(llm_config)
+                    fb_llm = await get_llm_instance("ollama", fb_model, llm_config)
+                    advisor_fb = PydanticAgent(fb_llm, system_prompt=advisor_prompt)
+                    result = await _with_retries(lambda: advisor_fb.run(state['scope']))
+                except Exception:
+                    raise
+            else:
                 raise
         advisor_text = result.data if hasattr(result, 'data') else str(result)
 
@@ -537,13 +575,16 @@ async def coder_agent(state: AgentState, config: dict) -> AgentState:
         try:
             result = await _with_retries(lambda: coder.run(instruction, deps=deps))
         except Exception as e:
-            logger.warning(f"Coder failed, attempting fallback to Ollama: {e}")
-            try:
-                fb_model = _fallback_model(llm_config)
-                fb_llm = await get_llm_instance("ollama", fb_model, llm_config)
-                coder_fb = create_pydantic_ai_coder(custom_model=fb_llm)
-                result = await _with_retries(lambda: coder_fb.run(instruction, deps=deps))
-            except Exception:
+            if _ollama_allowed(llm_config):
+                logger.warning(f"Coder failed, attempting fallback to Ollama: {e}")
+                try:
+                    fb_model = _fallback_model(llm_config)
+                    fb_llm = await get_llm_instance("ollama", fb_model, llm_config)
+                    coder_fb = create_pydantic_ai_coder(custom_model=fb_llm)
+                    result = await _with_retries(lambda: coder_fb.run(instruction, deps=deps))
+                except Exception:
+                    raise
+            else:
                 raise
         code_text = result.data if hasattr(result, 'data') else str(result)
 
@@ -689,12 +730,25 @@ async def run_agent_workflow(initial_state: Optional[Dict[str, Any]] = None) -> 
     try:
         logger.info("🚀 Starting agentic flow execution...")
         
-        # Get the agentic flow
+        # Build strict llm_config from active profile and merge any overrides from state
+        overrides = {}
+        try:
+            overrides = (initial_state or {}).get("llm_overrides") or {}
+        except Exception:
+            overrides = {}
+        llm_config = build_llm_config_from_active_profile(overrides if isinstance(overrides, dict) else None)
+
+        # Prepare flow and config
         flow = get_agentic_flow()
-        
-        # Run the flow with the initial state
-        logger.info("⚡ Executing agent workflow...")
-        result = await flow.ainvoke(initial_state)
+        corr = (initial_state or {}).get("correlation_id") or "agent-graph"
+        config = {"configurable": {"thread_id": str(corr), "llm_config": llm_config}}
+        logger.info(
+            f"⚡ Executing agent workflow with provider='{llm_config.get('LLM_PROVIDER')}' "
+            f"reasoner='{llm_config.get('REASONER_MODEL')}' advisor='{llm_config.get('ADVISOR_MODEL')}' coder='{llm_config.get('CODER_MODEL')}'"
+        )
+
+        # Run the flow with configured llm_config
+        result = await flow.ainvoke(initial_state, config)
         
         # Log the results
         logger.info("✅ Agent workflow completed successfully")
@@ -764,3 +818,28 @@ if __name__ == '__main__':
     except KeyboardInterrupt:
         print("\n🛑 Execution interrupted by user")
         sys.exit(0)
+
+# --- Backward-compatibility proxy to canonical implementation ---
+# Delegate public API to canonical graphs module to avoid duplication.
+# This keeps import paths stable while the real implementation lives under
+# `archon.archon.graphs.archon.app.graph`.
+try:
+    from archon.archon.graphs.archon.app.graph import (
+        get_agentic_flow as _canonical_get_agentic_flow,
+        run_agent_workflow as _canonical_run_agent_workflow,
+    )
+    get_agentic_flow = _canonical_get_agentic_flow  # type: ignore
+    run_agent_workflow = _canonical_run_agent_workflow  # type: ignore
+    __all__ = [
+        'get_agentic_flow',
+        'run_agent_workflow',
+    ]
+except Exception as _proxy_err:
+    # If canonical module isn't importable, keep legacy definitions.
+    # Log at debug level only to not spam in normal runs.
+    try:
+        logging.getLogger(__name__).debug(
+            f"Proxy to canonical graphs.archon failed: {_proxy_err}"
+        )
+    except Exception:
+        pass

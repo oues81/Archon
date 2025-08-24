@@ -13,7 +13,8 @@ def custom_time(*args):
 logging.Formatter.converter = custom_time
 
 # Configuration des répertoires
-LOG_DIR = Path("/app/logs")
+# Utilise la variable d'environnement ARCHON_LOG_DIR si définie, sinon ./logs (local dev)
+LOG_DIR = Path(os.getenv("ARCHON_LOG_DIR", "./logs"))
 LOG_DIR.mkdir(exist_ok=True, parents=True)
 
 # Formateur de log standard

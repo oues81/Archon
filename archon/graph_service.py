@@ -40,7 +40,7 @@ except ImportError:
     profiles_available = False
     logging.warning("Module api.profiles non disponible")
 
-from archon.archon.archon_graph import get_agentic_flow
+from archon.archon.graphs.archon.app.graph import get_agentic_flow
 from archon.archon.docs_maintainer_graph import get_docs_flow
 from archon.archon.content_restructurer_graph import get_content_flow
 from archon.utils.utils import write_to_log
@@ -483,6 +483,15 @@ async def advisor_ingest_cv(req: Request, payload: AdvisorIngestRequest) -> Advi
             pass
         raise HTTPException(status_code=500, detail=str(e))
 
+@app.post("/agent/run")
+async def agent_run(payload: InvokeRequest):
+    """Stable endpoint alias for running the agent.
+
+    This is a thin wrapper around /invoke to provide a canonical URL for external
+    callers (e.g., RHCV assistant). The request/response schema is identical to /invoke.
+    """
+    return await invoke_agent(payload)
+
 @app.post("/invoke")
 async def invoke_agent(request: InvokeRequest):
     """
@@ -510,6 +519,14 @@ async def invoke_agent(request: InvokeRequest):
             'ADVISOR_MODEL': provider.config.advisor_model,
             'OLLAMA_BASE_URL': provider.config.base_url
         }
+
+        # Inject a default timeout into llm_config if not set elsewhere
+        try:
+            timeout_env = os.getenv("ARCHON_HTTP_TIMEOUT", "120")
+            timeout_s = int(timeout_env) if str(timeout_env).isdigit() else 120
+        except Exception:
+            timeout_s = 120
+        llm_config['TIMEOUT_S'] = llm_config.get('TIMEOUT_S', timeout_s)
 
         # Add the API key with the expected name for compatibility
         if provider.config.api_key:

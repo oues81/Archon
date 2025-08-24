@@ -342,6 +342,107 @@ def save_env_var(var_name: str, var_value: str, profile_name: Optional[str] = No
         logger.error(f"❌ Failed to save env var '{var_name}': {e}")
         return False
 
+def build_llm_config_from_active_profile(llm_overrides: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    """Build a strict LLM configuration from the active profile only.
+
+    This constructs the llm_config dictionary by reading exclusively from the
+    currently active profile in `env_vars.json` (no environment fallbacks).
+
+    Provider-specific validation rules:
+    - openrouter: requires LLM_API_KEY and BASE_URL
+    - openai: requires LLM_API_KEY (BASE_URL optional)
+    - ollama: requires OLLAMA_BASE_URL
+
+    Args:
+        llm_overrides: Optional overrides to merge into the resulting config.
+                       Only keys with non-None values will override.
+
+    Returns:
+        Dict[str, Any]: The constructed llm_config.
+
+    Raises:
+        ValueError: If required provider fields are missing.
+    """
+    profile_name = get_current_profile()
+    cfg = get_profile_config(profile_name) or {}
+
+    provider = str(cfg.get("LLM_PROVIDER") or "").lower()
+    if not provider:
+        raise ValueError("LLM_PROVIDER missing in active profile")
+
+    # Models: use profile-only fallbacks (no env)
+    primary_model = (
+        cfg.get("PRIMARY_MODEL")
+        or cfg.get("REASONER_MODEL")
+        or cfg.get("ADVISOR_MODEL")
+        or cfg.get("CODER_MODEL")
+    )
+    reasoner_model = cfg.get("REASONER_MODEL") or primary_model
+    advisor_model = cfg.get("ADVISOR_MODEL") or primary_model
+    coder_model = cfg.get("CODER_MODEL") or primary_model
+
+    # Base URLs / keys strictly from profile
+    base_url = cfg.get("BASE_URL")
+    api_key = cfg.get("LLM_API_KEY")
+    ollama_base = cfg.get("OLLAMA_BASE_URL")
+    ollama_model = cfg.get("OLLAMA_MODEL")
+
+    # Validate provider-specific requirements
+    if provider == "openrouter":
+        if not api_key:
+            raise ValueError("Missing OpenRouter API key: set 'LLM_API_KEY' in profile")
+        if not base_url:
+            raise ValueError("Missing OpenRouter BASE_URL: set 'BASE_URL' in profile")
+    elif provider == "openai":
+        if not api_key:
+            raise ValueError("Missing OpenAI API key: set 'LLM_API_KEY' in profile")
+        # base_url optional for OpenAI
+    elif provider == "ollama":
+        if not ollama_base:
+            raise ValueError("Missing Ollama base URL: set 'OLLAMA_BASE_URL' in profile")
+        if not (reasoner_model or advisor_model or coder_model or ollama_model):
+            raise ValueError("No model specified for Ollama in profile")
+    else:
+        raise ValueError(f"Unsupported LLM provider in profile: {provider}")
+
+    # Operational settings strictly from profile (with safe defaults)
+    timeout_s = float(cfg.get("TIMEOUT_S") or 30)
+    max_conc = int(cfg.get("LLM_MAX_PARALLEL_BATCHES") or cfg.get("MAX_CONCURRENCY") or 2)
+    enable_langues = bool(cfg.get("ENABLE_LANGUES", True))
+    enable_localisation = bool(cfg.get("ENABLE_LOCALISATION", True))
+    weights = cfg.get("WEIGHTS") or {}
+
+    llm_config: Dict[str, Any] = {
+        "LLM_PROVIDER": provider,
+        "BASE_URL": base_url,
+        "LLM_API_KEY": api_key,
+        "REASONER_MODEL": reasoner_model,
+        "ADVISOR_MODEL": advisor_model,
+        "CODER_MODEL": coder_model,
+        "TIMEOUT_S": timeout_s,
+        "MAX_CONCURRENCY": max_conc,
+        "ENABLE_LANGUES": enable_langues,
+        "ENABLE_LOCALISATION": enable_localisation,
+        "WEIGHTS": weights,
+        # Ollama-specific (may be unused depending on provider)
+        "OLLAMA_BASE_URL": ollama_base,
+        "OLLAMA_MODEL": ollama_model,
+        # Optional OpenRouter headers if present in profile
+        "OPENROUTER_REFERRER": cfg.get("OPENROUTER_REFERRER"),
+        "OPENROUTER_X_TITLE": cfg.get("OPENROUTER_X_TITLE"),
+    }
+
+    # Merge safe overrides
+    if isinstance(llm_overrides, dict):
+        llm_config.update({k: v for k, v in llm_overrides.items() if v is not None})
+
+    logger.info(
+        f"🔧 Built llm_config from profile='{profile_name}' provider='{provider}' "
+        f"reasoner='{llm_config.get('REASONER_MODEL')}' advisor='{llm_config.get('ADVISOR_MODEL')}' coder='{llm_config.get('CODER_MODEL')}'"
+    )
+
+    return llm_config
+
 def reload_archon_graph():
     """
     Reload the archon graph configuration

@@ -270,6 +270,222 @@ Guidelines:
 - Only include requirements that are feasible to implement.
 """
 
+# CV Agent Prompts (centralized)
+# These prompts are intentionally concise and enforce strict JSON-only outputs.
+# Detailed rubrics and examples should be maintained here to keep a single source of truth.
+
+cv_extract_prompt = """
+[ROLE]
+Tu es un extracteur structuré spécialisé en CV. Tu dois produire STRICTEMENT un JSON valide, sans aucun texte hors JSON.
+
+[CONTEXT]
+- Le JSON `profil_poste_json` ci-dessous contient les critères d'analyse (exigences et pondérations). Utilise-le comme contexte, mais n'invente pas d'informations absentes du CV.
+profil_poste_json: {{profil_poste_json}}
+
+[INPUT]
+- cv_texte: texte brut du CV à analyser
+
+[POLICIES]
+- Sortie: JSON uniquement, valide, conforme au schéma cible.
+- Valeurs manquantes: Number->null, String/Text/URL->"", Boolean->false, DateTime->null (ISO 8601), Choice->"".
+- Aucune hallucination: ne déduis pas d'emails/phones/liens non présents explicitement.
+- Normalisation: langues au format {code ISO-639-1, niveau_cefr in [A1..C2] si connu, sinon ""}.
+- Dédoublonnage: listes uniques (competences.tech/soft/mots_cles, diplomes, certifications, langues).
+- Limites: n'extrais pas d'infos PII si absentes. Ne complète pas depuis profil_poste_json, seulement depuis le CV.
+
+[PITFALLS AVOID]
+- Ne pas confondre ville/région/pays.
+- Ne pas convertir des années en plages sans source.
+- Ne pas inférer LinkedIn depuis un nom.
+- Ne pas mélanger hard/soft skills.
+
+[TASK]
+Extrait les informations demandées du cv_texte. Si une information n'est pas trouvée, applique la politique valeurs manquantes.
+
+[OUTPUT SCHEMA]
+{
+  "nom_complet": "string",
+  "nom_fichier": "string",
+  "resume_hash": "string",
+  "correlation_id": "string",
+  "linkedin_url": "string",
+  "ville": "string",
+  "region_text": "string",
+  "pays": "string",
+  "pret_relocaliser": false,
+  "disponibilite_date": null,
+  "annees_exp_totale": null,
+  "annees_exp_poste": null,
+  "competences": { "tech": [], "soft": [], "mots_cles": [] },
+  "diplomes": [],
+  "certifications": [],
+  "langues": [ { "code": "string", "niveau_cefr": "string" } ],
+  "notes": "string",
+  "url_fichier": "string"
+}
+
+[INPUT DATA]
+cv_texte:
+{{cv_texte}}
+"""
+
+cv_skills_prompt = """
+[ROLE]
+Évaluateur des compétences vs critères du profil.
+
+[CONTEXT]
+- Le `profil_poste_json` fournit des must-have/nice-to-have et terminologie attendue. C'est le référentiel d'analyse.
+profil_poste_json: {{profil_poste_json}}
+
+[INPUT]
+candidate_base_json: {{candidate_base_json}}
+
+[RUBRIC / 100]
+- Must-have coverage: 40
+- Nice-to-have pertinence/profondeur: 30
+- Seniorité/maîtrise (réalisations, projets): 20
+- Cohérence terminologique: 10
+
+[POLICIES]
+- JSON strict: {"score_skills": int|null, "evidence_skills": ["..."]}
+- Si informations insuffisantes pour évaluer: score_skills=null et evidence explique la lacune.
+- Evidence: 2 à 4 extraits/justifications concises, citables depuis candidate_base si possible.
+- Bornes: score ∈ [0..100]. Ne dépasse pas ces bornes.
+
+[PITFALLS AVOID]
+- Ne pas récompenser des mots-clés hors contexte.
+- Ne pas sanctionner l'absence d'un nice-to-have non requis.
+
+[TASK]
+Calcule la note et les evidences en t’appuyant sur candidate_base et le profil.
+
+[OUTPUT]
+{ "score_skills": 0, "evidence_skills": ["..."] }
+"""
+
+cv_experience_prompt = """
+[ROLE]
+Évaluateur de l’expérience vs exigences du profil.
+
+[CONTEXT]
+profil_poste_json: {{profil_poste_json}}
+
+[INPUT]
+candidate_base_json: {{candidate_base_json}}
+
+[RUBRIC / 100]
+- Années totales vs attendu: 35
+- Années sur le poste ciblé vs attendu: 35
+- Pertinence secteur/stack/contextes vs profil: 20
+- Continuité/progression: 10
+
+[POLICIES]
+- JSON strict: {"score_experience": int|null, "evidence_experience": ["..."]}
+- Si non mesurable (ex: années absentes): score_experience=null avec evidence "non disponible".
+- Evidence: 2–4, concises, traçables depuis candidate_base.
+- Bornes: [0..100].
+
+[PITFALLS AVOID]
+- Ne pas extrapoler des années manquantes.
+- Ne pas confondre années totales vs sur le poste cible.
+
+[TASK]
+Calcule la note et evidences.
+
+[OUTPUT]
+{ "score_experience": 0, "evidence_experience": ["..."] }
+"""
+
+cv_education_prompt = """
+[ROLE]
+Évaluateur des études/certifications vs profil.
+
+[CONTEXT]
+profil_poste_json: {{profil_poste_json}}
+
+[INPUT]
+candidate_base_json: {{candidate_base_json}}
+
+[RUBRIC / 100]
+- Niveau d’étude minimal vs requis: 50
+- Diplômes/Certifications pertinents: 30
+- Réputation/pertinence établissement (si inférable): 20
+
+[POLICIES]
+- JSON strict: {"score_education": int|null, "evidence_education": ["..."]}
+- Si niveau/diplômes inconnus: score_education=null et evidence l’indique.
+- Evidence 2–4, concise, traçable.
+
+[PITFALLS AVOID]
+- Ne pas inventer des diplômes.
+- Ne pas inférer la réputation sans source claire.
+
+[TASK]
+Calcule la note et evidences.
+
+[OUTPUT]
+{ "score_education": 0, "evidence_education": ["..."] }
+"""
+
+cv_languages_prompt = """
+[ROLE]
+Évaluateur des langues vs exigences du profil.
+
+[CONTEXT]
+profil_poste_json: {{profil_poste_json}}
+
+[INPUT]
+candidate_base_json: {{candidate_base_json}}
+
+[RUBRIC / 100]
+- Langue(s) requise(s) présentes: 70
+- Niveau CEFR suffisant vs requis: 30
+
+[POLICIES]
+- JSON strict: {"score_langues": int|null, "evidence_langues": ["..."]}
+- Si langue/niveau inconnus: score_langues=null + evidence.
+- Normalise le niveau CEFR si exprimé différemment.
+
+[PITFALLS AVOID]
+- Ne pas confondre bilingue auto-déclaré et CEFR.
+- Ne pas supposer un niveau absent.
+
+[TASK]
+Calcule la note et evidences.
+
+[OUTPUT]
+{ "score_langues": 0, "evidence_langues": ["..."] }
+"""
+
+cv_location_prompt = """
+[ROLE]
+Évaluateur de la localisation vs exigences du profil.
+
+[CONTEXT]
+profil_poste_json: {{profil_poste_json}}
+
+[INPUT]
+candidate_base_json: {{candidate_base_json}}
+
+[RUBRIC / 100]
+- Région/Pays correspondants (exact ou compatible): 70
+- Disponibilité/relocation compatibles: 30
+
+[POLICIES]
+- JSON strict: {"score_localisation": int|null, "evidence_localisation": ["..."]}
+- Si adresse ou mobilité inconnue: score_localisation=null + evidence.
+
+[PITFALLS AVOID]
+- Ne pas confondre ville actuelle et mobilité potentielle.
+- Ne pas supposer la relocalisation sans mention.
+
+[TASK]
+Calcule la note et evidences.
+
+[OUTPUT]
+{ "score_localisation": 0, "evidence_localisation": ["..."] }
+"""
+
 # Explicit exports for clarity
 __all__ = [
     'prompt_refiner_agent_prompt',
@@ -280,6 +496,13 @@ __all__ = [
     'advisor_prompt',
     'ingestion_advisor_prompt',
     'reasoner_prompt',
+    # CV prompts
+    'cv_extract_prompt',
+    'cv_skills_prompt',
+    'cv_experience_prompt',
+    'cv_education_prompt',
+    'cv_languages_prompt',
+    'cv_location_prompt',
 ]
 
 # Backward-compatibility alias expected by some modules

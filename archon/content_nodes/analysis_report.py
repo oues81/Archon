@@ -8,13 +8,17 @@ ART_DIR = Path("generated/restruct")
 logger = logging.getLogger(__name__)
 
 
-def _resolve_root(config: Dict[str, Any]) -> Path:
-    cfg = (config or {}).get("configurable", {}) if isinstance(config, dict) else {}
-    out = None
-    if isinstance(cfg, dict):
-        out = cfg.get("output_root")
-    if isinstance(out, str) and out.strip():
-        p = Path(out)
+def _resolve_root(state: Dict[str, Any], config: Dict[str, Any]) -> Path:
+    # Prefer artifacts_root propagated in state, else config.output_root, else default
+    root = None
+    if isinstance(state, dict):
+        root = state.get("artifacts_root") or None
+    if not root:
+        cfg = (config or {}).get("configurable", {}) if isinstance(config, dict) else {}
+        if isinstance(cfg, dict):
+            root = cfg.get("output_root")
+    if isinstance(root, str) and str(root).strip():
+        p = Path(root)
         p.mkdir(parents=True, exist_ok=True)
         return p
     ART_DIR.mkdir(parents=True, exist_ok=True)
@@ -26,7 +30,7 @@ def run(state: Dict[str, Any], config: Dict[str, Any]) -> Dict[str, Any]:
     - Reads inventory, insights, and move plan
     - Writes analysis_summary.md under output_root (or default ART_DIR)
     """
-    root = _resolve_root(config)
+    root = _resolve_root(state, config)
     out = root / "analysis_summary.md"
 
     # Resolve artifact paths from state or defaults under root

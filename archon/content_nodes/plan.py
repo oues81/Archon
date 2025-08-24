@@ -16,7 +16,9 @@ def run(state: Dict[str, Any], config: Dict[str, Any]) -> Dict[str, Any]:
     except Exception:
         cfg = {}
     root = None
-    if isinstance(cfg, dict):
+    if isinstance(state, dict):
+        root = state.get("artifacts_root") or None
+    if not root and isinstance(cfg, dict):
         root = cfg.get("output_root")
     art_root = Path(root) if isinstance(root, str) and root.strip() else ART_DIR
     art_root.mkdir(parents=True, exist_ok=True)
@@ -24,14 +26,14 @@ def run(state: Dict[str, Any], config: Dict[str, Any]) -> Dict[str, Any]:
 
     # Load inventory and insights if available
     inv_path = None
-    if isinstance(state, Dict):
+    if isinstance(state, dict):
         inv_path = state.get("inventory_path")
     if not inv_path:
         cand = art_root / "global_inventory.json"
         inv_path = str(cand) if cand.exists() else None
 
     insights_path = None
-    if isinstance(state, Dict):
+    if isinstance(state, dict):
         insights_path = state.get("insights_path")
     if not insights_path:
         cand2 = art_root / "content_insights_root.json"
@@ -64,6 +66,16 @@ def run(state: Dict[str, Any], config: Dict[str, Any]) -> Dict[str, Any]:
 
     provider = get_llm_provider()
     model = getattr(provider.config, "reasoner_model", None) or provider.config.primary_model
+    # Apply TIMEOUT_S from config if provided
+    try:
+        cfg_llm = (config or {}).get("configurable", {}) if isinstance(config, dict) else {}
+        if isinstance(cfg_llm, dict):
+            llm_conf = cfg_llm.get("llm_config") or {}
+            t_s = llm_conf.get("TIMEOUT_S") if isinstance(llm_conf, dict) else None
+            if isinstance(t_s, (int, float)) and hasattr(provider, "config") and hasattr(provider.config, "timeout"):
+                provider.config.timeout = int(t_s)
+    except Exception:
+        pass
 
     logger.info(
         "🧭 [plan.start] module=archon.archon.content_nodes.plan:run_plan | items=%s | items_sample=%s | clusters=%s | clusters_sample=%s | model=%s",

@@ -10,18 +10,17 @@ logger = logging.getLogger(__name__)
 
 
 def run(state: Dict[str, Any], config: Dict[str, Any]) -> Dict[str, Any]:
-    # Resolve artifacts root (timestamped run directory if provided)
+    # Resolve artifacts root: prefer state.artifacts_root, then config.output_root, else default
     try:
         cfg = (config or {}).get("configurable", {}) if isinstance(config, dict) else {}
     except Exception:
         cfg = {}
     root = None
-    if isinstance(cfg, dict):
+    if isinstance(state, dict):
+        root = state.get("artifacts_root") or None
+    if not root and isinstance(cfg, dict):
         root = cfg.get("output_root")
-    if isinstance(root, str) and root.strip():
-        art_root = Path(root)
-    else:
-        art_root = ART_DIR
+    art_root = Path(root) if isinstance(root, str) and str(root).strip() else ART_DIR
     art_root.mkdir(parents=True, exist_ok=True)
     out = art_root / "global_inventory.json"
 
@@ -130,4 +129,4 @@ def run(state: Dict[str, Any], config: Dict[str, Any]) -> Dict[str, Any]:
     out.write_text(json.dumps(data, indent=2), encoding="utf-8")
     dur_ms = int((time.time() - start_ts) * 1000)
     logger.info("[inventory] done | count=%s dur_ms=%s out=%s", len(items), dur_ms, str(out))
-    return {"inventory_path": str(out), "inventory_count": len(items)}
+    return {"inventory_path": str(out), "inventory_count": len(items), "artifacts_root": str(art_root)}

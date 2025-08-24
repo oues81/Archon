@@ -16,7 +16,9 @@ def run(state: Dict[str, Any], config: Dict[str, Any]) -> Dict[str, Any]:
     except Exception:
         cfg = {}
     root = None
-    if isinstance(cfg, dict):
+    if isinstance(state, dict):
+        root = state.get("artifacts_root") or None
+    if not root and isinstance(cfg, dict):
         root = cfg.get("output_root")
     art_root = Path(root) if isinstance(root, str) and root.strip() else ART_DIR
     art_root.mkdir(parents=True, exist_ok=True)
@@ -44,6 +46,16 @@ def run(state: Dict[str, Any], config: Dict[str, Any]) -> Dict[str, Any]:
 
     provider = get_llm_provider()
     model = getattr(provider.config, "advisor_model", None) or provider.config.primary_model
+    # Apply TIMEOUT_S from config if provided
+    try:
+        cfg_llm = (config or {}).get("configurable", {}) if isinstance(config, dict) else {}
+        if isinstance(cfg_llm, dict):
+            llm_conf = cfg_llm.get("llm_config") or {}
+            t_s = llm_conf.get("TIMEOUT_S") if isinstance(llm_conf, dict) else None
+            if isinstance(t_s, (int, float)) and hasattr(provider, "config") and hasattr(provider.config, "timeout"):
+                provider.config.timeout = int(t_s)
+    except Exception:
+        pass
     # Optional temperature from config
     temperature: Optional[float] = None
     try:
