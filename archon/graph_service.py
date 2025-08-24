@@ -44,7 +44,7 @@ from archon.archon.graphs.archon.app.graph import get_agentic_flow
 from archon.archon.docs_maintainer_graph import get_docs_flow
 from archon.archon.content_restructurer_graph import get_content_flow
 from archon.utils.utils import write_to_log
-from archon.archon.logging_utils import redact_pii
+from archon.archon.utils.logging_utils import redact_pii
 from archon.llm import get_llm_provider
 from archon.archon.security.hmac import verify as verify_hmac
 import requests
