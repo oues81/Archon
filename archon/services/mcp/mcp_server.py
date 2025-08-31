@@ -478,6 +478,368 @@ async def health_head():
         "version": "1.0.0"
     }
 
+@app.post("/cv/health_check")
+async def cv_health_check_compat(payload: Dict[str, Any]) -> Dict[str, Any]:
+    """JSON-compat endpoint for CV health check.
+
+    Accepts application/json and forwards to the same analyzer used by the MCP tool.
+    Body: {"api_url"?: str, "correlation_id"?: str}
+    """
+    try:
+        api_url = (payload or {}).get("api_url")
+        corr = (payload or {}).get("correlation_id")
+        # Lazy import to avoid startup cost
+        try:
+            from archon.archon.cv_analyzer import health_check as _cv_health_check  # type: ignore
+        except Exception as _e:
+            raise HTTPException(status_code=501, detail=f"cv_health_check unavailable: {_e}")
+        # Emit started
+        try:
+            _mcp_response_queue.put_nowait({
+                "event": "cv_health_check.started",
+                "api_url": api_url,
+                "correlation_id": corr,
+                "ts": time.time(),
+            })
+        except Exception:
+            pass
+        _t0 = time.time()
+        res = await _cv_health_check(api_url=api_url)
+        # Emit completed
+        try:
+            _mcp_response_queue.put_nowait({
+                "event": "cv_health_check.completed",
+                "ok": True,
+                "elapsed_ms": int((time.time() - _t0) * 1000),
+                "correlation_id": corr,
+                "ts": time.time(),
+            })
+        except Exception:
+            pass
+        return res if isinstance(res, dict) else {"ok": True, "data": res}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"cv_health_check_compat failed: {e}", exc_info=True)
+        try:
+            _mcp_response_queue.put_nowait({
+                "event": "cv_health_check.error",
+                "error": str(e),
+                "correlation_id": corr,
+                "ts": time.time(),
+            })
+        except Exception:
+            pass
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/cv/parse_v2")
+async def cv_parse_v2_compat(payload: Dict[str, Any]) -> Dict[str, Any]:
+    """JSON-compat endpoint for CV parse_v2.
+
+    Accepts application/json and forwards to analyzer, optional strict gating using health_check.
+    Body: {"filename": str, "file_base64": str, "api_url"?: str, "strict_gating"?: bool}
+    """
+    try:
+        if not isinstance(payload, dict):
+            raise HTTPException(status_code=400, detail="Invalid JSON body")
+        filename = payload.get("filename")
+        file_b64 = payload.get("file_base64")
+        api_url = payload.get("api_url")
+        strict_gating = bool(payload.get("strict_gating"))
+        corr = payload.get("correlation_id")
+        delegate = bool(payload.get("delegate_to_archon") or payload.get("use_agentic_flow"))
+        profile_name = (payload.get("profile_name") or "").strip() or "openrouter_default"
+        if not filename or not file_b64:
+            raise HTTPException(status_code=400, detail="filename and file_base64 are required")
+
+        # Optional strict gating
+        if strict_gating:
+            try:
+                from archon.archon.cv_analyzer import health_check as _cv_health_check  # type: ignore
+                _ = await _cv_health_check(api_url=api_url)
+            except Exception as _e:
+                raise HTTPException(status_code=502, detail=f"Preflight failed: {_e}")
+
+        # Lazy import parse_v2
+        # Delegation path: forward to Graph service Advisor ingest flow
+        if delegate:
+            try:
+                try:
+                    _mcp_response_queue.put_nowait({
+                        "event": "cv_parse_v2.delegated.started",
+                        "filename": filename,
+                        "correlation_id": corr,
+                        "ts": time.time(),
+                    })
+                except Exception:
+                    pass
+                body = {
+                    "filename": filename,
+                    "file_base64": file_b64,
+                    "consent": True,
+                    "privacy_mode": "local",
+                    "profile": profile_name,
+                    # allow future passthroughs (profile/search/export) if desired
+                }
+                headers = {"Content-Type": "application/json", "X-Source": "mcp", "X-Profile-Name": profile_name}
+                if corr:
+                    headers["X-Correlation-Id"] = corr
+                r = requests.post(f"{GRAPH_SERVICE_URL}/advisor/ingest_cv", json=body, headers=headers, timeout=300)
+                if r.status_code != 200:
+                    raise HTTPException(status_code=r.status_code, detail=f"Delegation failed: {r.text[:200]}")
+                advisor = r.json()
+                try:
+                    _mcp_response_queue.put_nowait({
+                        "event": "cv_parse_v2.delegated.completed",
+                        "ok": True,
+                        "elapsed_ms": int((time.time() - _t0) * 1000),
+                        "correlation_id": corr,
+                        "ts": time.time(),
+                    })
+                except Exception:
+                    pass
+                return {"delegated": True, "advisor": advisor}
+            except HTTPException:
+                # Error already shaped; also emit SSE
+                try:
+                    _mcp_response_queue.put_nowait({
+                        "event": "cv_parse_v2.delegated.error",
+                        "correlation_id": corr,
+                        "ts": time.time(),
+                    })
+                except Exception:
+                    pass
+                raise
+            except Exception as e:
+                try:
+                    _mcp_response_queue.put_nowait({
+                        "event": "cv_parse_v2.delegated.error",
+                        "error": str(e),
+                        "correlation_id": corr,
+                        "ts": time.time(),
+                    })
+                except Exception:
+                    pass
+                raise HTTPException(status_code=502, detail=str(e))
+
+        try:
+            from archon.archon.cv_analyzer import parse_v2 as _cv_parse_v2  # type: ignore
+        except Exception as _e:
+            raise HTTPException(status_code=501, detail=f"cv_parse_v2 unavailable: {_e}")
+        # Emit started
+        try:
+            _mcp_response_queue.put_nowait({
+                "event": "cv_parse_v2.started",
+                "filename": filename,
+                "size_b64": len(file_b64) if isinstance(file_b64, str) else None,
+                "correlation_id": corr,
+                "ts": time.time(),
+            })
+        except Exception:
+            pass
+        _t0 = time.time()
+        res = await _cv_parse_v2(filename=filename, file_base64=file_b64, api_url=api_url)
+        # Emit completed
+        try:
+            _mcp_response_queue.put_nowait({
+                "event": "cv_parse_v2.completed",
+                "ok": True,
+                "elapsed_ms": int((time.time() - _t0) * 1000),
+                "correlation_id": corr,
+                "ts": time.time(),
+            })
+        except Exception:
+            pass
+        return res if isinstance(res, dict) else {"ok": True, "data": res}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"cv_parse_v2_compat failed: {e}", exc_info=True)
+        try:
+            _mcp_response_queue.put_nowait({
+                "event": "cv_parse_v2.error",
+                "error": str(e),
+                "correlation_id": corr,
+                "ts": time.time(),
+            })
+        except Exception:
+            pass
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/cv/anonymize")
+async def cv_anonymize_compat(payload: Dict[str, Any]) -> Dict[str, Any]:
+    """JSON-compat endpoint for CV anonymization with SSE events."""
+    try:
+        if not isinstance(payload, dict):
+            raise HTTPException(status_code=400, detail="Invalid JSON body")
+        parsed = payload.get("parsed") or {}
+        text_opt = payload.get("text_optional")
+        strategy = payload.get("strategy") or {"mask_name": True, "mask_email": True, "mask_phone": True, "mask_addresses": True}
+        corr = payload.get("correlation_id")
+
+        try:
+            _mcp_response_queue.put_nowait({"event": "cv_anonymize.started", "correlation_id": corr, "ts": time.time()})
+        except Exception:
+            pass
+        _t0 = time.time()
+
+        # Simple mask emulation
+        masked = dict(parsed)
+        entities: list = []
+        if strategy.get("mask_email") and isinstance(masked, dict):
+            if "email" in masked:
+                entities.append({"type": "email", "value": masked["email"]})
+                masked["email"] = "***@***"
+        text_masked = None
+        if isinstance(text_opt, str):
+            text_masked = text_opt
+        try:
+            _mcp_response_queue.put_nowait({
+                "event": "cv_anonymize.completed",
+                "ok": True,
+                "elapsed_ms": int((time.time() - _t0) * 1000),
+                "correlation_id": corr,
+                "ts": time.time(),
+            })
+        except Exception:
+            pass
+        return {"parsed_masked": masked, "text_masked": text_masked, "entities": entities}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"cv_anonymize_compat failed: {e}", exc_info=True)
+        try:
+            _mcp_response_queue.put_nowait({"event": "cv_anonymize.error", "error": str(e), "correlation_id": corr, "ts": time.time()})
+        except Exception:
+            pass
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/cv/index")
+async def cv_index_compat(payload: Dict[str, Any]) -> Dict[str, Any]:
+    """JSON-compat endpoint for indexing CV/doc content with SSE events."""
+    try:
+        if not isinstance(payload, dict):
+            raise HTTPException(status_code=400, detail="Invalid JSON body")
+        doc_id = payload.get("doc_id") or str(uuid.uuid4())
+        content = payload.get("content") or {}
+        meta = payload.get("metadata") or {}
+        upsert = bool(payload.get("upsert", True))
+        corr = payload.get("correlation_id")
+
+        try:
+            _mcp_response_queue.put_nowait({"event": "cv_index.started", "doc_id": doc_id, "correlation_id": corr, "ts": time.time()})
+        except Exception:
+            pass
+        _t0 = time.time()
+        # Prototype vectorization: store fake vector by hashing content length
+        full_text = json.dumps(content, ensure_ascii=False)
+        vec = [float((hash(full_text) % 997) / 997.0)] * 8
+        if not upsert and doc_id in _cv_index_store:
+            raise HTTPException(status_code=409, detail="Document already exists; upsert is false")
+        _cv_index_store[doc_id] = {"content": content, "metadata": meta}
+        _cv_index_vectors[doc_id] = vec
+        chunks = [{"chunk_id": f"{doc_id}#0", "tokens": min(512, len(full_text.split())), "vector_dim": len(vec)}]
+        try:
+            _mcp_response_queue.put_nowait({
+                "event": "cv_index.completed",
+                "ok": True,
+                "elapsed_ms": int((time.time() - _t0) * 1000),
+                "correlation_id": corr,
+                "ts": time.time(),
+            })
+        except Exception:
+            pass
+        return {"doc_id": doc_id, "upserted": True, "chunks": chunks}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"cv_index_compat failed: {e}", exc_info=True)
+        try:
+            _mcp_response_queue.put_nowait({"event": "cv_index.error", "error": str(e), "correlation_id": corr, "ts": time.time()})
+        except Exception:
+            pass
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/cv/search")
+async def cv_search_compat(payload: Dict[str, Any]) -> Dict[str, Any]:
+    """JSON-compat endpoint for vector-esque search with SSE events."""
+    try:
+        if not isinstance(payload, dict):
+            raise HTTPException(status_code=400, detail="Invalid JSON body")
+        query = payload.get("query") or ""
+        top_k = int(payload.get("top_k") or 5)
+        filters = payload.get("filters") or {}
+        corr = payload.get("correlation_id")
+        try:
+            _mcp_response_queue.put_nowait({"event": "cv_search.started", "correlation_id": corr, "ts": time.time()})
+        except Exception:
+            pass
+        _t0 = time.time()
+        # Prototype similarity: inverse abs diff between query length and vector seed
+        scored: list = []
+        for did, vec in _cv_index_vectors.items():
+            base = vec[0] if vec else 0.0
+            score = max(0.0, 1.0 - abs(len(query) - base * 100.0) / 100.0)
+            scored.append({"doc_id": did, "score": round(score, 4), "metadata": _cv_index_store.get(did, {}).get("metadata", {})})
+        scored.sort(key=lambda x: x["score"], reverse=True)
+        try:
+            _mcp_response_queue.put_nowait({
+                "event": "cv_search.completed",
+                "ok": True,
+                "elapsed_ms": int((time.time() - _t0) * 1000),
+                "correlation_id": corr,
+                "ts": time.time(),
+            })
+        except Exception:
+            pass
+        return {"matches": scored[:top_k], "filters": filters}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"cv_search_compat failed: {e}", exc_info=True)
+        try:
+            _mcp_response_queue.put_nowait({"event": "cv_search.error", "error": str(e), "correlation_id": corr, "ts": time.time()})
+        except Exception:
+            pass
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/cv/export")
+async def cv_export_compat(payload: Dict[str, Any]) -> Dict[str, Any]:
+    """JSON-compat endpoint for exporting results with SSE events."""
+    try:
+        if not isinstance(payload, dict):
+            raise HTTPException(status_code=400, detail="Invalid JSON body")
+        items = payload.get("items") or []
+        fmt = (payload.get("format") or "jsonl").lower()
+        dest = payload.get("destination") or {}
+        corr = payload.get("correlation_id")
+        try:
+            _mcp_response_queue.put_nowait({"event": "cv_export.started", "fmt": fmt, "correlation_id": corr, "ts": time.time()})
+        except Exception:
+            pass
+        _t0 = time.time()
+        # Prototype: return payload echo with meta; real impl could write to storage
+        artifact = {"format": fmt, "count": len(items), "destination": dest}
+        try:
+            _mcp_response_queue.put_nowait({
+                "event": "cv_export.completed",
+                "ok": True,
+                "elapsed_ms": int((time.time() - _t0) * 1000),
+                "correlation_id": corr,
+                "ts": time.time(),
+            })
+        except Exception:
+            pass
+        return {"export": artifact, "items": items}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"cv_export_compat failed: {e}", exc_info=True)
+        try:
+            _mcp_response_queue.put_nowait({"event": "cv_export.error", "error": str(e), "correlation_id": corr, "ts": time.time()})
+        except Exception:
+            pass
+        raise HTTPException(status_code=500, detail=str(e))
 # Lightweight async warmup to initialize providers/profiles without blocking startup
 _warmup_started = False
 

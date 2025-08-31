@@ -186,6 +186,29 @@ async def advisor_ingest_cv(req: Request, payload: AdvisorIngestRequest) -> Advi
         if not ok:
             raise HTTPException(status_code=401, detail=f"HMAC verification failed: {msg}")
 
+        # Ensure correct LLM profile (default to openrouter_default if unspecified)
+        try:
+            requested_profile = (payload.profile or "").strip() or (req.headers.get("X-Profile-Name") or "").strip()
+            if not requested_profile:
+                requested_profile = "openrouter_default"
+            provider = get_llm_provider()
+            if hasattr(provider, "reload_profile"):
+                ok_reload = provider.reload_profile(requested_profile)
+                if not ok_reload:
+                    # Try fallback to openrouter_default if explicit name failed
+                    if requested_profile != "openrouter_default":
+                        _log_safe("profile_reload_warn", endpoint="/advisor/ingest_cv", correlation_id=corr_id, status="fallback", tool="profile")
+                        provider.reload_profile("openrouter_default")
+            # Sanity log
+            try:
+                cfg = getattr(provider, "config", None)
+                if cfg:
+                    _log_safe("profile_active", endpoint="/advisor/ingest_cv", correlation_id=corr_id, status="ok", tool="profile")
+            except Exception:
+                pass
+        except Exception as _e:
+            logger.warning(f"Advisor ingest: profile selection failed: {_e}")
+
         # Validate mode selection
         has_file = bool(payload.filename and payload.file_base64)
         has_sp = bool(payload.share_url) or bool(payload.site_id and payload.drive_id and payload.item_id)

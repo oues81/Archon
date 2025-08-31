@@ -6,6 +6,10 @@ from typing import Dict, Any
 from pathlib import Path
 import json
 from datetime import datetime, timezone
+import os
+import logging
+import logfire
+from archon.utils.utils import configure_logging
 
 from archon.archon.graphs.cv_graph.agents import (
     preprocessing,
@@ -18,6 +22,16 @@ from archon.archon.graphs.cv_graph.agents import (
 )
 from archon.archon.graphs.cv_graph.agents import fill_all
 from archon.archon.graphs.cv_graph.schemas.candidate_schema import CANDIDATE_SCHEMA
+
+
+_log_summary = configure_logging()
+logger = logging.getLogger(__name__)
+try:
+    logfire.configure(service_name="archon")
+    logger.info("✅ Logfire configured successfully")
+except Exception as e:
+    logger.warning(f"⚠️ Unable to configure Logfire: {e}")
+    os.environ.setdefault("LOGFIRE_DISABLE", "1")
 
 
 class _Pipeline:

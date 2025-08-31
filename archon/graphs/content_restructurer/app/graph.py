@@ -3,6 +3,9 @@ from typing import Dict, Any
 from pathlib import Path
 import time
 import os
+import logging
+import logfire
+from archon.utils.utils import configure_logging
 
 try:
     from langgraph.graph import StateGraph, END
@@ -20,6 +23,16 @@ from archon.archon.content_nodes import report as report_node
 from archon.archon.content_nodes import analysis_report as ar_node
 
 _content_flow = None
+
+# Initialize standardized logging and Logfire
+_log_summary = configure_logging()
+logger = logging.getLogger(__name__)
+try:
+    logfire.configure(service_name="archon")
+    logger.info("✅ Logfire configured successfully")
+except Exception as e:
+    logger.warning(f"⚠️ Unable to configure Logfire: {e}")
+    os.environ.setdefault("LOGFIRE_DISABLE", "1")
 
 
 def _ensure_dirs(state: Dict[str, Any], config: Dict[str, Any]) -> Dict[str, Any]:
