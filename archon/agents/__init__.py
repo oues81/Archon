@@ -5,4 +5,5 @@ __all__ = [
     "tools_refiner_agent",
     "pydantic_ai_coder",
     "refiner",
+    "generalist_agent",
 ]

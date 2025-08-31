@@ -217,21 +217,21 @@ if not _disable_profiles:
 else:
     logging.getLogger(__name__).info("Profiles utilities import disabled via DISABLE_PROFILES=1")
 
-# Advisor agent availability (optional import)
+# Generalist agent availability (optional import)
 _advisor_available = False
 _disable_advisor = os.environ.get("DISABLE_ADVISOR", "0") == "1"
 if not _disable_advisor:
     try:
-        from archon.archon.agents.advisor_agent import (
-            get_default_agent as _get_advisor_agent,
-            AdvisorDeps as _AdvisorDeps,
+        from archon.archon.agents.generalist_agent import (
+            create_generalist_agent as _get_advisor_agent,
+            PydanticAIDeps as _AdvisorDeps,
         )
         _advisor_available = True
     except Exception as _e:
         _advisor_available = False
-        logging.getLogger(__name__).warning(f"Advisor agent unavailable: {_e}")
+        logging.getLogger(__name__).warning(f"Generalist agent unavailable: {_e}")
 else:
-    logging.getLogger(__name__).info("Advisor agent import disabled via DISABLE_ADVISOR=1")
+    logging.getLogger(__name__).info("Generalist agent import disabled via DISABLE_ADVISOR=1")
 
 # Configuration du logging
 logging.basicConfig(

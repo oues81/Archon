@@ -296,6 +296,8 @@ class LLMProvider:
                 payload.update(kwargs)
             if prov == "openrouter":
                 import httpx
+                import time
+                import random
                 base_url = self.config.base_url or "https://openrouter.ai/api/v1"
                 headers = {
                     "Authorization": f"Bearer {self.config.api_key}",
@@ -308,14 +310,70 @@ class LLMProvider:
                 if title:
                     headers["X-Title"] = title
                 url = f"{base_url}/chat/completions"
-                try:
-                    with httpx.Client(timeout=self.config.timeout) as client:
-                        resp = client.post(url, json=payload, headers=headers)
-                        resp.raise_for_status()
-                        data = resp.json()
-                        return data.get("choices", [{}])[0].get("message", {}).get("content", "")
-                except httpx.HTTPStatusError as e:
-                    raise RuntimeError(f"Erreur d'API OpenRouter: {str(e)}")
+                
+                # Paramètres de retry
+                max_retries = 5
+                base_delay = 1.0
+                max_delay = 60.0
+                jitter = 0.1
+                attempt = 0
+                
+                while attempt < max_retries:
+                    try:
+                        with httpx.Client(timeout=self.config.timeout) as client:
+                            resp = client.post(url, json=payload, headers=headers)
+                            
+                            if resp.status_code == 200:
+                                data = resp.json()
+                                return data.get("choices", [{}])[0].get("message", {}).get("content", "")
+                            
+                            # Gestion spécifique des erreurs 429
+                            if resp.status_code == 429:
+                                # Utiliser le header Retry-After si présent
+                                retry_after = resp.headers.get("Retry-After")
+                                if retry_after:
+                                    try:
+                                        wait_time = float(retry_after)
+                                    except (ValueError, TypeError):
+                                        # Backoff exponentiel si Retry-After n'est pas un nombre
+                                        wait_time = min(max_delay, base_delay * (2 ** attempt) + random.uniform(0, jitter))
+                                else:
+                                    # Backoff exponentiel par défaut
+                                    wait_time = min(max_delay, base_delay * (2 ** attempt) + random.uniform(0, jitter))
+                                
+                                logger.warning(f"Rate limit atteint (429). Attente de {wait_time:.2f}s avant retry {attempt+1}/{max_retries}")
+                                time.sleep(wait_time)
+                                attempt += 1
+                                continue
+                            
+                            # Pour les autres erreurs, lever une exception
+                            resp.raise_for_status()
+                            
+                    except httpx.HTTPStatusError as e:
+                        if e.response.status_code == 429 and attempt < max_retries - 1:
+                            # Déjà géré dans le bloc précédent, ne devrait pas arriver ici
+                            pass
+                        else:
+                            error_data = {}
+                            try:
+                                error_data = e.response.json()
+                            except Exception:
+                                pass
+                            
+                            error_msg = error_data.get('error', {}).get('message') if isinstance(error_data.get('error'), dict) else str(error_data.get('error', str(e)))
+                            raise RuntimeError(f"Erreur d'API OpenRouter ({e.response.status_code}): {error_msg}")
+                    except (httpx.RequestError, httpx.TimeoutException) as e:
+                        if attempt < max_retries - 1:
+                            wait_time = min(max_delay, base_delay * (2 ** attempt) + random.uniform(0, jitter))
+                            logger.warning(f"Erreur réseau OpenRouter: {str(e)}. Retry {attempt+1}/{max_retries} dans {wait_time:.2f}s")
+                            time.sleep(wait_time)
+                            attempt += 1
+                            continue
+                        else:
+                            raise RuntimeError(f"Échec de connexion à OpenRouter après {max_retries} tentatives: {str(e)}")
+                
+                # Si on atteint ce point, c'est qu'on a épuisé toutes les tentatives
+                raise RuntimeError(f"Échec de la requête OpenRouter après {max_retries} tentatives (dernier code: 429)")
             else:
                 # Ollama: prefer native API /api/chat (non-stream); fallback to OpenAI-compatible /v1/chat/completions
                 import requests
@@ -504,8 +562,13 @@ class LLMProvider:
             self.config.api_key = os.getenv("OPENROUTER_API_KEY")
         if not self.config.base_url:
             self.config.base_url = "https://openrouter.ai/api/v1"
+        
+        # Définir un timeout plus long pour OpenRouter
+        if not self.config.timeout or self.config.timeout < 60:
+            self.config.timeout = 60
+            
         # Keep configured model as-is; tests expect creation to succeed
-        logger.info("Initialized OpenRouter provider (minimal)")
+        logger.info("Initialized OpenRouter provider (minimal) with timeout: {}s".format(self.config.timeout))
 
 # Factory function
 def create_provider() -> LLMProvider:
