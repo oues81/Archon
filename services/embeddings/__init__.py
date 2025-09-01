@@ -1,0 +1,2 @@
+"""Embeddings submodule for services.
+"""
