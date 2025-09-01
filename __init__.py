@@ -1,13 +1,21 @@
-"""
-Archon - A framework for building and managing AI agents
-"""
+"""Compatibilité après renommage du module archon en k."""
 
-from .llm import LLMProvider, LLMConfig, llm_provider, get_config_path, load_config
+import sys
+from importlib import import_module
 
-__all__ = [
-    'LLMProvider',
-    'LLMConfig',
-    'llm_provider',
-    'get_config_path',
-    'load_config'
-]
+import k
+
+# Rediriger les imports de `archon` vers `k`
+class _ArchonCompatibilityFinder:
+    def __getattr__(self, name):
+        try:
+            return getattr(k, name)
+        except AttributeError:
+            try:
+                module = import_module("k." + name)
+                return module
+            except ImportError:
+                raise AttributeError("Module k has no attribute " + name)
+
+sys.modules["archon"] = _ArchonCompatibilityFinder()
+# Avertissement: ce module est un shim de compatibilité. Utilisez `import k` à la place.

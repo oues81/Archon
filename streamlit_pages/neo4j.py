@@ -9,8 +9,8 @@ import os
 import pandas as pd
 from typing import Optional
 
-from archon.utils.neo4j_client import Neo4jClient
-from archon.utils.utils import get_env_var, save_env_var as set_env_var, write_to_log
+from k.core.utils.neo4j_client import Neo4jClient
+from k.core.utils.utils import get_env_var, save_env_var as set_env_var, write_to_log
 
 
 def neo4j_tab(neo4j_client: Optional[Neo4jClient] = None):

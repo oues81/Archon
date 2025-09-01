@@ -3,19 +3,19 @@ import time
 import os
 
 # Use proper package imports (project is installed on PYTHONPATH=/app/src)
-from archon.archon.crawlers.crawl_pydantic_ai_docs import (
+from k.services.crawlers.crawl_pydantic_ai_docs import (
     start_crawl_with_requests,
     clear_existing_records,
 )
-from archon.archon.crawlers.crawl_mcp_docs import (
+from k.services.crawlers.crawl_mcp_docs import (
     start_crawl_with_requests as start_mcp_crawl,
     clear_existing_records as clear_mcp_records,
 )
-from archon.archon.crawlers.crawl_windsurf_workflows_docs import (
+from k.services.crawlers.crawl_windsurf_workflows_docs import (
     start_crawl_with_requests as start_windsurf_crawl,
     clear_existing_records as clear_windsurf_records,
 )
-from archon.utils.utils import get_env_var, create_new_tab_button
+from k.core.utils.utils import get_env_var, create_new_tab_button
 
 def documentation_tab(supabase_client):
     """Display the documentation interface"""

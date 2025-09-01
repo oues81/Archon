@@ -36,7 +36,7 @@ except ImportError:
     _SupabaseClient = None  # type: ignore
 
 try:
-    from archon.utils.neo4j_client import Neo4jClient
+    from k.core.utils.neo4j_client import Neo4jClient
 except ImportError:
     # Fallback si Neo4jClient n'existe pas
     class Neo4jClient:

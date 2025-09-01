@@ -1,2 +1,2 @@
 # Auto-generated shim to preserve imports
-from archon.archon.providers.ollama_model import *
+from k.providers.ollama_model import *

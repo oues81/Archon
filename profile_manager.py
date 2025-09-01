@@ -18,8 +18,8 @@ sys.path.insert(0, parent_dir)
 
 # Importer le LLMProvider
 try:
-    from archon.llm import LLMProvider, LLMConfig
-    from archon.llm import get_config_path as get_llm_config_path
+    from k.llm import LLMProvider, LLMConfig
+    from k.llm import get_config_path as get_llm_config_path
     LLM_PROVIDER_AVAILABLE = True
 except ImportError:
     LLM_PROVIDER_AVAILABLE = False

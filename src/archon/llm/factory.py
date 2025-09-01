@@ -11,14 +11,14 @@ from dataclasses import dataclass
 # Import des modèles Ollama depuis le bon paquet
 try:
     # Import via paquet exposé (grâce à l'alias dans archon.archon.models.__init__)
-    from archon.archon.models.ollama_model import OllamaModel
+    from k.core.models.ollama_model import OllamaModel
 except Exception:
     # Fallback relatif direct si nécessaire
     from ..archon.ollama_model import OllamaModel  # type: ignore
 
 # Import ModelConfig depuis l'emplacement réel
 try:
-    from archon.archon.config.model_config import ModelConfig
+    from k.config.model_config import ModelConfig
 except Exception:
     from ..archon.config.model_config import ModelConfig  # type: ignore
 
@@ -115,7 +115,7 @@ class ModelFactory:
         déprécié. Nous lisons le profil courant depuis la configuration et
         construisons la configuration modèle à partir de ce profil.
         """
-        from archon.config.config import load_config
+        from k.config.config import load_config
         cfg = load_config() or {}
         current_profile = cfg.get('current_profile')
         if not current_profile:

@@ -1,5 +1,5 @@
 import streamlit as st
-from archon.utils.utils import (
+from k.core.utils.utils import (
     get_env_var, save_env_var, reload_archon_graph,
     get_current_profile, set_current_profile, get_all_profiles,
     create_profile, delete_profile, get_profile_env_vars

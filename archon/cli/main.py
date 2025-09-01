@@ -17,7 +17,7 @@ def main(argv: list[str] | None = None) -> int:
     if getattr(args, "version", False):
         # Lazy import to avoid import side-effects at module load time
         try:
-            from archon import __version__  # type: ignore
+            from k import __version__  # type: ignore
         except Exception:
             __version__ = "0.0.0-dev"
         print(__version__)

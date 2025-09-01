@@ -51,11 +51,11 @@ st.set_page_config(
 # Utilities and styles
 # Prefer package-qualified import; fallback to backup copy in /app/src/utils
 try:
-    from archon.utils.utils import get_clients
+    from k.core.utils.utils import get_clients
 except ModuleNotFoundError:
     from utils.utils import get_clients
 from streamlit_pages.styles import load_css
-from archon.utils.utils import load_env_vars  # for fallback Supabase discovery
+from k.core.utils.utils import load_env_vars  # for fallback Supabase discovery
 
 # Streamlit pages
 from streamlit_pages.intro import intro_tab

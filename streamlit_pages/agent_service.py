@@ -7,7 +7,7 @@ import time
 import sys
 import os
 
-from archon.utils.utils import reload_archon_graph
+from k.core.utils.utils import reload_archon_graph
 
 def agent_service_tab():
     """Display the agent service interface for managing the graph service"""

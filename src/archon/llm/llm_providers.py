@@ -148,7 +148,7 @@ class LLMProvider:
             try:
                 self.config = LLMConfig.from_profile(profile_name)
             except Exception:
-                # Fallback: try to read a patched config path from archon.llm.get_config_path (used by tests)
+                # Fallback: try to read a patched config path from archon.core.llm.get_config_path (used by tests)
                 try:
                     import importlib
                     llm_mod = importlib.import_module('archon.llm')

@@ -6,10 +6,10 @@ from dotenv import load_dotenv
 from pydantic_ai import Agent, ModelRetry, RunContext
 from pydantic_ai.models.anthropic import AnthropicModel
 from pydantic_ai.models.openai import OpenAIModel
-from archon.models.ollama_model import OllamaModel
+from k.core.models.ollama_model import OllamaModel
 
-from archon.utils.utils import get_env_var
-from archon.archon.prompts.agent_prompts import prompt_refiner_agent_prompt
+from k.core.utils.utils import get_env_var
+from k.prompts.agent_prompts import prompt_refiner_agent_prompt
 
 # Chargement des variables d'environnement
 load_dotenv()

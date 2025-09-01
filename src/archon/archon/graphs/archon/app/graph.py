@@ -17,7 +17,7 @@ import httpx
 import logfire
 from typing import Dict, Any, Optional, Union, List, Tuple
 
-from archon.utils.utils import configure_logging, get_bool_env, build_llm_config_from_active_profile
+from k.core.utils.utils import configure_logging, get_bool_env, build_llm_config_from_active_profile
 
 # Configure logging centrally
 _log_summary = configure_logging()
@@ -97,7 +97,7 @@ advisor: Optional['AIAgent'] = None
 coder: Optional['AIAgent'] = None
 
 # Unified LLM Provider Import
-from archon.llm import LLMProvider, LLMConfig
+from k.llm import LLMProvider, LLMConfig
 
 # Pydantic AI Compatibility Imports
 try:
@@ -271,7 +271,7 @@ except ImportError as e:
 
 # Prompt Imports
 try:
-    from archon.archon.prompts.agent_prompts import (
+    from k.prompts.agent_prompts import (
         prompt_refiner_agent_prompt, advisor_prompt, coder_prompt_with_examples, reasoner_prompt
     )
 except ImportError:
@@ -440,8 +440,8 @@ async def advisor_with_examples(state: AgentState, config: dict) -> AgentState:
         })
         return state
 
-from archon.archon.pydantic_ai_coder import create_pydantic_ai_coder
-from archon.utils.utils import get_clients, get_bool_env, validate_rag_env
+from k.pydantic_ai_coder import create_pydantic_ai_coder
+from k.core.utils.utils import get_clients, get_bool_env, validate_rag_env
 
 async def coder_agent(state: AgentState, config: dict) -> AgentState:
     """Generates the final code using the coder agent based on the active profile."""

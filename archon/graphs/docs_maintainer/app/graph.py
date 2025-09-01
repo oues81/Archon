@@ -5,7 +5,7 @@ import time
 import os
 import logging
 import logfire
-from archon.utils.utils import configure_logging
+from k.core.utils.utils import configure_logging
 
 try:
     from langgraph.graph import StateGraph, END
@@ -13,16 +13,16 @@ except Exception:  # pragma: no cover - fallback placeholder
     StateGraph = None  # type: ignore
     END = None  # type: ignore
 
-from archon.archon.restruct_common.ensure_dirs import ensure_docs_dirs
-from archon.archon.restruct_common import approval as approval_node
-from archon.archon.restruct_common import git_apply as git_apply_node
-from archon.archon.restruct_common import backups as backups_node
-from archon.archon.docs_nodes import inventory as inv_node
-from archon.archon.docs_nodes import links as links_node
-from archon.archon.docs_nodes import taxonomy as taxo_node
-from archon.archon.docs_nodes import frontmatter as fm_node
-from archon.archon.docs_nodes import structure as struct_node
-from archon.archon.docs_nodes import report as report_node
+from k.restruct_common.ensure_dirs import ensure_docs_dirs
+from k.restruct_common import approval as approval_node
+from k.restruct_common import git_apply as git_apply_node
+from k.restruct_common import backups as backups_node
+from k.docs_nodes import inventory as inv_node
+from k.docs_nodes import links as links_node
+from k.docs_nodes import taxonomy as taxo_node
+from k.docs_nodes import frontmatter as fm_node
+from k.docs_nodes import structure as struct_node
+from k.docs_nodes import report as report_node
 
 _docs_flow = None
 

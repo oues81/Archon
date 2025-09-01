@@ -5,7 +5,7 @@ import time
 import os
 import logging
 import logfire
-from archon.utils.utils import configure_logging
+from k.core.utils.utils import configure_logging
 
 try:
     from langgraph.graph import StateGraph, END
@@ -13,14 +13,14 @@ except Exception:  # pragma: no cover - fallback placeholder
     StateGraph = None  # type: ignore
     END = None  # type: ignore
 
-from archon.archon.restruct_common.ensure_dirs import ensure_content_dirs
-from archon.archon.restruct_common import approval as approval_node
-from archon.archon.restruct_common import git_apply as git_apply_node
-from archon.archon.content_nodes import inventory as inv_node
-from archon.archon.content_nodes import semantic as sem_node
-from archon.archon.content_nodes import plan as plan_node
-from archon.archon.content_nodes import report as report_node
-from archon.archon.content_nodes import analysis_report as ar_node
+from k.restruct_common.ensure_dirs import ensure_content_dirs
+from k.restruct_common import approval as approval_node
+from k.restruct_common import git_apply as git_apply_node
+from k.content_nodes import inventory as inv_node
+from k.content_nodes import semantic as sem_node
+from k.content_nodes import plan as plan_node
+from k.content_nodes import report as report_node
+from k.content_nodes import analysis_report as ar_node
 
 _content_flow = None
 

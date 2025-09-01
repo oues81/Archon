@@ -53,9 +53,9 @@ def final_report():
         sys.path.append('/app')
         sys.path.append('/app/archon')
         
-        import archon.llm_provider
+        import k.llm_provider
         importlib.reload(archon.llm_provider)
-        from archon.llm import llm_provider
+        from k.llm import llm_provider
         
         print(f"Modèle: {llm_provider.config.primary_model}")
         

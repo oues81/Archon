@@ -14,8 +14,8 @@ from pathlib import Path
 
 from pydantic import BaseModel
 
-from archon.state.agent_state import AgentState
-from archon.state.state_migration import ensure_agent_state
+from k.state.agent_state import AgentState
+from k.state.state_migration import ensure_agent_state
 
 logger = logging.getLogger(__name__)
 

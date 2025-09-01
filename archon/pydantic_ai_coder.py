@@ -7,15 +7,15 @@ import logfire
 from pydantic_ai import Agent
 from pydantic_ai.models.anthropic import AnthropicModel
 
-from archon.utils.utils import get_env_var
-from archon.archon.schemas import PydanticAIDeps
-from archon.archon.prompts.agent_prompts import primary_coder_prompt
-from archon.archon.agents.agent_tools import (
+from k.core.utils.utils import get_env_var
+from k.schemas import PydanticAIDeps
+from k.prompts.agent_prompts import primary_coder_prompt
+from k.services.agents.agent_tools import (
     retrieve_relevant_documentation_tool,
     list_documentation_pages_tool,
     get_page_content_tool,
 )
-from archon.archon.models import OllamaModel
+from k.models import OllamaModel
 
 
 # --- Helpers expected by unit tests ---

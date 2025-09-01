@@ -1,2 +1,2 @@
 # Auto-generated shim to preserve imports
-from archon.archon.providers.llm_provider import *
+from k.providers.llm_provider import *

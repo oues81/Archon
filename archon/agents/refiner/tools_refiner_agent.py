@@ -14,15 +14,15 @@ from pydantic_ai import Agent, ModelRetry, RunContext
 from pydantic_ai.models.anthropic import AnthropicModel
 from pydantic_ai.models.openai import OpenAIModel
 from pydantic_ai.models import Model  # Import direct depuis pydantic_ai.models
-from archon.models.ollama_model import OllamaModel
+from k.core.models.ollama_model import OllamaModel
 from typing import Any, Dict, List, Optional, AsyncIterator, Union, cast, AsyncGenerator
 from openai import AsyncOpenAI
 import aiohttp
 import json
 
-from archon.utils.utils import get_env_var
-from archon.archon.prompts.agent_prompts import tools_refiner_prompt
-from archon.agent_tools import (
+from k.core.utils.utils import get_env_var
+from k.prompts.agent_prompts import tools_refiner_prompt
+from k.agent_tools import (
     retrieve_relevant_documentation_tool,
     list_documentation_pages_tool,
     get_page_content_tool,

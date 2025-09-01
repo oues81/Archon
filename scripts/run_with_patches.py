@@ -6,7 +6,7 @@ sys.path.insert(0, os.path.abspath('/app/archon'))
 
 # Importer et appliquer les patches avant tout autre import
 try:
-    from archon.patches import apply_all_patches
+    from k.patches import apply_all_patches
     if not apply_all_patches():
         print("Échec de l'application des patches", file=sys.stderr)
         sys.exit(1)

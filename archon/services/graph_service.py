@@ -11,7 +11,7 @@ import dataclasses
 from datetime import datetime
 from pathlib import Path
 
-from archon.utils.utils import configure_logging
+from k.core.utils.utils import configure_logging
 
 _log_summary = configure_logging()
 logger = logging.getLogger(__name__)
@@ -34,7 +34,7 @@ from typing import Optional, Dict, Any, List
 # Import du router des profils (support both legacy and proper package path)
 try:
     # Preferred: within package namespace
-    from archon.api.profiles import router as profiles_router
+    from k.api.profiles import router as profiles_router
     profiles_available = True
 except Exception:
     try:
@@ -46,13 +46,13 @@ except Exception:
         profiles_available = False
         logging.warning("Module archon.api.profiles non disponible")
 
-from archon.archon.graphs.archon.app.graph import get_agentic_flow
-from archon.archon.graphs.docs_maintainer_graph import get_docs_flow
-from archon.archon.graphs.content_restructurer_graph import get_content_flow
-from archon.utils.utils import write_to_log
-from archon.archon.utils.logging_utils import redact_pii
-from archon.llm import get_llm_provider
-from archon.archon.security.hmac import verify as verify_hmac
+from k.graphs.k.app.graph import get_agentic_flow
+from k.graphs.docs_maintainer_graph import get_docs_flow
+from k.graphs.content_restructurer_graph import get_content_flow
+from k.core.utils.utils import write_to_log
+from k.core.utils.logging_utils import redact_pii
+from k.llm import get_llm_provider
+from k.security.hmac import verify as verify_hmac
 import requests
 
 try:

@@ -181,7 +181,7 @@ def _mask_text(text: str, strategy: Dict[str, bool]) -> (str, List[Dict[str, str
 
 # Optional dependencies for crawler/RAG
 try:
-    from archon.archon.crawlers.core import CrawlerConfig, run_crawl
+    from k.services.crawlers.core import CrawlerConfig, run_crawl
     _crawler_available = True
 except Exception as _e:
     logging.getLogger(__name__).warning(f"Crawler core unavailable: {_e}")
@@ -204,12 +204,12 @@ _profiles_available = False
 _disable_profiles = os.environ.get("DISABLE_PROFILES", "0") == "1"
 if not _disable_profiles:
     try:
-        from archon.utils.utils import (
+        from k.core.utils.utils import (
             get_all_profiles,
             get_current_profile,
             set_current_profile,
         )
-        from archon.llm import get_llm_provider
+        from k.llm import get_llm_provider
         _profiles_available = True
     except Exception as _e:
         logging.getLogger(__name__).warning(f"Profile utilities unavailable: {_e}")
@@ -222,7 +222,7 @@ _advisor_available = False
 _disable_advisor = os.environ.get("DISABLE_ADVISOR", "0") == "1"
 if not _disable_advisor:
     try:
-        from archon.archon.agents.generalist_agent import (
+        from k.services.agents.generalist_agent import (
             create_generalist_agent as _get_advisor_agent,
             PydanticAIDeps as _AdvisorDeps,
         )
@@ -490,7 +490,7 @@ async def cv_health_check_compat(payload: Dict[str, Any]) -> Dict[str, Any]:
         corr = (payload or {}).get("correlation_id")
         # Lazy import to avoid startup cost
         try:
-            from archon.archon.cv_analyzer import health_check as _cv_health_check  # type: ignore
+            from k.cv_analyzer import health_check as _cv_health_check  # type: ignore
         except Exception as _e:
             raise HTTPException(status_code=501, detail=f"cv_health_check unavailable: {_e}")
         # Emit started
@@ -555,7 +555,7 @@ async def cv_parse_v2_compat(payload: Dict[str, Any]) -> Dict[str, Any]:
         # Optional strict gating
         if strict_gating:
             try:
-                from archon.archon.cv_analyzer import health_check as _cv_health_check  # type: ignore
+                from k.cv_analyzer import health_check as _cv_health_check  # type: ignore
                 _ = await _cv_health_check(api_url=api_url)
             except Exception as _e:
                 raise HTTPException(status_code=502, detail=f"Preflight failed: {_e}")
@@ -623,7 +623,7 @@ async def cv_parse_v2_compat(payload: Dict[str, Any]) -> Dict[str, Any]:
                 raise HTTPException(status_code=502, detail=str(e))
 
         try:
-            from archon.archon.cv_analyzer import parse_v2 as _cv_parse_v2  # type: ignore
+            from k.cv_analyzer import parse_v2 as _cv_parse_v2  # type: ignore
         except Exception as _e:
             raise HTTPException(status_code=501, detail=f"cv_parse_v2 unavailable: {_e}")
         # Emit started
@@ -849,7 +849,7 @@ def _do_warmup(correlation_id: Optional[str] = None) -> None:
         _ensure_env_from_profile()
         try:
             # Dynamic import to bypass module-level DISABLE_PROFILES gating
-            from archon.llm import get_llm_provider as _dyn_get_llm_provider  # type: ignore
+            from k.llm import get_llm_provider as _dyn_get_llm_provider  # type: ignore
             provider = _dyn_get_llm_provider()
             # Attempt to load default/active profile
             try:
@@ -862,7 +862,7 @@ def _do_warmup(correlation_id: Optional[str] = None) -> None:
         # Prefetch RHCV profiles cache if possible
         try:
             # Import RH-CV analyzer helpers lazily to avoid import cost on startup
-            from archon.archon.cv_analyzer import get_version as _cv_get_version, get_profiles_version as _cv_get_profiles_version  # type: ignore
+            from k.cv_analyzer import get_version as _cv_get_version, get_profiles_version as _cv_get_profiles_version  # type: ignore
             api_url = os.environ.get("CV_API_URL")
             ver = _run_async(_cv_get_version(api_url))  # type: ignore[arg-type]
             etag = None
@@ -1650,7 +1650,7 @@ def _process_mcp_payload(data: Dict[str, Any]) -> Dict[str, Any]:
                             pass
                         # Lazy import
                         try:
-                            from archon.archon.cv_analyzer import analyze as _cv_analyze
+                            from k.cv_analyzer import analyze as _cv_analyze
                         except Exception as _e:
                             response["error"] = {"code": -32021, "message": f"cv_analyzer unavailable: {_e}"}
                             return response
@@ -1736,14 +1736,14 @@ def _process_mcp_payload(data: Dict[str, Any]) -> Dict[str, Any]:
                         except Exception:
                             pass
                         try:
-                            from archon.archon.cv_analyzer import parse_v2 as _cv_parse_v2
+                            from k.cv_analyzer import parse_v2 as _cv_parse_v2
                         except Exception as _e:
                             response["error"] = {"code": -32031, "message": f"cv_parse_v2 unavailable: {_e}"}
                             return response
                         # Optional strict gating preflight
                         if strict_gating:
                             try:
-                                from archon.archon.cv_analyzer import health_check as _cv_health_check
+                                from k.cv_analyzer import health_check as _cv_health_check
                             except Exception as _e:
                                 response["error"] = {"code": -32041, "message": f"cv_health_check unavailable: {_e}"}
                                 return response
@@ -1822,7 +1822,7 @@ def _process_mcp_payload(data: Dict[str, Any]) -> Dict[str, Any]:
                     except Exception:
                         pass
                     try:
-                        from archon.archon.cv_analyzer import health_check as _cv_health_check
+                        from k.cv_analyzer import health_check as _cv_health_check
                     except Exception as _e:
                         response["error"] = {"code": -32041, "message": f"cv_health_check unavailable: {_e}"}
                         return response
@@ -1903,8 +1903,8 @@ def _process_mcp_payload(data: Dict[str, Any]) -> Dict[str, Any]:
                             api_sha1 = None
                             parser_ver = None
                             try:
-                                from archon.archon.cv_analyzer import get_profiles_version as _get_prof_ver
-                                from archon.archon.cv_analyzer import get_version as _get_parser_ver
+                                from k.cv_analyzer import get_profiles_version as _get_prof_ver
+                                from k.cv_analyzer import get_version as _get_parser_ver
                                 ver = _run_async(_get_prof_ver(api_url=api_url, correlation_id=corr_id))
                                 if isinstance(ver, dict) and ver.get("ok"):
                                     data = ver.get("data") or {}

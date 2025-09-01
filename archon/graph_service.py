@@ -1,2 +1,2 @@
 # Auto-generated shim to preserve imports
-from archon.archon.services.graph_service import *
+from k.services.graph_service import *

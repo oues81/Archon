@@ -1,7 +1,7 @@
 """Lightweight Ollama provider classes used in tests.
 
 These classes provide a minimal surface so imports like
-`from archon.archon.models.ollama_model import OllamaModel, OllamaClient`
+`from k.core.models.ollama_model import OllamaModel, OllamaClient`
 work, and basic attributes are available.
 """
 from __future__ import annotations

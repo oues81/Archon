@@ -1,2 +1,2 @@
 # Auto-generated shim to preserve imports
-from archon.archon.prompts.agent_prompts import *
+from k.prompts.agent_prompts import *

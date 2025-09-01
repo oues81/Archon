@@ -1,5 +1,5 @@
 import streamlit as st
-from archon.utils.utils import create_new_tab_button
+from k.core.utils.utils import create_new_tab_button
 
 def intro_tab():
     """Display the introduction and setup guide for Archon"""    

@@ -22,7 +22,7 @@ load_dotenv()
 # Ajouter le chemin vers le module archon
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from archon.crawl_windsurf_workflows_docs import main_with_requests, CrawlProgressTracker
+from k.crawl_windsurf_workflows_docs import main_with_requests, CrawlProgressTracker
 
 def progress_callback(data):
     status = data.get("event") or data.get("status") or ""

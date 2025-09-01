@@ -31,7 +31,7 @@ class ModelConfig:
         `archon.config.config.load_config`.
         """
         try:
-            from archon.config.config import load_config  # patched in tests
+            from k.config.config import load_config  # patched in tests
         except Exception as e:  # pragma: no cover
             logger.error(f"Impossible d'importer load_config: {e}")
             raise

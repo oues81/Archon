@@ -16,10 +16,10 @@ from langchain_core.messages import HumanMessage
 from langgraph.graph import StateGraph, END
 
 # Imports des nouveaux composants
-from archon.state.agent_state import AgentState
-from archon.state.checkpoint import checkpoint_state, restore_state
-from archon.llm.error_handling import llm_error_handler
-from archon.utils.instrumentation import time_node, log_graph_metrics
+from k.state.agent_state import AgentState
+from k.state.checkpoint import checkpoint_state, restore_state
+from k.core.llm.error_handling import llm_error_handler
+from k.core.utils.instrumentation import time_node, log_graph_metrics
 
 # Configuration du logging
 logger = logging.getLogger(__name__)

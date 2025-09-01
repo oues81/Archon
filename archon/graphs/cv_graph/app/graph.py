@@ -9,9 +9,9 @@ from datetime import datetime, timezone
 import os
 import logging
 import logfire
-from archon.utils.utils import configure_logging
+from k.core.utils.utils import configure_logging
 
-from archon.archon.graphs.cv_graph.agents import (
+from k.graphs.cv_graph.agents import (
     preprocessing,
     contact_info,
     location,
@@ -20,8 +20,8 @@ from archon.archon.graphs.cv_graph.agents import (
     competence,
     availability,
 )
-from archon.archon.graphs.cv_graph.agents import fill_all
-from archon.archon.graphs.cv_graph.schemas.candidate_schema import CANDIDATE_SCHEMA
+from k.graphs.cv_graph.agents import fill_all
+from k.graphs.cv_graph.schemas.candidate_schema import CANDIDATE_SCHEMA
 
 
 _log_summary = configure_logging()

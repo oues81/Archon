@@ -26,7 +26,7 @@ load_dotenv()
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 # Importer les modules nécessaires depuis archon
-from archon.crawl_mcp_docs import main, CrawlProgressTracker
+from k.crawl_mcp_docs import main, CrawlProgressTracker
 
 def progress_callback(data):
     """Affiche la progression du crawler."""
@@ -49,7 +49,7 @@ def run_crawler():
     tracker = CrawlProgressTracker(progress_callback)
     
     # Exécuter le crawler avec la version synchrone
-    from archon.crawl_mcp_docs import main_with_requests
+    from k.crawl_mcp_docs import main_with_requests
     main_with_requests(tracker)
     success = True
     
