@@ -10,7 +10,7 @@ from dataclasses import dataclass
 
 # Import des modèles Ollama depuis le bon paquet
 try:
-    # Import via paquet exposé (grâce à l'alias dans archon.archon.models.__init__)
+    # Import via paquet exposé (grâce à l'alias dans archon.models.__init__)
     from k.core.models.ollama_model import OllamaModel
 except Exception:
     # Fallback relatif direct si nécessaire
